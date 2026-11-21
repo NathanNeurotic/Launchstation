@@ -1,0 +1,55 @@
+$ llvm-size -A build/obj/wLaunchELF/wLaunchELF.unstripped.elf
+build/obj/wLaunchELF/wLaunchELF.unstripped.elf  :
+section               size      addr
+.text              2188928   1048576
+.ctors                   0   3237504
+.init_array             16   3237504
+.reginfo                24   3237520
+.MIPS.abiflags          24   3237544
+.data              1669488   3237632
+.rodata            1440560   4907136
+.eh_frame_hdr            0   6347696
+.sdata                   4   6347776
+.got                   152   6347792
+.sbss                    0   6348032
+.bss               1613524   6348032
+.mdebug.abiN32           0         0
+.pdr                179232         0
+.comment               204         0
+.debug_loc          120154         0
+.debug_abbrev        57127         0
+.debug_info         282259         0
+.debug_str           22877         0
+.debug_frame         13500         0
+.debug_line         141430         0
+.debug_ranges         7456         0
+.debug_aranges          48         0
+Total              7737007
+
+
+
+$ llvm-size -A build/bin/wLaunchELF.elf
+build/bin/wLaunchELF.elf  :
+section               size      addr
+.text              2188928   1048576
+.ctors                   0   3237504
+.init_array             16   3237504
+.reginfo                24   3237520
+.MIPS.abiflags          24   3237544
+.data              1669488   3237632
+.rodata            1440560   4907136
+.eh_frame_hdr            0   6347696
+.sdata                   4   6347776
+.got                   152   6347792
+.sbss                    0   6348032
+.bss               1613524   6348032
+Total              6912720
+
+
+
+$ llvm-size build/bin/wLaunchELF.elf build/bin/loader.elf build/bin/wle_igr.elf (Berkeley)
+   text	   data	    bss	    dec	    hex	filename
+3629536	1669660	1613524	6912720	 697ad0	build/bin/wLaunchELF.elf
+  15365	     12	  39592	  54969	   d6b9	build/bin/loader.elf
+ 173022	 344356	  66628	 584006	  8e946	build/bin/wle_igr.elf
+3631920	1695228	1618004	6945152	 69f980	build-ds34/bin/wLaunchELF.elf

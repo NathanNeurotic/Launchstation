@@ -1,0 +1,25 @@
+# build-ds34/bin/wLaunchELF.elf (5393568 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+.text	1	AX	100000	2191264
+.ctors	1	A	316fa0	0
+.init_array	14	AW	316fa0	16
+.reginfo	1879048198	A	316fb0	24
+.MIPS.abiflags	1879048234	A	316fc8	24
+.data	1	AW	317000	1695056
+.rodata	1	A	4b4d80	1440608
+.eh_frame_hdr	1	A	6148e0	0
+.sdata	1	AW	614900	4
+.got	1	AW	614910	152
+.sbss	1	AW	614a00	0
+.bss	8	AW	614a00	1618004
+.shstrtab	3		0	111
+# totals
+# bss (NOBITS)	1618004
+# data (AW)	1695228
+# non-alloc	111
+# rodata (A)	1440656
+# text (AX)	2191264
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x10000	0x100000	5327360	6945364	7
+# PHDR	1879048192	0x226fb0	0x316fb0	24	24	4
+# PHDR	1879048195	0x226fc8	0x316fc8	24	24	4

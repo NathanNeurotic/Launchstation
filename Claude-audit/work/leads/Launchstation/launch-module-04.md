@@ -1,0 +1,133 @@
+## Symbols with no reference outside their definition (symbols-unreferenced.tsv). Class no-other-mention = the name appears nowhere else in the repo; only-prototype-or-export-mentions = it appears only in a prototype or export list
+- iop/mx4sio_bd/src/spi_sdcard_driver.h:11  macro `CMD_ABORT_CRC16_INVALID`  (no-other-mention)
+- iop/mx4sio_bd/src/spi_sdcard_driver.h:12  macro `CMD_ABORT_WRITE_ERROR`  (no-other-mention)
+- iop/mx4sio_bd/src/spi_sdcard_driver.h:13  macro `CMD_ABORT_UKNOWN_ERROR`  (no-other-mention)
+- iop/mx4sio_bd/src/spi_sdcard_driver_config.h:9  macro `SPISD_ASSERT`  (no-other-mention)
+
+## Macros tested by #if/#ifdef that no source or build file defines (cond-macros-undefined.tsv). Compiler, SDK and toolchain macros also land here: check before using
+- `BUILD_BOOTLOADER`  tested at 1 site(s) in the repo, mentioned in 0 build file(s); here: iop/mx4sio_bd/src/spi_sdcard_driver_config.h:19
+- `CONFIG_USE_CRC16`  tested at 3 site(s) in the repo, mentioned in 0 build file(s); here: iop/mx4sio_bd/src/mx4sio.c:42, iop/mx4sio_bd/src/mx4sio.h:45, iop/mx4sio_bd/src/spi_sdcard_driver.c:463
+- `CRC7_MODE_RAM_TABLE`  tested at 2 site(s) in the repo, mentioned in 0 build file(s); here: iop/mx4sio_bd/src/spi_sdcard_crc7.c:7, iop/mx4sio_bd/src/spi_sdcard_crc7.h:10
+- `DEBUG_VERBOSE`  tested at 10 site(s) in the repo, mentioned in 0 build file(s); here: iop/mx4sio_bd/src/mx4sio.c:257, iop/mx4sio_bd/src/mx4sio.c:296, iop/mx4sio_bd/src/mx4sio.c:338, iop/mx4sio_bd/src/mx4sio.c:381, iop/mx4sio_bd/src/mx4sio.c:422, iop/mx4sio_bd/src/mx4sio.c:436
+- `MINI_DRIVER`  tested at 7 site(s) in the repo, mentioned in 4 build file(s); here: iop/mx4sio_bd/src/module_debug.h:6, iop/mx4sio_bd/src/mx4sio.c:737, iop/mx4sio_bd/src/mx4sio.c:819
+- `U`  tested at 1 site(s) in the repo, mentioned in 0 build file(s); here: iop/mx4sio_bd/src/spi_sdcard_driver_config.h:19
+- `__GNUC__`  tested at 2 site(s) in the repo, mentioned in 0 build file(s) [builtin-like]; here: iop/mx4sio_bd/src/mx4sio.c:667, iop/mx4sio_bd/src/mx4sio.c:691
+- `__clang__`  tested at 2 site(s) in the repo, mentioned in 0 build file(s) [builtin-like]; here: iop/mx4sio_bd/src/mx4sio.c:667, iop/mx4sio_bd/src/mx4sio.c:691
+
+## Byte-identical files (dupes-exact-files.tsv)
+- iop/mx4sio_bd/LICENSE is byte-identical to: Launchstation/iop/usbmass_bd/LICENSE
+- iop/mx4sio_bd/src/ioplib.c is byte-identical to: Launchstation/iop/mmceman/src/ioplib.c
+- iop/mx4sio_bd/src/ioplib.h is byte-identical to: Launchstation/iop/mmceman/include/ioplib.h
+- iop/nfsman/irx_imports.h is byte-identical to: Launchstation/iop/smb2man/irx_imports.h
+- iop/nfsman/linkfile is byte-identical to: Launchstation/iop/smb2man/linkfile
+
+## Largely identical files (dupes-file-pairs.tsv)
+- iop/mx4sio_bd/LICENSE is 10% the same as Launchstation/iop/oldlibs/ps2ftpd/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as Launchstation/iop/usbmass_bd/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as POPSLoader/iop/embed/BDMASSAULT_MX4SIO/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/modules/bdmassault/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/modules/debug/ps2link/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/modules/mx4sio_bd/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/modules/usb/usbmass_bd/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/ship/POPS/UDPFS-NOTICES/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/third_party/ps2sdk-ppctty/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as RiptOPL/third_party/ps2sdk-socket/LICENSE (15 cloned normalised lines)
+- iop/mx4sio_bd/LICENSE is 10% the same as Simple-Media-System/iop/smbman-sms/LICENSE-AFL-2.0 (15 cloned normalised lines)
+- iop/mx4sio_bd/src/crc16.c is 100% the same as RiptOPL/modules/mx4sio_bd/src/crc16.c (18 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.c is 100% the same as Launchstation/iop/mmceman/src/ioplib.c (59 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.c is 100% the same as RiptOPL/modules/mmce/mmceman/src/ioplib.c (59 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.c is 100% the same as RiptOPL/modules/mx4sio_bd/src/ioplib.c (59 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.h is 88% the same as Launchstation/iop/mmceman/include/ioplib.h (15 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.h is 88% the same as RiptOPL/modules/mmce/mmceman/include/ioplib.h (15 cloned normalised lines)
+- iop/mx4sio_bd/src/ioplib.h is 88% the same as RiptOPL/modules/mx4sio_bd/src/ioplib.h (15 cloned normalised lines)
+- iop/mx4sio_bd/src/irx_imports.h is 95% the same as RiptOPL/modules/mx4sio_bd/src/irx_imports.h (21 cloned normalised lines)
+- iop/mx4sio_bd/src/module_debug.h is 80% the same as RiptOPL/modules/mx4sio_bd/src/module_debug.h (12 cloned normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c is 100% the same as RiptOPL/modules/mx4sio_bd/src/mx4sio.c (601 cloned normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c repeats itself: 54 cloned normalised lines inside the file (11%)
+- iop/mx4sio_bd/src/mx4sio.h is 100% the same as RiptOPL/modules/mx4sio_bd/src/mx4sio.h (38 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c is 98% the same as Launchstation/iop/mmceman/src/sio2man_hook.c (173 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c is 98% the same as RiptOPL/modules/mmce/mmceman/src/sio2man_hook.c (174 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c is 98% the same as RiptOPL/modules/mx4sio_bd/src/sio2man_hook.c (174 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.h is 89% the same as RiptOPL/modules/mx4sio_bd/src/sio2man_hook.h (17 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h is 100% the same as RiptOPL/modules/mx4sio_bd/src/sio2regs.h (104 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h is 98% the same as Launchstation/iop/mmceman/include/sio2regs.h (102 cloned normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h is 98% the same as RiptOPL/modules/mmce/mmceman/include/sio2regs.h (102 cloned normalised lines)
+- iop/mx4sio_bd/src/spi_sdcard_crc7.c is 100% the same as RiptOPL/modules/mx4sio_bd/src/spi_sdcard_crc7.c (36 cloned normalised lines)
+- iop/mx4sio_bd/src/spi_sdcard_driver.c is 100% the same as RiptOPL/modules/mx4sio_bd/src/spi_sdcard_driver.c (374 cloned normalised lines)
+- iop/mx4sio_bd/src/spi_sdcard_driver.h is 100% the same as RiptOPL/modules/mx4sio_bd/src/spi_sdcard_driver.h (173 cloned normalised lines)
+- iop/mx4sio_bd/src/spi_sdcard_driver.h repeats itself: 20 cloned normalised lines inside the file (15%)
+- iop/mx4sio_bd/src/spi_sdcard_driver_config.h is 100% the same as RiptOPL/modules/mx4sio_bd/src/spi_sdcard_driver_config.h (14 cloned normalised lines)
+- iop/nfsman/irx_imports.h is 100% the same as Launchstation/iop/smb2man/irx_imports.h (19 cloned normalised lines)
+- iop/nfsman/irx_imports.h is 100% the same as RiptOPL/modules/network/nfsman/irx_imports.h (19 cloned normalised lines)
+- iop/nfsman/irx_imports.h is 73% the same as RiptOPL/modules/network/smb2man/irx_imports.h (14 cloned normalised lines)
+- iop/nfsman/linkfile is 100% the same as Launchstation/iop/smb2man/linkfile (139 cloned normalised lines)
+- iop/nfsman/linkfile is 100% the same as Launchstation/iop/smbd/linkfile (138 cloned normalised lines)
+- ... 7 more: grep your file paths in evidence/Launchstation/
+
+## Duplicate blocks (dupes-blocks.tsv)
+- iop/mx4sio_bd/LICENSE:123-138  ==  Launchstation/iop/oldlibs/ps2ftpd/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  Launchstation/iop/usbmass_bd/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  POPSLoader/iop/embed/BDMASSAULT_MX4SIO/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/modules/bdmassault/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/modules/debug/ps2link/LICENSE:131-146  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/modules/mx4sio_bd/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/modules/usb/usbmass_bd/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/ship/POPS/UDPFS-NOTICES/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/third_party/ps2sdk-ppctty/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  RiptOPL/third_party/ps2sdk-socket/LICENSE:123-138  (15 normalised lines)
+- iop/mx4sio_bd/LICENSE:123-138  ==  Simple-Media-System/iop/smbman-sms/LICENSE-AFL-2.0:123-138  (15 normalised lines)
+- iop/mx4sio_bd/src/crc16.c:1-26  ==  RiptOPL/modules/mx4sio_bd/src/crc16.c:1-26  (18 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:4-60  ==  Launchstation/iop/mmceman/src/ioplib.c:4-60  (31 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:4-60  ==  RiptOPL/modules/mmce/mmceman/src/ioplib.c:4-60  (31 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:4-60  ==  RiptOPL/modules/mx4sio_bd/src/ioplib.c:4-60  (31 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:55-98  ==  Launchstation/iop/mmceman/src/ioplib.c:55-98  (28 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:55-98  ==  RiptOPL/modules/mmce/mmceman/src/ioplib.c:55-98  (28 normalised lines)
+- iop/mx4sio_bd/src/ioplib.c:55-98  ==  RiptOPL/modules/mx4sio_bd/src/ioplib.c:55-98  (28 normalised lines)
+- iop/mx4sio_bd/src/ioplib.h:4-37  ==  Launchstation/iop/mmceman/include/ioplib.h:4-37  (15 normalised lines)
+- iop/mx4sio_bd/src/ioplib.h:4-37  ==  RiptOPL/modules/mmce/mmceman/include/ioplib.h:4-37  (15 normalised lines)
+- iop/mx4sio_bd/src/ioplib.h:4-37  ==  RiptOPL/modules/mx4sio_bd/src/ioplib.h:4-37  (15 normalised lines)
+- iop/mx4sio_bd/src/irx_imports.h:3-31  ==  RiptOPL/modules/mx4sio_bd/src/irx_imports.h:3-31  (21 normalised lines)
+- iop/mx4sio_bd/src/module_debug.h:1-18  ==  RiptOPL/modules/mx4sio_bd/src/module_debug.h:1-18  (12 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:1-239  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:1-239  (123 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:236-278  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:236-278  (26 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:275-321  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:275-321  (29 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:318-338  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:360-381  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:318-338  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:402-422  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:318-338  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:360-381  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:318-338  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:402-422  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:318-363  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:318-363  (28 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:360-381  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:318-338  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:360-381  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:402-422  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:360-381  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:318-338  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:360-381  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:402-422  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:360-405  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:360-405  (29 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:402-422  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:318-338  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:402-422  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:360-381  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:402-422  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:318-338  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:402-422  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:360-381  (14 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:402-452  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:402-452  (31 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:435-452  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:484-503  (12 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:435-452  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:484-503  (12 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:449-503  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:449-503  (30 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:484-503  ==  Launchstation/iop/mx4sio_bd/src/mx4sio.c:435-452  (12 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:484-503  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:435-452  (12 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:500-696  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:500-696  (115 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:731-754  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:731-754  (16 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.c:744-846  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.c:744-846  (66 normalised lines)
+- iop/mx4sio_bd/src/mx4sio.h:1-76  ==  RiptOPL/modules/mx4sio_bd/src/mx4sio.h:1-76  (38 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c:26-313  ==  RiptOPL/modules/mmce/mmceman/src/sio2man_hook.c:28-316  (159 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c:27-313  ==  Launchstation/iop/mmceman/src/sio2man_hook.c:32-318  (158 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c:4-24  ==  Launchstation/iop/mmceman/src/sio2man_hook.c:4-24  (15 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c:4-24  ==  RiptOPL/modules/mmce/mmceman/src/sio2man_hook.c:4-24  (15 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.c:4-313  ==  RiptOPL/modules/mx4sio_bd/src/sio2man_hook.c:4-313  (174 normalised lines)
+- iop/mx4sio_bd/src/sio2man_hook.h:4-30  ==  RiptOPL/modules/mx4sio_bd/src/sio2man_hook.h:4-30  (17 normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h:1-172  ==  RiptOPL/modules/mx4sio_bd/src/sio2regs.h:1-172  (104 normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h:1-42  ==  Launchstation/iop/mmceman/include/sio2regs.h:13-56  (33 normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h:1-42  ==  RiptOPL/modules/mmce/mmceman/include/sio2regs.h:13-56  (33 normalised lines)
+- iop/mx4sio_bd/src/sio2regs.h:46-172  ==  Launchstation/iop/mmceman/include/sio2regs.h:74-200  (69 normalised lines)
+- ... 51 more: grep your file paths in evidence/Launchstation/
+
+## TODO/FIXME/HACK style markers (cond-markers.tsv)
+- iop/mx4sio_bd/src/mx4sio.h:46  uint16_t crc[512]; /*FIXME*/
+- iop/mx4sio_bd/src/spi_sdcard_driver.c:138  /* TODO: use this to verify writes */
+- iop/mx4sio_bd/src/spi_sdcard_driver.h:62  // XXX: The folowing are not fixed to correct endianness!

@@ -1,0 +1,159 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-06.b",
+  "coverage": [
+    {"path": "src/dash_browser.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_browser.c is the dashboard File Browser, used both as the Files tab (dashFilesScreen) and as a modal browser (dashFileBrowser). Folder reads run as worker jobs (listRun) and are applied, sorted and selected on the UI thread (listDone); the device list, MISC commands, bookmarks (PathPad) and the Actions menu are built here. File operations reuse the classic filer code (copy/paste/PSU, delete, rename, size, title.cfg, VMC mount, folder icons, folder dates) behind dashboard dialogs, and the file adds its own memory-card image tools: MMCE active-card backup history with RTC-stamped names, PCSX2 export/convert, recovery to a new image, and installing new numbered or Game ID cards on an MMCE adapter.",
+  "reusable_helpers": [
+    {"name": "joinBackupPath", "path": "src/dash_browser.c", "line": 1304, "what": "joins folder and name, adding '/' unless the folder ends in '/' or ':'; returns 0 on truncation"},
+    {"name": "activeBackupStamp", "path": "src/dash_browser.c", "line": 1262, "what": "YYYYMMDD-HHMMSS local-time stamp from the CDVD RTC (BCD decode) with a seconds-since-boot fallback"},
+    {"name": "activeHistoryFilesEqual", "path": "src/dash_browser.c", "line": 1400, "what": "byte-for-byte compare of two files in 16 KB chunks"},
+    {"name": "parentOf", "path": "src/dash_browser.c", "line": 609, "what": "parent folder of a device path plus the child name to reselect"},
+    {"name": "fmtBytes", "path": "src/dash_browser.c", "line": 3197, "what": "formats a byte count as GB or MB with two decimals"},
+    {"name": "fmtSize", "path": "src/dash_browser.c", "line": 3205, "what": "formats a FILEINFO size as GB/MB/KB/B"},
+    {"name": "browserDisplayPath", "path": "src/dash_browser.c", "line": 3222, "what": "shows usbN: paths as massN: for display only"},
+    {"name": "wrapIndex", "path": "src/dash_browser.c", "line": 146, "what": "wraps a list index into 0..total-1"},
+    {"name": "gameIdFromImageName", "path": "src/dash_browser.c", "line": 2023, "what": "extracts and validates a 10-char Game ID from an <ID>.mcd or <ID>-1.mcd file name"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "fbSortFiles insertion-sorts 388-byte FILEINFO structs on the UI thread: O(n^2) for folders up to 2048 entries",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 265, "end": 278},
+        {"path": "src/dash_browser.c", "start": 384, "end": 385},
+        {"path": "src/dash_worker.c", "start": 221, "end": 229},
+        {"path": "tests/test_browser_sort.py", "start": 26, "end": 31}
+      ],
+      "problem": "listDone (a worker completion callback, run on the UI thread by dashWorkerPump -> finish, dash_worker.c:221-229) sorts the whole listing with an insertion sort that moves whole FILEINFO structs (char[256] + title[66] + 64-byte sceMcTblGetDir, about 388 B). Average cost is n*n/4 moves: at the MAX_ENTRY cap of 2048 that is about 1.05 M struct copies (about 400 MB of memory traffic) plus as many fbCompare calls (Type sort, the default, runs several extension compares per call), all before the next frame. Large USB/HDD folders therefore stall the UI when opened, refreshed or re-sorted.",
+      "fix": "Replace the body of fbSortFiles with a qsort call (qsort is already linked: dash_card_tool.c:1766, dash_lib.c:599, dash_widgets.c:950) through a two-line wrapper that calls fbCompare. fbCompare already ends in a name tiebreak, so the order is unchanged except for names that differ only in case. Add #include <stdlib.h> to the host harness string in tests/test_browser_sort.py, which compiles the extracted function with -Werror.",
+      "justification": "",
+      "benefit": "INFERRED: worst case drops from ~1.05 M moves of 388 B to ~n*log2(n) = ~22.5 k swaps at n=2048; ~0.1-0.25 s per open at n=500 and multi-second stalls near the cap go away. ~8 lines removed.",
+      "benefit_rank": 3,
+      "lines_removed": 8,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_browser.c:220-278 (fbCompare, fbSortFiles) and 358-398 (listDone calls fbSortFiles when fb_sort != FB_SORT_STORED). dash_worker.c:1-22 and 221-258: completion callbacks run on the UI thread. FILEINFO layout read at include/launchelf.h:560-565; MAX_ENTRY = 2048 at launchelf.h:205; size of sceMcTblGetDir (64 B) and padding are INFERRED. grep qsort over src: used in dash_card_tool.c, dash_hdd.c, dash_lib.c, dash_widgets.c. tests/test_browser_sort.py extracts fbSortFiles by signature and includes only assert/stdint/stdio/string. Timing figures are INFERRED, not measured."
+    },
+    {
+      "n": 2,
+      "title": "Active MMCE backup/export name buffers (40 and 48 bytes) truncate the no-RTC stamp: names lose .mcd/.ps2 and later backups are refused",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 1271, "end": 1275},
+        {"path": "src/dash_browser.c", "start": 1316, "end": 1336},
+        {"path": "src/dash_browser.c", "start": 1290, "end": 1302},
+        {"path": "src/dash_browser.c", "start": 1557, "end": 1557},
+        {"path": "src/dash_browser.c", "start": 1569, "end": 1573},
+        {"path": "src/dash_browser.c", "start": 1627, "end": 1627},
+        {"path": "src/dash_browser.c", "start": 1640, "end": 1644}
+      ],
+      "problem": "When sceCdReadClock fails or stat != 0, the stamp is 00000000-000000-S plus 10 digits of Timer()/1000 (27 chars). MMCE0-ActiveCard-<stamp>.mcd is then 48 chars but name[40] keeps 39: the extension and the last 5 digits are cut, and because Timer() counts ms since boot the kept digits are 00000 for the first 27.7 hours. The first backup is written with no .mcd, so activeHistoryMatch never sees it (no dedupe, no pruning); every later attempt truncates all 100 suffixes to the same existing name and fails with 'Could not create a unique backup history name'. The PCSX2 export (name[48]) loses the final '2' and writes a .ps file.",
+      "fix": "Declare both name buffers as char name[MAX_NAME] (dash_browser.c:1557 and 1627). Nothing else changes.",
+      "justification": "",
+      "benefit": "Fixes blocked active-card backups and wrongly named exports on consoles without a valid RTC reading; no lines added (INFERRED how often the RTC read fails; the code at 1272-1273 says it must still work).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_browser.c:1262-1341 (stamp, history match, stamped names) and callers 1555-1573 (name[40], activeHistoryName) and 1625-1644 (name[48], ext ps2). Length arithmetic: prefix 'MMCE0-ActiveCard-' = 17, fallback stamp 17 + 10 digits = 27, '.mcd' = 4 -> 48 chars + NUL; RTC stamp is 15 chars so the RTC path just fits (17+15+3+4 = 39). Timer() returns ms since boot (src/timer.c:8-11). activeHistoryMatch (1290-1302) requires a '.mcd' extension. mmce_backup.c:50-71 builds the same stamp for its own history. Frequency of a failing RTC read on real consoles is INFERRED."
+    },
+    {
+      "n": 3,
+      "title": "dash_browser.o keeps ~88 KB of one-shot scratch in .bss: eight static int[2048] index arrays and two 16 KB compare buffers",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 822, "end": 822},
+        {"path": "src/dash_browser.c", "start": 978, "end": 978},
+        {"path": "src/dash_browser.c", "start": 1054, "end": 1054},
+        {"path": "src/dash_browser.c", "start": 1079, "end": 1079},
+        {"path": "src/dash_browser.c", "start": 1172, "end": 1172},
+        {"path": "src/dash_browser.c", "start": 2698, "end": 2698},
+        {"path": "src/dash_browser.c", "start": 2795, "end": 2795},
+        {"path": "src/dash_browser.c", "start": 3045, "end": 3045},
+        {"path": "src/dash_browser.c", "start": 1402, "end": 1403}
+      ],
+      "problem": "Each of opCopy, opExtractPsuTo, opImportSavesTo, opDelete, opSize and actionsMenu (three: sv_idx, psu_idx and a second sv_idx that shadows the first inside case F_IMPORT_SAVES) has its own static int[MAX_ENTRY] for targets(); all run on the UI thread one after another and never hold two of them live at once. activeHistoryFilesEqual adds two static 16 KB buffers used only by the rare active-card dedupe. Together 96 KB of the object's 104 KB .bss, reserved for the whole run.",
+      "fix": "Use one file-scope static int index array for every targets()/psuTargets()/saveFileTargets()/ps1SaveTargets() caller and delete the eight local statics (this also removes the shadowed sv_idx). In activeHistoryFilesEqual malloc one 32 KB block for the two halves at entry and free it at done.",
+      "justification": "The malloc needs one NULL check (returning -1, which callers already treat as 'could not compare'); it replaces 32 KB of permanent .bss used only by one rarely chosen menu action.",
+      "benefit": "MEASURED map: 8 x 0x2000 + 2 x 0x4000 = 96 KB; sharing saves 7 x 8192 = 56 KB and malloc saves 32 KB -> 88 KB .bss (of 106560 B). Rated 3 not 4: RAM headroom only, the browser already mallocs ~1.5 MB per listing.",
+      "benefit_rank": 3,
+      "lines_removed": 4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "evidence/Launchstation/raw/link-raw/wLaunchELF.map:11459-11476 lists dash_browser.o .bss 0x1a040 with actionsMenu.sv_idx, actionsMenu.psu_idx, actionsMenu.sv_idx.228, opCopy.idx, opExtractPsuTo.idx, opImportSavesTo.idx, opDelete.idx, opSize.idx at 0x2000 each and activeHistoryFilesEqual.buf_a/buf_b at 0x4000 each; link/wLaunchELF-contrib-by-object.tsv gives .bss 106560 for dash_browser.o. extra-warnings-syntax-only.raw.log:1421-1422 reports the -Wshadow at 3045 vs 2698. Read every use: arrays are filled by targets()-style helpers and read only inside the same function; actionsMenu uses its arrays only for counts before the switch dispatches to the op functions."
+    },
+    {
+      "n": 4,
+      "title": "opBackupActiveMmce compares the new backup with the previous one on the UI thread after the progress overlay is closed",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 1587, "end": 1610},
+        {"path": "src/dash_browser.c", "start": 1400, "end": 1447},
+        {"path": "src/mmce_backup.c", "start": 565, "end": 577}
+      ],
+      "problem": "After mcCardBackupActiveMmce has written and verified the image, dashLoadingEnd() is called (1589) and only then activeHistoryFilesEqual reads the whole new backup and the previous history image in 16 KB reads (2 x 8 MB for a standard card), with no dashLoadingStatus/frame in the loop. On a USB destination this is several seconds with the screen frozen on the finished overlay and input ignored; when the card is unchanged the just-written 8 MB file is then deleted. The selected-card path in mmce_backup.c:565-577 compares the source with the newest history before writing anything.",
+      "fix": "Smallest: move dashLoadingEnd() below the compare and call dashLoadingStatus(\"Comparing with previous backup\", done, total) once per chunk in activeHistoryFilesEqual so frames keep drawing. Optional, saves the write: compare the source with the newest history first, as mmce_backup.c does; needs hardware testing because mcCardBackupActiveMmce keeps the synthetic source open on purpose (mc_card_export.c:250-253).",
+      "justification": "Adds about two lines (the status call and its counters); removes a multi-second unresponsive period on the UI thread, which the target rules forbid.",
+      "benefit": "INFERRED: ~16 MB read with no frame per repeat backup (seconds on USB 1.1) becomes a progress bar; the optional reorder also saves an 8 MB write + 16 MB verify read when the card is unchanged.",
+      "benefit_rank": 3,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_browser.c:1555-1623 and 1400-1447. dash_ui.c:1406-1426 (dashLoadingStatus draws only while loading_active) and 1527-1533 (dashLoadingEnd clears it): nothing is drawn during the compare. mc_card_export.c:239-296 writes then re-reads the whole image; source_info_fd (173-203) sizes are page*pages_per_cluster*clusters (8 MB for a standard card). mmce_backup.c:550-577 compares before writing. Only reached when an earlier history file exists (newest > 0 at 1596). USB throughput and resulting seconds are INFERRED, not measured."
+    },
+    {
+      "n": 5,
+      "title": "tsChoose shows the detail text only for the first four folder-date choices; the *Tuna Date row never gets its detail",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 2403, "end": 2413},
+        {"path": "src/filer_actions.c", "start": 1406, "end": 1415}
+      ],
+      "problem": "details[] has five strings, including 'set selected MC folder to 2099' for the fifth choice, but the loop assigns items[i].detail only for i < 4. selectTimestampOrganizationMode passes five items (TIMESTAMP_ORGANIZE_COUNT = 5, filer_actions.c:385-390) whenever the Tuna option is allowed, so that row is shown without its explanation.",
+      "fix": "Bound the detail lookup by the array size (5) instead of the literal 4.",
+      "justification": "",
+      "benefit": "Cosmetic correctness: the fifth detail string becomes visible; no size change.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_browser.c:2401-2416 and 2538-2557 (dash_timestamp_ui installed for time_manip_organize). filer_actions.c:385-390 enum gives TIMESTAMP_ORGANIZE_COUNT 5; 1406-1429 builds five items and calls filerTimestampUi->choose(..., items, count) with count 5 when allow_tuna."
+    },
+    {
+      "n": 6,
+      "title": "recoverCardFromPath prepares device stacks after the folder picker without waiting for the picker's in-flight listing job",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_browser.c", "start": 2224, "end": 2261},
+        {"path": "src/dash_widgets.c", "start": 1340, "end": 1346},
+        {"path": "src/dash_browser.c", "start": 1566, "end": 1574},
+        {"path": "src/dash_browser.c", "start": 1691, "end": 1704},
+        {"path": "src/dash_browser.c", "start": 1768, "end": 1770}
+      ],
+      "problem": "Every other op calls prepareOp() (wait for the worker) after dashPickPath, but recoverCardFromPath calls it before (2224) and then, after the picker, does UI-thread IO (recoveryTargetPath: up to 999 x 2 wleExists) and prepareTransferDeviceStacks, which can load drivers or reload stacks. dashPickPath can return while its own folder listing is still running on the worker (dash_widgets.c:1340: 'a listing still in flight ... frees itself'), e.g. when 'Use this folder' is chosen right after opening a slow SMB/HDD folder, breaking the worker rule in dash_worker.c:7-17. opBackupActiveMmce, opExportActiveMmcePcsx2, opBackupCard and opConvertCard similarly stat the destination after the picker but before prepareOp.",
+      "fix": "In recoverCardFromPath call prepareOp() again right after dashPickPath returns; in the four other ops move the existing prepareOp() call above the wleExists/name checks that follow the picker.",
+      "justification": "One added call in recoverCardFromPath; it closes the one path in this file that can start or reload IOP drivers while a worker listing may still be reading.",
+      "benefit": "Removes a rare race between a worker folder read and driver/stack preparation on the UI thread; +2 lines, the other four are reorders.",
+      "benefit_rank": 2,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Low",
+      "basis": "INFERRED",
+      "evidence": "Read dash_browser.c:2208-2289 and the other ops at 1492-1517, 1555-1585, 1625-1656, 1678-1715, 1740-1781 (prepareOp after the picker, wleExists before it in four). dash_widgets.c:1087-1110, 1191-1217 (Use this folder returns at once, even while pk.loading) and 1340-1346. dash_widgets.c:997-1003 shows the picker itself awaits the worker before preparing a device. filer_device.c:178-218: prepareTransferDeviceStacks calls ensurePathDeviceStackReady, which loads USB/MMCE/ATA modules and may reload the source stack. Whether a concurrent fileXio call or driver load actually corrupts the in-flight read is INFERRED."
+    }
+  ]
+}

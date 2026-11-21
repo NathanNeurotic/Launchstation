@@ -1,0 +1,162 @@
+category	file	member	section	kind	size_bytes
+first-party	build/obj/loader/loader/loader.o		.discard.linker_only	code	172
+first-party	build/obj/loader/loader/loader.o		.text.iRotateThreadReadyQueue	code	32
+first-party	build/obj/loader/loader/loader.o		.text.iSuspendThread	code	32
+first-party	build/obj/loader/loader/loader.o		.text.ExecPS2	code	32
+first-party	build/obj/loader/loader/loader.o		.text.pthread_setcancelstate	code	24
+first-party	build/obj/loader/loader/loader.o		.reginfo	metadata	24
+first-party	build/obj/loader/loader/loader.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/loader/loader/loader.o		.text.LoadExecPS2	code	16
+first-party	build/obj/loader/loader/loader.o		.text._libcglue_timezone_update	code	8
+first-party	build/obj/loader/loader/loader.o		.text._libcglue_rtc_update	code	8
+first-party	build/obj/loader/loader/loader.o		.text._ps2sdk_fileXio_set_block_size	code	8
+first-party	build/obj/loader/loader/loader.o		.text.InitTLB	code	8
+first-party	build/obj/loader/loader/loader.o		.text._ps2sdk_deinit_timer	code	8
+first-party	build/obj/loader/loader/loader.o		.text.ForTimer_InitAlarm	code	8
+first-party	build/obj/loader/loader/loader.o		.text.__libpthreadglue_init	code	8
+first-party	build/obj/loader/loader/loader.o		.text.__libpthreadglue_deinit	code	8
+first-party	build/obj/loader/loader/loader.o		.text	code	0
+first-party	build/obj/loader/loader/loader.o		.data	data	0
+first-party	build/obj/loader/loader/loader.o		.bss	bss	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memcpy.o	.reginfo	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memcpy.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memcpy.o	.data	data	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memcpy.o	.bss	bss	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memset.o	.reginfo	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memset.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memset.o	.data	data	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memset.o	.bss	bss	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strlcpy.o	.reginfo	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strlcpy.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strlcpy.o	.data	data	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strlcpy.o	.bss	bss	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strncmp.o	.reginfo	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strncmp.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strncmp.o	.data	data	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strncmp.o	.bss	bss	0
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioIoctl2	code	448
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioFormat	code	340
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioWrite	code	312
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioOpen	code	304
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioReadlink	code	296
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioGetdir	code	292
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioChStat	code	288
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioMount	code	284
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioCopyfile	code	284
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioRead	code	284
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioGetStat	code	272
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioRename	code	268
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioSymlink	code	268
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioIoctl	code	268
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioDread	code	256
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioMkdir	code	252
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioRmdir	code	244
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioRemove	code	244
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioChdir	code	244
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioLseek64	code	244
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioDopen	code	244
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioLseek	code	240
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioGetDeviceList	code	236
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioWaitAsync	code	220
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioClose	code	216
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioDclose	code	216
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioSetRWBufferSize	code	192
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioExit	code	136
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.recv_intr	code	100
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioStop	code	84
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text.fileXioSetBlockMode	code	12
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.rodata.str1.1	rodata	1
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.text	code	0
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.SyncDCache	code	140
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.InvalidDCache	code	140
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.EnableIntc	code	120
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.DisableIntc	code	120
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iSyncDCache	code	44
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iInvalidDCache	code	44
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iEnableIntc	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iDisableIntc	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iEnableDmac	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text.iDisableDmac	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	.bss	bss	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.text.TerminateLibrary	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	.bss	bss	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.text.SifIopReboot	code	144
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.text.SifIopIsAlive	code	40
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.rodata.str1.1	rodata	38
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text.SifLoadIopHeap	code	448
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text.SifFreeIopHeap	code	416
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text.SifAllocIopHeap	code	404
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text.SifInitIopHeap	code	308
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.bss	bss	44
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text.SifExitIopHeap	code	40
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel.o	.bss	bss	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text._SifLoadModule	code	608
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text._SifLoadModuleBuffer	code	540
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifStopModule	code	520
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifIopGetVal	code	512
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifIopSetVal	code	500
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifSearchModuleByName	code	424
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifSearchModuleByAddress	code	412
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifUnloadModule	code	408
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifExecModuleBuffer	code	260
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifExecModuleFile	code	232
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadModule	code	40
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadModuleEncrypted	code	40
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadStartModule	code	36
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadElfPart	code	32
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadModuleBuffer	code	32
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text.SifLoadStartModuleBuffer	code	32
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text._SifSendCmd	code	304
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text.sceSifRemoveCmdHandler	code	80
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text.sceSifSetSreg	code	28
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text.sceSifSetCmdBuffer	code	20
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text.sceSifSetSysCmdBuffer	code	20
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	.data	data	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifGetOtherData	code	524
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifExecRequest	code	460
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifRegisterRpc	code	188
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text._rpc_get_packet	code	168
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifRemoveRpc	code	136
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifRemoveRpcQueue	code	132
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifSetRpcQueue	code	128
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifRpcLoop	code	120
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifGetNextRequest	code	88
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text._rpc_get_fpacket	code	48
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text.sceSifCheckStatRpc	code	48
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.text	code	0
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	.data	data	0
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	.text._exit	code	52
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	.reginfo	metadata	24
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	.MIPS.abiflags	metadata	24
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	.data	data	4
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	.text	code	0

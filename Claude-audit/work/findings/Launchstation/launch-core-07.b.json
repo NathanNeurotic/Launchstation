@@ -1,0 +1,103 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-07.b",
+  "coverage": [
+    {"path": "include/dash_card_tool.h", "status": "read_full", "note": ""},
+    {"path": "src/dash_card_tool.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_clock_sync.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_card_tool.c is the dashboard's memory-card image tool, called from the File Browser on the UI thread (dash_browser.c:2967-3080). It reads PS2 .mcd/.bin/.vmc images through a 4-way 4 KB block cache (ctRead) and mc_card_view/mc_card_write, and copies, moves, deletes, exports (.psu/.psv/.cbs/.zip) and imports saves, each write behind an MMCE/VMC in-use check and a verified, numbered safety copy of the whole image in WLE-Safety/. It also makes resized, blank and per-game (Game ID) card images, converts save formats, imports many saves onto an image or a real card (ctPutSaveMc), and has two list views: All saves (every image in a folder and its subfolders) and Save library (.psu files with subfolder sets), plus MMCE active-card display and switching. dash_clock_sync.c sets the PS2 RTC from SNTP (0.pool.ntp.org over the ps2ips RPC sockets, converted to JST and read back) or from a manual date entered in local time.",
+  "reusable_helpers": [
+    {"name": "ctWriteFileAs / dashCardWriteVerified", "path": "src/dash_card_tool.c", "line": 552, "what": "writes a buffer to a new (O_EXCL) or truncated file in 64 KB chunks, reads it back in 4 KB blocks and removes it on mismatch"},
+    {"name": "ctSafetyCopyOf", "path": "src/dash_card_tool.c", "line": 266, "what": "verified numbered backup copy <base>-NNNN.mcd in WLE-Safety/ that keeps the newest 10"},
+    {"name": "ctRead", "path": "src/dash_card_tool.c", "line": 50, "what": "small set-associative 4 KB block cache over an open file for random-offset reads"},
+    {"name": "ctLoadPsu", "path": "src/dash_card_tool.c", "line": 666, "what": "reads a whole file into a malloc buffer with a size cap and parses any supported save format"},
+    {"name": "ctBaseName", "path": "src/dash_card_tool.c", "line": 185, "what": "file name after the last '/' or ':'"},
+    {"name": "ctLibPath", "path": "src/dash_card_tool.c", "line": 2330, "what": "bounded join of a folder and a relative path"},
+    {"name": "ctStamp / ctBcd", "path": "src/dash_card_tool.c", "line": 1379, "what": "reads the RTC and builds an 8-byte memory-card timestamp from BCD"},
+    {"name": "ctAppend", "path": "src/dash_card_tool.c", "line": 949, "what": "front-to-back-only write callback for formatting a new image"},
+    {"name": "civilDays / civilFromDays", "path": "src/dash_clock_sync.c", "line": 219, "what": "civil date to day number and back"},
+    {"name": "toBcd / fromBcd / manualToBcd / manualFromBcd", "path": "src/dash_clock_sync.c", "line": 251, "what": "BCD byte conversion (two copies in this file)"},
+    {"name": "getBe32 / putBe32", "path": "src/dash_clock_sync.c", "line": 100, "what": "big-endian 32-bit load/store"},
+    {"name": "dashClockDaysInMonth", "path": "src/dash_clock_sync.c", "line": 392, "what": "days in a month with leap-year rule"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Save library and All saves re-read everything after actions that change nothing (ctLibToCard returns 1, ctSaveMenu Export returns 2)",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_card_tool.c", "start": 2534, "end": 2534},
+        {"path": "src/dash_card_tool.c", "start": 2681, "end": 2683},
+        {"path": "src/dash_card_tool.c", "start": 2708, "end": 2708},
+        {"path": "src/dash_card_tool.c", "start": 2737, "end": 2739},
+        {"path": "src/dash_card_tool.c", "start": 2781, "end": 2783},
+        {"path": "src/dash_card_tool.c", "start": 2813, "end": 2816},
+        {"path": "src/dash_card_tool.c", "start": 2399, "end": 2418},
+        {"path": "src/dash_card_tool.c", "start": 1538, "end": 1542},
+        {"path": "src/dash_card_tool.c", "start": 2207, "end": 2210},
+        {"path": "src/dash_card_tool.c", "start": 2269, "end": 2270}
+      ],
+      "problem": "ctLibToCard returns 1 ('may have changed') after copying .psu files to a card image, although it writes only to that image and its WLE-Safety/ copy, never to a library .psu. All three callers (marked-saves menu, Apply set, single-file menu) then break out and ctLibScan reopens, mallocs and fully parses every .psu again (up to 500, each up to 8.5 MB, ctLoadPsu 685-696) on the UI thread. In All saves, a single-save Export via ctSaveMenu returns 2 and the caller rescans every card image (up to 64), while the batch Export correctly returns 0 (2048-2050).",
+      "fix": "Return 0 from ctLibToCard (the library is unchanged, so the list and marks can stay). In dashCardAllSaves rescan only after Copy, Move or Delete, e.g. let ctSaveMenu return -1 after ctExportPsu (dashCardTool ignores the return value).",
+      "justification": "",
+      "benefit": "Removes one full re-read of the library per copy: e.g. 100 saves x 300 KB = 30 MB at about 1 MB/s USB is about 30 s of loading screen (INFERRED). All saves: one rescan of up to 64 images per single export avoided.",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_card_tool.c 2465-2535 (ctLibToCard: dest is a card image picked with DASH_PICK_FILE; writes via ctPutSave; return 1 at 2534), 2644-2711 (ctLibApplySet/ctLibFileMenu return its value), 2713-2825 (loop 'read again after anything that may have changed the files'; break at 2783 and 2816 reruns ctLibScan), 2353-2459 (ctLibScan calls ctLoadPsu per file, which reads the whole file at 685-696 and mcCardSaveFromPsu copies it, mc_card_write.c:892-937). ctSaveMenu 1509-1543 returns r=2 after ctExportPsu; dashCardAllSaves 2269-2270 breaks on >=0 and 2207-2210 rescans; ctAllBatch returns 0 for export at 2048-2050. Callers on the UI thread: dash_browser.c:2985, 2991. Transfer rate is an estimate."
+    },
+    {
+      "n": 2,
+      "title": "Card contents keeps 82 KB of list buffers (ct_saves, ct_titles, ct_details, ct_items) in .bss for the whole run",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_card_tool.c", "start": 45, "end": 48},
+        {"path": "src/dash_card_tool.c", "start": 451, "end": 451},
+        {"path": "src/dash_card_tool.c", "start": 1486, "end": 1486},
+        {"path": "src/dash_card_tool.c", "start": 1577, "end": 1608},
+        {"path": "src/dash_card_tool.c", "start": 988, "end": 988},
+        {"path": "src/dash_card_tool.c", "start": 1217, "end": 1217},
+        {"path": "src/dash_card_tool.c", "start": 1404, "end": 1404}
+      ],
+      "problem": "ct_saves (30,000 B), ct_titles (24,000 B), ct_details (24,000 B) and ct_items (4,048 B) are static, but ct_titles/ct_details/ct_items are used only inside dashCardTool (1577-1622) and ct_saves only while a card dialog runs; ctDropSave (451) and dashCardNewBlank (1486) fill all 250 entries just to read the count. The sibling views already malloc their lists per call (2195-2206, 2729-2736). ctResize, ctSplitGameId and dashCardNewBlank each hold their own static sb[512]/root[1024] pair although they never run together.",
+      "fix": "Allocate the title/detail/item arrays (and the saves list) in dashCardTool on entry and free them on return, as dashCardAllSaves does; call mcViewListSaves with max 0 and NULL in ctDropSave and dashCardNewBlank (allowed, mc_card_view.c:327); give ctResize/ctSplitGameId/ctGameCard a heap list; keep one file-scope sb/root pair.",
+      "justification": "Replaces static arrays with per-call allocation. The concrete problem is 82 KB of EE RAM reserved for the whole run for a rarely opened dialog; the two sibling views in the same file already work this way, so it adds only the malloc/free lines (about +10 net).",
+      "benefit": "82,048 B of .bss returned to the heap while no card dialog is open, plus 3,072 B from sharing sb/root (MEASURED, raw/sizes/wLaunchELF-unstripped-all-symbols-by-size.tsv); peak use while the dialog is open is unchanged.",
+      "benefit_rank": 3,
+      "lines_removed": -10,
+      "effort": "M",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Symbol sizes from evidence/Launchstation/raw/sizes/wLaunchELF-unstripped-all-symbols-by-size.tsv: ct_saves 30000, ct_titles 24000, ct_details 24000, ct_items 4048, ctResize.sb/root, ctSplitGameId.sb/root, dashCardNewBlank.sb/root 512/1024 each; dash_card_tool.o .bss 109,504 (BUILD-EVIDENCE.md:91). grep -n ct_saves|ct_titles|ct_details|ct_items over src/Launchstation: only dash_card_tool.c (45-48, 451, 1005-1022, 1102, 1180-1187, 1231-1254, 1486, 1566-1622). At 451 and 1486 only n/found are used afterwards. mcViewListSaves accepts max 0 with out NULL (mc_card_view.c:327) and still sets *total."
+    },
+    {
+      "n": 3,
+      "title": "Safety copies are numbered and pruned by base name only, so same-named images share one sequence and delete each other's copies",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_card_tool.c", "start": 237, "end": 238},
+        {"path": "src/dash_card_tool.c", "start": 275, "end": 280},
+        {"path": "src/dash_card_tool.c", "start": 290, "end": 299},
+        {"path": "src/dash_card_tool.c", "start": 311, "end": 334},
+        {"path": "src/dash_card_tool.c", "start": 1282, "end": 1282},
+        {"path": "src/dash_card_tool.c", "start": 1312, "end": 1313}
+      ],
+      "problem": "ctSafetyCopyOf names copies <base>-NNNN.mcd, where base is the image name without extension cut to 47 chars, and the prune keeps 10 across all files matching that base. Images 'X.mcd' and 'X.bin' (or X.vmc/.mc2) in one folder share a sequence on any device. On MMCE all images use one folder, mmceN:/WLE-Safety/, so same-named images in different folders collide too; ctSplitGameId itself makes WLE-GameID/<source>/<ID>/<ID>-1.mcd for each source card. Ten writes to one image delete every safety copy of the other, and the names do not say which card a copy is from.",
+      "fix": "Make the base unique per image: keep the full file name including its extension (drop the dot strip at 275-276), and on MMCE also add a short hash of the full image path. Then numbering and pruning see only that image's copies.",
+      "justification": "Adds a few lines (a path hash for MMCE). The concrete problem is that the 'keep the newest 10 safety copies of this card' guarantee breaks for same-named images: older verified copies of another card are deleted. A per-image base fixes it with no new folder layout.",
+      "benefit": "Stops one card's writes from pruning another card's safety copies; about 3 net lines added (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": -3,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read ctSafetyFolder 233-245 (MMCE: fixed mmce%d:/WLE-Safety/, else the image's own folder), ctSafetyNumber 248-260 (matches by base prefix plus 4 digits plus .mcd), ctSafetyCopyOf 266-336 (base = name minus extension, max 47 chars; high = max number over the folder; prune loop deletes the lowest number while count > CT_SAFETY_KEEP=10). Every write path calls it via ctSafetyOnce (379-389). ctSplitGameId 1281-1284 and 1312-1313 make <ID>-1.mcd under a per-source folder on the same MMCE unit. ctAllCandidate 1653-1654 accepts MCD/PS2/VMC/MC2/BIN, so same-base images in one folder are plausible. How often users hit this is INFERRED."
+    }
+  ]
+}

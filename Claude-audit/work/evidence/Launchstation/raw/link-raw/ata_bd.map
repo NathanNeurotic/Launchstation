@@ -1,0 +1,219 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      b90     4 .rel.text
+       0        0       a8     4         obj/ata_bd/exports.o:(.rel.text)
+      a8       a8      ae8     4         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.rel.data)
+       0        0       28     4 .rel.rodata
+       0        0       28     4         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.rel.rodata)
+       0        0     2034    16 .text
+       0        0       74    16         obj/ata_bd/exports.o:(.text)
+       0        0        0     1                 _exp_atad
+      6c       6c        8     1                 _retonly
+      80       80     1e40    16         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.text)
+      80       80      254     1                 _start
+     2d4      2d4       58     1                 ata_intr_cb
+     32c      32c       18     1                 ata_pre_dma_cb
+     344      344       18     1                 ata_post_dma_cb
+     35c      35c       6c     1                 ata_shutdown_cb
+     3c8      3c8       4c     1                 ata_bd_read
+     414      414       4c     1                 ata_bd_write
+     460      460        c     1                 ata_bd_flush
+     46c      46c       24     1                 ata_bd_stop
+     490      490      530     1                 sceAtaInit
+     9c0      9c0        8     1                 _exit
+     9c8      9c8       10     1                 sceAtaGetError
+     9d8      9d8       18     1                 ata_set_command_type
+     9f0      9f0      384     1                 sceAtaExecCmd
+     d74      d74       60     1                 ata_device_select
+     dd4      dd4       28     1                 ata_alarm_cb
+     dfc      dfc      4b0     1                 sceAtaWaitResult
+    12ac     12ac      114     1                 gen_ata_wait_busy
+    13c0     13c0       5c     1                 sceAtaSoftReset
+    141c     141c       9c     1                 sceAtaFlushCache
+    14b8     14b8       5c     1                 sceAtaIdle
+    1514     1514       60     1                 sceAtaGetSceId
+    1574     1574       64     1                 sceAtaSmartSaveAttr
+    15d8     15d8       a8     1                 sceAtaSmartReturnStatus
+    1680     1680       30     1                 sceAtaDmaTransfer
+    16b0     16b0      290     1                 ata_device_sector_io64
+    1940     1940       60     1                 ata_set_dir
+    19a0     19a0       ec     1                 sceAtaSecuritySetPassword
+    1a8c     1a8c       58     1                 ata_get_security_status
+    1ae4     1ae4      104     1                 sceAtaSecurityUnLock
+    1be8     1be8       f8     1                 sceAtaSecurityEraseUnit
+    1ce0     1ce0       5c     1                 sceAtaIdleImmediate
+    1d3c     1d3c       60     1                 ata_device_identify
+    1d9c     1d9c       c8     1                 ata_device_probe
+    1e64     1e64       5c     1                 ata_device_standby_immediate
+    1ec0     1ec0      174    16         obj/ata_bd/imports.o:(.text)
+    1ed4     1ed4        0     1                 RegisterLibraryEntries
+    1ef8     1ef8        0     1                 DelayThread
+    1f00     1f00        0     1                 SetAlarm
+    1f08     1f08        0     1                 CancelAlarm
+    1f10     1f10        0     1                 USec2SysClock
+    1f34     1f34        0     1                 CreateEventFlag
+    1f3c     1f3c        0     1                 iSetEventFlag
+    1f44     1f44        0     1                 ClearEventFlag
+    1f4c     1f4c        0     1                 WaitEventFlag
+    1f70     1f70        0     1                 printf
+    1f94     1f94        0     1                 memcpy
+    1f9c     1f9c        0     1                 memset
+    1fc0     1fc0        0     1                 SpdRegisterIntrHandler
+    1fc8     1fc8        0     1                 SpdDmaTransfer
+    1fd0     1fd0        0     1                 SpdIntrEnable
+    1fd8     1fd8        0     1                 SpdIntrDisable
+    1fe0     1fe0        0     1                 SpdSetLED
+    1fe8     1fe8        0     1                 Dev9RegisterPowerOffHandler
+    1ff0     1ff0        0     1                 dev9RegisterPreDmaCb
+    1ff8     1ff8        0     1                 dev9RegisterPostDmaCb
+    201c     201c        0     1                 bdm_connect_bd
+    2024     2024        0     1                 bdm_disconnect_bd
+       0        0      534    16 .rodata
+       0        0       96    16         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.rodata)
+      14       14       12     1                 smart_cmd_table
+      26       26       70     1                 ata_cmd_table
+      a0       a0      479    16         <internal>:(.rodata.str1.1)
+     520      520       10    16         <internal>:(.rodata.cst16)
+     530      530        4    16         <internal>:(.rodata.cst4)
+  402594   402594    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       10    16 .data
+       0        0        0    16         obj/ata_bd/exports.o:(.data)
+       0        0        c    16         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.data)
+       0        0        8     1                 _irx_id
+       8        8        4     1                 ata_evflg
+      10       10        0    16         obj/ata_bd/imports.o:(.data)
+  4425b0   4425b0        0     1 __bss_start = .
+       0        0      2e0    16 .bss
+       0        0        0    16         obj/ata_bd/exports.o:(.bss)
+       0        0      2d1    16         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.bss)
+       0        0        1     1                 ata_dvrp_workaround
+       4        4        1     1                 ata_gamestar_workaround
+       8        8       30     1                 atad_devinfo
+      38       38       80     1                 g_ata_bd
+      b8       b8        4     1                 g_atad_search_command
+      bc       bc        4     1                 g_atad_search_type
+      c0       c0        4     1                 atad_cmd_state.0
+      c4       c4        4     1                 atad_cmd_state.1
+      c8       c8        4     1                 atad_cmd_state.2
+      cc       cc        4     1                 atad_cmd_state.3
+      d0       d0      200     1                 ata_param
+     2d0      2d0        1     1                 ata_devinfo_init
+     2e0      2e0        0    16         obj/ata_bd/imports.o:(.bss)
+  442890   442890        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/ata_bd/exports.o:(.mdebug.abi32)
+       0        0        0     1         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.mdebug.abi32)
+       0        0        0     1         obj/ata_bd/imports.o:(.mdebug.abi32)
+       0        0      480     4 .pdr
+       0        0       20     4         obj/ata_bd/exports.o:(.pdr)
+      20       20      460     4         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.pdr)
+       0        0      120     4 .rel.pdr
+       0        0        8     4         obj/ata_bd/exports.o:(.rel.pdr)
+       8        8      118     4         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.rel.pdr)
+       0        0        d     1 .llvm_addrsig
+       0        0        0     1         obj/ata_bd/exports.o:(.llvm_addrsig)
+       0        0        d     1         obj/ata_bd/iop/ata_bd/src/ps2atad.o:(.llvm_addrsig)
+       d        d        0     1         obj/ata_bd/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      740     4 .symtab
+       0        0      740     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      5f1     1 .strtab
+       0        0      5f1     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_exp_atad                                         obj/ata_bd/exports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+_start                                            obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+_retonly                                          obj/ata_bd/exports.o
+_exit                                             obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaInit                                        obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSoftReset                                   obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaExecCmd                                     obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaWaitResult                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaGetError                                    obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaDmaTransfer                                 obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSecuritySetPassword                         obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSecurityUnLock                              obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSecurityEraseUnit                           obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaIdle                                        obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaGetSceId                                    obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSmartReturnStatus                           obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaSmartSaveAttr                               obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaFlushCache                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+sceAtaIdleImmediate                               obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+ata_device_sector_io64                            obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+ata_set_command_type                              obj/ata_bd/iop/ata_bd/src/ps2atad.o
+                                                  obj/ata_bd/exports.o
+printf                                            obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+CreateEventFlag                                   obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SpdRegisterIntrHandler                            obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+dev9RegisterPreDmaCb                              obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+dev9RegisterPostDmaCb                             obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+Dev9RegisterPowerOffHandler                       obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+RegisterLibraryEntries                            obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+memset                                            obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SpdIntrDisable                                    obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+iSetEventFlag                                     obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+DelayThread                                       obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+bdm_connect_bd                                    obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+ClearEventFlag                                    obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+USec2SysClock                                     obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SetAlarm                                          obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SpdIntrEnable                                     obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SpdSetLED                                         obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+WaitEventFlag                                     obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+SpdDmaTransfer                                    obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+CancelAlarm                                       obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+memcpy                                            obj/ata_bd/imports.o
+                                                  obj/ata_bd/iop/ata_bd/src/ps2atad.o
+_irx_id                                           obj/ata_bd/iop/ata_bd/src/ps2atad.o
+bdm_disconnect_bd                                 obj/ata_bd/imports.o

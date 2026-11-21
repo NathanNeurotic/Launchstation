@@ -1,0 +1,34 @@
+# CANDIDATE LIST ONLY (smbman link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/smbman/imports.o	DelayThread	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/smbman/iop/smbman/smb.o	smb_NTCreateAndX	FUNC	636	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb.o	smb_ReadAndX	FUNC	544	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb.o	smb_WriteAndX	FUNC	488	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smbman_fdhandles	OBJECT	9216	GLOBAL	.bss	6	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_devctl	FUNC	776	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_dread	FUNC	432	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_dopen	FUNC	416	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_chdir	FUNC	412	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_open	FUNC	332	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_write	FUNC	304	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_read	FUNC	292	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_lseek64	FUNC	276	GLOBAL	.text	2	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_rmdir	FUNC	220	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_close	FUNC	204	GLOBAL	.text	2	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_getstat	FUNC	204	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_init	FUNC	188	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_rename	FUNC	188	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_mkdir	FUNC	156	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_remove	FUNC	152	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	DMA_sendEE	FUNC	124	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_closeAll	FUNC	116	GLOBAL	.text	2	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_deinit	FUNC	92	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_lseek	FUNC	40	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smb_dclose	FUNC	8	GLOBAL	.text	1	yes
+build/obj/smbman/iop/smbman/smb_fio.o	smbman_io_sema	OBJECT	4	GLOBAL	.bss	12	yes
+build/obj/smbman/iop/smbman/smbman.o	_start	FUNC	60	GLOBAL	.text	0	yes
+build/obj/smbman/iop/smbman/smbman.o	_irx_id	OBJECT	8	GLOBAL	.data	0	yes

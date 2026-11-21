@@ -1,0 +1,22 @@
+section	vma_hex	size_bytes	sum_of_input_sections
+. = 0x0400000	0	4194304	0
+.reginfo	0	24	24
+.rel.text	0	7536	7536
+.rel.data	0	248	248
+.rel.rodata	0	64	64
+.text	0	26672	26632
+.rodata	0	4453	4441
+. = ALIGN(0x40000) + (. & (0x40000 - 1))	4079b5	262144	0
+.data	0	176	152
+__bss_start = .	447a70	0	0
+.bss	0	22976	22957
+. = ALIGN(32 / 8)	44d430	0	0
+.comment	0	105	105
+.mdebug.abi32	0	0	0
+.pdr	0	2400	2400
+.rel.pdr	0	600	600
+.llvm_addrsig	0	35	35
+.note.GNU-stack	0	0	0
+.symtab	0	2864	2864
+.shstrtab	0	160	160
+.strtab	0	2008	2008

@@ -1,0 +1,89 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-12.b",
+  "coverage": [
+    {"path": "src/dash_settings.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_settings.c is the dashboard Settings screen. It holds the page and item tables (classic wLaunchELF settings, dashboard theme, launch keys, network, SMB/NFS share editor, clock, paths), choice and colour editors, and the session logic that snapshots SETTING, dashCfg and the theme on entry, tracks dirty state and saves or discards on leave. Saves of LAUNCHSTATION.CNF and IPCONFIG.DAT are queued to the dash_worker thread (cfgSaveRun/cfgSaveDone); theme folder IO also goes through the worker. All drawing and input run on the UI thread through settingsDraw and settingsInput, and modal editors (colour, keyboard, clock) loop on dashRenderScene, which redraws the Settings screen underneath them.",
+  "reusable_helpers": [
+    {"name": "smbedSplitUrl", "path": "src/dash_settings.c", "line": 410, "what": "splits smb://host[:port]/share into host, port and share fields with size checks"},
+    {"name": "smbedNfsOption", "path": "src/dash_settings.c", "line": 461, "what": "reads one key=value option (uid=, gid=) from the query part of an nfs:// URL"},
+    {"name": "pathLeaf", "path": "src/dash_settings.c", "line": 2080, "what": "file-name leaf of a device path for display (folders shown whole, 'Not set' for empty)"},
+    {"name": "mcAlias", "path": "src/dash_settings.c", "line": 2098, "what": "rewrites mc0:/mc1: paths to the slot-neutral mc: form"},
+    {"name": "startDirOf", "path": "src/dash_settings.c", "line": 2140, "what": "directory part of a path for a file picker, mapping mc: to mc0:"},
+    {"name": "textChanged", "path": "src/dash_settings.c", "line": 2400, "what": "compares a saved config text snapshot with a freshly built one"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Classic colour editor (colorEditor) loses every change: settingsDraw's colorField call resets classic_col each frame",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 1442, "end": 1453},
+        {"path": "src/dash_settings.c", "start": 1492, "end": 1495},
+        {"path": "src/dash_settings.c", "start": 1536, "end": 1552},
+        {"path": "src/dash_settings.c", "start": 1574, "end": 1574},
+        {"path": "src/dash_settings.c", "start": 3984, "end": 3986},
+        {"path": "src/dash_main.c", "start": 1210, "end": 1210}
+      ],
+      "problem": "colorEditor edits classic_col[i] through the pointer colorField returns, then calls dashRenderScene() every frame (1574). That runs settingsDraw (dash_main.c:1210), whose ST_COLOR rows call colorField again (3986), and its classic branch (1445-1452) rewrites classic_col[i] from the unchanged setting->color. Each Left/Right/swatch step is undone before the next frame, so on OK c equals orig and classicColorStore (1551-1552) never runs: the 8 classic colour rows (788-795) cannot be changed.",
+      "fix": "In colorEditor, edit a local DashColor copy for classic colours (copy *c into a local and point c at it when classic is set) and pass that value to classicColorStore on OK instead of reading classic_col. Theme colours keep editing dashTheme directly. Adjust tests/test_classic_settings_persistence.py if classicColorStore takes the colour as an argument.",
+      "justification": "Adds about two lines (the local copy and the pointer switch). settingsDraw has to keep refreshing classic_col to show the current values, so the editor needs its own copy; this is smaller than tracking which row is being edited.",
+      "benefit": "Makes the 8 classic colour settings editable from Settings again; adds about 2 lines (INFERRED from the cited code path, not run on hardware).",
+      "benefit_rank": 3,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_settings.c 1425-1584 (classic_col, classicColorStore, colorField, colorEditor loop) and 3906-3994 (settingsDraw draws rows item_top..item_top+ITEM_ROWS, includes the focused row, calls colorField for ST_COLOR). Read dash_main.c 1186-1222: dashRenderScene calls screens[section]->draw() unless scene_override is set; grep dashPushSceneOverride shows only browser, exploit, editor, hex and hdd scenes push one, never Settings. colorEditor's only caller is settingsInput at 3791 for ST_COLOR rows."
+    },
+    {
+      "n": 2,
+      "title": "SMB/NFS editor passes sizeof(buf) as dashModalKeyboard max_len: 1-byte stack overwrite, and edit[96] truncates the 127-char share path",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 688, "end": 700},
+        {"path": "src/dash_settings.c", "start": 3376, "end": 3381},
+        {"path": "src/dash_settings.c", "start": 3393, "end": 3396},
+        {"path": "src/dash_settings.c", "start": 3405, "end": 3411},
+        {"path": "src/dash_widgets.c", "start": 341, "end": 350}
+      ],
+      "problem": "dashModalKeyboard's max_len is a string length: kbInsert (dash_widgets.c:345) inserts while strlen < max_len, so the result can hold max_len chars plus the NUL. smbedEditField (693), the port field (3380-3381) and NFS uid/gid (3411) pass sizeof(buf), so a full-length entry writes the NUL one byte past edit[96], buf[8] or buf[12] on the stack. Other callers (3359-3360) pass sizeof-1. edit[96] is also smaller than smbed.folder[128] (398): a share/export path is cut to 95 chars at 692 though 3395 promises 127.",
+      "fix": "Pass sizeof(edit) - 1 and sizeof(buf) - 1 at the three dashModalKeyboard calls, and declare edit as 128 bytes (the size of smbed.folder, the largest field edited there).",
+      "justification": "",
+      "benefit": "Closes a 1-byte stack overwrite reached by typing 8 chars in Port, 12 in UID/GID or 96 in a share field; share paths of 96-127 chars become enterable. 0 lines; +32 bytes of stack in smbedEditField (INFERRED).",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_widgets.c 341-350 (kbInsert: if len >= max_len return; else insert), 442-469 (modalKeyboard caps max_len to 255, passes it to kbUsb and kbInsert) and 653-656 (dashModalKeyboard). Read dash_settings.c 392-407 (smbed: host[80], folder[128], uid/gid[12]), 688-700, 3355-3420. Same-file caller with the length convention: 3359-3360 (sizeof(edit) - 1); also dash_editor.c:552. Reachable: SMB and ETH are default defines of the wLaunchELF target (brief: ps2.yaml:624,627); rows are on the SMB/NFS share editor pages."
+    },
+    {
+      "n": 3,
+      "title": "Settings reads files on the UI thread without dashWorkerAwaitAll (S_LANGUAGE language reload, SMB2.CNF reads in the share editor)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 1917, "end": 1919},
+        {"path": "src/dash_settings.c", "start": 565, "end": 567},
+        {"path": "src/dash_settings.c", "start": 3482, "end": 3484},
+        {"path": "src/dash_settings.c", "start": 496, "end": 496},
+        {"path": "src/dash_settings.c", "start": 2122, "end": 2125},
+        {"path": "src/dash_worker.c", "start": 6, "end": 10}
+      ],
+      "problem": "dash_worker.c:6-10 says the UI thread does no IO while a job runs, and pathApplied guards Load_External_Language with dashWorkerAwaitAll (2122-2125, 'these read files on the UI thread'). The S_LANGUAGE choice calls the same function (1919) with no guard; it opens and reads setting->lang_file when one is set (lang.c:469-486). The share editor reads SMB2.CNF with dashLoadTextFile (566-567, 3483-3484), and smbSharesSnapshot (496) can re-read LAUNCHSTATION.CNF or mc0/mc1 SYS-CONF (smb_shares.c:81-121, 216-219), with no worker check, while a queued job such as an earlier Save (cfgSaveRun, 2286-2298) may be using the same card.",
+      "fix": "Before each read, call dashWorkerAwaitAll and stop when it returns 0, as pathApplied does: in the S_LANGUAGE case, in smbedWriteFile's base == NULL branch, before the S_SMBED_TEXT read, and before smbedLoadPick at 3786.",
+      "justification": "Each guard adds about 2 lines. It is the documented mechanism (dash_worker.c:15-17) already used at 2124 and 2559 for the same kind of read, and it stops libmc/fileXio being used from two threads at once, which the worker rules forbid.",
+      "benefit": "Removes a race between UI-thread card reads and worker writes during Settings edits; about +8 lines (4 guards x 2). Harm on hardware INFERRED, not reproduced.",
+      "benefit_rank": 2,
+      "lines_removed": -8,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read dash_worker.c 1-22 (rules), dash_settings.c 2109-2138 (guarded pathApplied), 1912-1920 (unguarded S_LANGUAGE), 551-606 and 3427-3504 (SMB editor reads), 3780-3787 (smbedLoadPick on page open), 2286-2350 (cfgSave on worker). lang.c 452-488: Load_External_Language uses genOpen/genRead when lang_file is set. dash_store.c 105-139: dashLoadTextFile does genOpen/genRead with no worker check. smb_shares.c 81-121, 199-222: smbSharesConfigured/Snapshot call smbReadConfig when the cache is cold or mc1 is pending. Other UI-thread IO sites check dashWorkerIoBusy (dash_main.c:1266, dash_sound.c:171)."
+    }
+  ]
+}

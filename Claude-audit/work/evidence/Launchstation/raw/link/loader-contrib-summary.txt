@@ -1,0 +1,24 @@
+# source: loader-contrib-by-object.tsv (bytes of input sections placed in each output section, from the ld.lld map)
+category	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+sdk	13188	0	4	0	39464	0	0	52656
+first-party	1928	32	0	0	16	0	0	1976
+linker-internal	0	41	0	0	0	0	8	49
+ALL	15116	73	4	0	39480	0	8	54681
+
+archive	members_in_link	.text	.rodata	.data	.bss	total
+$SDK/packages-llvm/core/filexio/lib/libfilexio.a	1	1552	0	0	31812	33364
+$SDK/packages-llvm/core/kernel/lib/libkernel.a	8	10420	0	4	7324	17748
+$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	1	868	0	0	328	1196
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	4	348	0	0	0	348
+
+Top 40 first-party / embed-blob / linker-internal contributors to .text
+1928	build/obj/loader/loader/loader.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .rodata
+41	<internal>
+32	build/obj/loader/loader/loader.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .data
+
+Top 40 first-party / embed-blob / linker-internal contributors to .bss
+16	build/obj/loader/loader/loader.o

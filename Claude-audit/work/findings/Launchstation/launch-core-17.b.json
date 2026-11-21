@@ -1,0 +1,184 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-17.b",
+  "coverage": [
+    {"path": "src/filer.c", "status": "read_full", "note": ""},
+    {"path": "include/filer_actions.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "src/filer.c is the classic uLE/wLaunchELF browser core that the dashboard still uses for every listing: per-device directory readers (memory card via libmc, XFROM, cdfs, HDD/PFS with partition mounting, DVRP, VMC, generic fileXio for BDM/MMCE/MX4SIO/iLink/ATA/CF, host, UDPFS, SMB/NFS), the listDir dispatcher behind getDir/getDirComplete with open/read completeness tracking, genFixPath path translation (uLE:/, usb/mass aliases, ATA/CF canonical forms, hddN:/partition to pfsN:), the asynchronous root memory-card presence poll, USB drive discovery, and setFileList for the classic root and MISC pseudo-folders. include/filer_actions.h only declares the file-action API (size, timestamps, delete/rename/newdir, exploit-folder protection) implemented in src/filer_actions.c.",
+  "reusable_helpers": [
+    {"name": "mapUsbPathToFatFsPath", "path": "src/filer.c", "line": 280, "what": "maps usb:/usbN: aliases to the BDM device path (usbN: or mass/massN:)"},
+    {"name": "mapMassPathToFatFsPath", "path": "src/filer.c", "line": 312, "what": "maps mass:/massN: paths to the exFAT BDM namespace"},
+    {"name": "canonicalizeAtaPath", "path": "src/filer.c", "line": 684, "what": "turns ata:/ataN: into ataN:/ form"},
+    {"name": "canonicalizePcCardCfPath", "path": "src/filer.c", "line": 701, "what": "turns cf:/cfN: into cfN:/ form"},
+    {"name": "getHddDeviceFromPath", "path": "src/filer.c", "line": 662, "what": "extracts the hddN: device prefix from a path"},
+    {"name": "isSimpleDeviceRootPath", "path": "src/filer.c", "line": 338, "what": "true for dev: or dev:/ paths"},
+    {"name": "makeFslPath", "path": "src/filer.c", "line": 1682, "what": "copies a path converting backslashes to forward slashes"},
+    {"name": "makeHostPath", "path": "src/filer.c", "line": 1647, "what": "builds a host: path, optionally with backslash separators"},
+    {"name": "readNetDir", "path": "src/filer.c", "line": 1848, "what": "lists a network folder into FILEINFO and returns read/close errors"},
+    {"name": "filerEnsureElisaFont", "path": "src/filer.c", "line": 68, "what": "size-checked whole-file read into a memaligned buffer with a short-read loop"},
+    {"name": "clipReserve", "path": "src/filer.c", "line": 141, "what": "grow-on-demand realloc of a FILEINFO array that keeps the old one on failure"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Listing a missing folder or empty device root waits the whole 2-3 s retry budget every time (readGENERICWithFirstOpenRetry, ATA, MX4SIO)",
+      "category": 5,
+      "locations": [
+        {"path": "src/filer.c", "start": 345, "end": 381},
+        {"path": "src/filer.c", "start": 1960, "end": 1993},
+        {"path": "src/filer.c", "start": 2009, "end": 2041},
+        {"path": "src/filer.c", "start": 2090, "end": 2091},
+        {"path": "src/filer.c", "start": 2141, "end": 2188},
+        {"path": "src/filer.c", "start": 2206, "end": 2206},
+        {"path": "src/filer.c", "start": 2216, "end": 2216},
+        {"path": "src/dash_themes.c", "start": 965, "end": 968},
+        {"path": "src/dash_themes.c", "start": 993, "end": 995},
+        {"path": "src/dash_store.c", "start": 29, "end": 33}
+      ],
+      "problem": "Every usb/mass (2000 ms), iLink (3000 ms) and CF (2000 ms) listing goes through readGENERICWithFirstOpenRetry, and listDir repeats the loop for ATA and MX4SIO (750 ms, 2000 ms at a root). The retry is not limited to a first open: a missing sub-folder fails Dopen on every pass, and an empty root opens but is_root forbids the early break, so both run the full budget, polling with 100 ms busy spins. Example: booted from USB without a THEMES folder, the awaited 'Looking for themes' job (dash_settings.c:2913-2922) blocks 2 s per USB theme root; the library scan's default mass:/APPS/ and mass:/BOOT/ cost 2 s each when missing.",
+      "fix": "Retry only on the first open of a device unit per IOP session, keyed the same way as waitUsbTargetReady (filer.c:913-944), so later listings of a missing folder or empty root return at once; replace the three 100 ms spin loops with DelayThread(100000).",
+      "justification": "The per-unit mask check adds about four lines but removes repeated multi-second modal stalls on common layouts (missing THEMES/APPS/BOOT folders, empty sticks); it reuses the mask pattern already in this file rather than adding a mechanism, and replacing the spins removes six lines.",
+      "benefit": "Up to 2 s (iLink 3 s, ATA/MX4SIO 0.75 s) per listing of a missing folder or empty root; 2-4 s off the theme list when booted from USB (INFERRED from the loop budgets).",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer.c:345-381 (non-root: return only when Dopen succeeds, else loop until budget; root: break needs n>0), listDir 1960-1993 (mass/usb budget 2000), 2206 (ilink 3000), 2216 (cf 2000), ATA 1994-2043, MX4SIO 2069-2189. dash_themes.c:960-995 themeRoots builds <LaunchElfDir>THEMES/ and getDir()s it; called from dash_settings.c:2893 inside a job awaited with dashWorkerAwait (2911-2926). dash_lib.c:779-801 scanRun -> scanDir -> getDirComplete (704) for dash_store.c:29-33 defaults. mapMassPathToFatFsPath('mass:/APPS/') gives 'usb0:/APPS/', not a simple root. git log -S on the retry loop: from the initial import 944a2fc."
+    },
+    {
+      "n": 2,
+      "title": "hddParties/dvrParties keep 135 KB of partition names in .bss only to fill the HDD and DVR root listings",
+      "category": 4,
+      "locations": [
+        {"path": "src/filer.c", "start": 130, "end": 134},
+        {"path": "src/filer.c", "start": 762, "end": 770},
+        {"path": "src/filer.c", "start": 865, "end": 873},
+        {"path": "src/filer.c", "start": 1194, "end": 1197},
+        {"path": "src/filer.c", "start": 1267, "end": 1270}
+      ],
+      "problem": "hddParties[2][1400][33] (92,400 B) and dvrParties[1400][33] (46,200 B) are filled by setPartyListForDevice/setDVRPPartyList and read only by the root branches of readHDD and readHDDDVRP, which copy the names into info[]. Every other user (genFixPath 1063/1093, filerDirReadNeedsPrep 802, filerPrepareDirRead 829, invalidatePartitionCaches 880-887) only tests the counts, so the name tables are a cache of one listing held for the whole run.",
+      "fix": "Let the root branches of readHDD/readHDDDVRP write the partition names straight into info[] from the same hddN:/dvr_hdd0: Dread loop (give setPartyListForDevice/setDVRPPartyList an optional info pointer, NULL = count only), and delete both name tables, keeping hddNparties/ndvrpparties as counts. tests/test_listing_complete.py mirrors these tables in its stubs and needs the same change.",
+      "justification": "",
+      "benefit": "138,600 bytes of .bss removed (MEASURED: BUILD-EVIDENCE.md:83 lists hddParties 92400 and dvrParties 46200); the root listing then re-reads the partition table each time, a few APA RPCs.",
+      "benefit_rank": 4,
+      "lines_removed": 4,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -n 'hddParties|dvrParties' over src/Launchstation: only filer.c:130,133 (definitions), 767-768 and 870-871 (writes), 1195 and 1268 (root listing copies); tests/test_listing_complete.py:166,202 are stub copies. Grep 'hddNparties|ndvrpparties|MAX_PARTITIONS' over src/: other users only compare counts; dash_hdd.c:162,293 mallocs its own per-job partition arrays. Sizes from evidence/Launchstation/BUILD-EVIDENCE.md:83 (llvm-nm of the unstripped ELF); MAX_PARTITIONS=1400, MAX_PART_NAME=32 at include/launchelf.h:202,206."
+    },
+    {
+      "n": 3,
+      "title": "mcDir: a 128 KB libmc directory table is reserved in .bss for the whole run but used only during readMC/readXFROM",
+      "category": 4,
+      "locations": [
+        {"path": "src/filer.c", "start": 486, "end": 488},
+        {"path": "src/filer.c", "start": 507, "end": 541},
+        {"path": "src/filer.c", "start": 580, "end": 596}
+      ],
+      "problem": "static sceMcTblGetDir mcDir[MAX_ENTRY + 1] (2049 x 64 B = 131,136 B) receives mcGetDir/xfromGetDir results and is copied entry by entry into the caller's FILEINFO array in the same function; nothing reads it afterwards, yet it stays reserved for the whole session, including while copy, cloud TLS or image code needs heap.",
+      "fix": "Allocate the table with memalign(64, limit * sizeof(sceMcTblGetDir)) at the start of readMC/readXFROM, free it after the copy loop (a failed allocation is handled like a failed read), and delete the static table; update tests/test_listing_complete.py:248 and tests/test_mc_detect_retry.py:16, which match the declaration text.",
+      "justification": "Adds an allocate/free pair (about six lines) to return 128 KB of permanently reserved RAM to the heap outside memory-card listings; memalign keeps the 64-byte alignment the SIF transfer needs. Peak memory during an MC listing is unchanged, which is why this is rated below the RAM threshold.",
+      "benefit": "131,136 bytes of .bss no longer reserved outside MC/XFROM listings (MEASURED: BUILD-EVIDENCE.md:83, 131136 .bss mcDir); peak during a listing unchanged.",
+      "benefit_rank": 3,
+      "lines_removed": -5,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -n 'mcDir' over src/Launchstation: filer.c:488 (definition), 509, 534-538 (readMC), 581, 590-594 (readXFROM); tests/test_listing_complete.py:248 and tests/test_mc_detect_retry.py:16 match the source line. limit is at most MAX_ENTRY + 1 (507, 580). Size from evidence/Launchstation/BUILD-EVIDENCE.md:83."
+    },
+    {
+      "n": 4,
+      "title": "readHOST elflist.txt parser drops the last entry of a list without a trailing newline and can overrun FILEINFO.name",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer.c", "start": 1780, "end": 1804},
+        {"path": "src/filer.c", "start": 1687, "end": 1697},
+        {"path": "include/launchelf.h", "start": 562, "end": 562}
+      ],
+      "problem": "The parser ends the buffer with a synthetic newline (1782) and returns hostcount - 1 (1804), which only cancels the empty entry made when the file itself ends with a newline (an empty line opens as the folder host:). A list without a trailing newline loses its last ELF, every blank line adds a nameless folder, and a list with no valid line returns -1. Lines are buffered up to MAX_PATH-1 characters (1799) and makeFslPath copies up to 1024 bytes into info[].name, which is 256 bytes, so a line over 255 characters that opens overruns the entry's title and stats.",
+      "fix": "Skip empty lines, return hostcount, and cap a buffered line at sizeof(info->name) - 1 characters (ps2host truncates paths to 255 anyway, iop/ps2host/hostlink.h:68).",
+      "justification": "",
+      "benefit": "Correct elflist.txt listings (last ELF no longer hidden, no blank entries) and no name overrun; no size change (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read filer.c:1740-1805: trace 'a\\nb' (no final newline): lines a, b -> hostcount 2 -> returns 1. 'a\\nb\\n': third empty line -> host_path 'host:' -> fileXioDopen('host:') -> nameless folder -> returns 2. That Dopen('host:') succeeds is INFERRED from initHOST (1731-1734) and the root branch (1807), which rely on it. FILEINFO.name is char[MAX_NAME] (launchelf.h:562, MAX_NAME 256 at :201); makeFslPath bound MAX_PATH-1 (1687). readHOST reached from listDir (2051-2052) for host: paths. git log -S 'return hostcount - 1': from the initial import 944a2fc."
+    },
+    {
+      "n": 5,
+      "title": "readCD rejects and spins down a DVD-Video/ESR or audio disc that finishes detection during its 500 ms wait",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer.c", "start": 611, "end": 623},
+        {"path": "src/init.c", "start": 1359, "end": 1373},
+        {"path": "src/init.c", "start": 1388, "end": 1407}
+      ],
+      "problem": "When the disc is still detecting at entry (611), the loop waits for uLE_cdDiscValid, which accepts SCECdCDDA and SCECdDVDV; the range check that follows (619) treats every type above SCECdPS2DVD as invalid, calls uLE_cdStop (stops the drive, init.c:1404) and returns an empty listing. If detection had already finished before entry the check is skipped and the same disc lists. Trigger: insert an ESR-patched disc (reported as DVDV, init.c:1396-1401) or a DVD-Video and open cdfs: right away; the first listing is empty and the drive spins down.",
+      "fix": "After the wait, return 0 only when the last uLE_cdDiscValid() call failed; delete the range check and the uLE_cdStop call.",
+      "justification": "",
+      "benefit": "First cdfs listing after inserting a DVD-Video/ESR disc works; about 3 lines removed (INFERRED: the 4-line check becomes one test of the loop's last result).",
+      "benefit_rank": 2,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read filer.c:605-655 and init.c:1359-1408. The enum order SCECdPS2DVD 0x14 < SCECdCDDA 0xFD < SCECdDVDV 0xFE is from ps2sdk libcdvd-common.h (INFERRED: the SDK is not in the clone; tests/test_launch_driver_messages.py:65-66 uses stub values). LIBCDVD_LEGACY is not defined by ps2.yaml, so this readCD is the compiled one; include/snippets/readCD.h:12-24 has the same logic but is not built. readCD is reached from listDir (2044-2048)."
+    },
+    {
+      "n": 6,
+      "title": "genFixPath sprintf into party[MAX_NAME] overflows the stack for an hdd0:/ or dvr_hdd0:/ path whose partition part exceeds about 250 characters",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer.c", "start": 948, "end": 948},
+        {"path": "src/filer.c", "start": 1051, "end": 1062},
+        {"path": "src/filer.c", "start": 1079, "end": 1090},
+        {"path": "src/lang.c", "start": 472, "end": 472},
+        {"path": "src/config.c", "start": 1047, "end": 1048},
+        {"path": "src/config.c", "start": 1058, "end": 1059}
+      ],
+      "problem": "loc_path (MAX_PATH) takes everything after 'hddN:/', is cut at the next '/', and sprintf(party, \"%s%s\", hdd_device, loc_path) (1062) or \"dvr_hdd0:%s\" (1090) writes it into the 256-byte stack buffer party without a bound. APA names are at most 32 characters, so only hand-edited or corrupted text reaches it, for example LAUNCHSTATION.CNF LANG_FILE or CNF_Path (MAX_PATH fields copied by config.c:1048,1059) passed to genFixPath at boot by lang.c:472 and main_modules.c:13.",
+      "fix": "Use snprintf(party, sizeof(party), ...) at both sites and return -1 (bad path) when the result does not fit.",
+      "justification": "Adds one length comparison per site; it closes a stack overflow reachable from config text, and a partition name that long cannot exist, so failing the path is correct.",
+      "benefit": "Removes a boot-time stack overflow on a malformed config path; about 2 lines added (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read filer.c:946-1107: party[MAX_NAME] (948, MAX_NAME 256 at launchelf.h:201), loc_path from uLE_path + 6 (1051) or + 10 (1079), sprintf at 1062 and 1090. uLE_related copies non-uLE paths unchanged (main_fileops.c:51-53). Config fields CNF_Path/lang_file are char[MAX_PATH] (launchelf.h:281,303), filled by strcpy at config.c:1048,1059; callers genFixPath(setting->lang_file) lang.c:472 and genFixPath(setting->CNF_Path) main_modules.c:13."
+    },
+    {
+      "n": 7,
+      "title": "genFixPath strips the '/' after the device with an overlapping strcpy at four sites (undefined behaviour)",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer.c", "start": 975, "end": 977},
+        {"path": "src/filer.c", "start": 989, "end": 991},
+        {"path": "src/filer.c", "start": 1014, "end": 1016},
+        {"path": "src/filer.c", "start": 1023, "end": 1025}
+      ],
+      "problem": "Each site does strcpy(gen_path + (sep - gen_path), sep + 1) with sep inside gen_path, i.e. copies a string onto itself shifted by one byte; overlapping strcpy is undefined in C. It works today only because the copy runs forward byte by byte for these misaligned pointers (INFERRED from newlib's strcpy). The mx4sio site (1031-1032) copies from uLE_path into gen_path and is not affected.",
+      "fix": "Replace the four identical three-line blocks with one small static helper that finds the separator and shifts the tail with memmove, called from the four branches.",
+      "justification": "The helper replaces four copies of the same three lines (net about 2 lines fewer) and makes the shift well defined.",
+      "benefit": "Defined behaviour for every usb/mass/ata/cf path; about 2 lines removed (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read filer.c:966-1032: fatfs_sep/pathSep are strchr(gen_path, '/') at 975, 989, 1014, 1023, and the strcpy destination is the same pointer, source one byte later. The non-EXFAT branch (995-998) and mx4sio (1031-1032) take the separator from uLE_path, a different buffer. EXFAT is defined (ps2.yaml:629), so 989-991 is the compiled mass branch."
+    }
+  ]
+}

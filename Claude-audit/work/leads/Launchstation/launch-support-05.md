@@ -1,0 +1,13 @@
+## Largely identical files (dupes-file-pairs.tsv)
+- tests/test_smb_connect_state.py is 12% the same as Launchstation/tests/test_smb_explicit_port.py (15 cloned normalised lines)
+- tests/test_smb_explicit_port.py is 29% the same as Launchstation/tests/test_smb_connect_state.py (15 cloned normalised lines)
+- tests/test_smb_shares.py is 8% the same as Launchstation/tests/test_nfs_shares.py (22 cloned normalised lines)
+- tests/test_udpfs_smap_fifo_tail.py is 86% the same as RiptOPL/.github/scripts/test_udpfs_smap_fifo_tail.py (136 cloned normalised lines)
+
+## Duplicate blocks (dupes-blocks.tsv)
+- tests/test_smb_connect_state.py:2-21  ==  Launchstation/tests/test_smb_explicit_port.py:2-21  (15 normalised lines)
+- tests/test_smb_explicit_port.py:2-21  ==  Launchstation/tests/test_smb_connect_state.py:2-21  (15 normalised lines)
+- tests/test_smb_shares.py:2-41  ==  Launchstation/tests/test_nfs_shares.py:2-41  (22 normalised lines)
+- tests/test_udpfs_smap_fifo_tail.py:27-50  ==  RiptOPL/.github/scripts/test_udpfs_smap_fifo_tail.py:26-49  (20 normalised lines)
+- tests/test_udpfs_smap_fifo_tail.py:4-20  ==  RiptOPL/.github/scripts/test_udpfs_smap_fifo_tail.py:4-20  (15 normalised lines)
+- tests/test_udpfs_smap_fifo_tail.py:50-198  ==  RiptOPL/.github/scripts/test_udpfs_smap_fifo_tail.py:49-197  (101 normalised lines)

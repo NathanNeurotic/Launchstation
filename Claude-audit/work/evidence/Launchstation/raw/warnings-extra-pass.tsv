@@ -1,0 +1,764 @@
+file	line	severity	flag	message
+iop/ps2host/net_fsys.c	87	warning	-Wcast-function-type-mismatch	cast from 'int (*)(void *)' to 'th_func_p' (aka 'void (*)(void *)') converts to incompatible function type
+src/ember.c	244	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const char *' to parameter of type 'char *' discards qualifiers
+src/init.c	514	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const void *' to parameter of type 'void *' discards qualifiers
+src/init.c	1900	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const void *' to parameter of type 'void *' discards qualifiers
+src/filer_browser.c	812	warning	-Wmisleading-indentation	misleading indentation; statement is not part of the previous 'if'
+.smbd-deps/libsmb2/lib/alloc.c	131	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_free_data'
+.smbd-deps/libsmb2/lib/asn1-ber.c	64	warning	-Wmissing-prototypes	no previous prototype for function 'asn1ber_next_byte'
+.smbd-deps/libsmb2/lib/asn1-ber.c	75	warning	-Wmissing-prototypes	no previous prototype for function 'asn1ber_out_byte'
+.smbd-deps/libsmb2/lib/errors.c	45	warning	-Wmissing-prototypes	no previous prototype for function 'nterror_to_str'
+.smbd-deps/libsmb2/lib/errors.c	1080	warning	-Wmissing-prototypes	no previous prototype for function 'nterror_to_errno'
+.smbd-deps/libsmb2/lib/hmac-md5.c	22	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_hmac_md5'
+.smbd-deps/libsmb2/lib/libsmb2.c	743	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_derive_key'
+.smbd-deps/libsmb2/lib/md5.c	38	warning	-Wmissing-prototypes	no previous prototype for function 'byteSwap'
+.smbd-deps/libsmb2/lib/ntlmssp.c	1316	warning	-Wmissing-prototypes	no previous prototype for function 'ntlmssp_get_utf16_field'
+.smbd-deps/libsmb2/lib/pdu.c	910	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_get_fixed_reply_size'
+.smbd-deps/libsmb2/lib/pdu.c	960	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_get_fixed_request_size'
+.smbd-deps/libsmb2/lib/pdu.c	1019	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_process_reply_payload_fixed'
+.smbd-deps/libsmb2/lib/pdu.c	1068	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_process_reply_payload_variable'
+.smbd-deps/libsmb2/lib/pdu.c	1118	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_process_request_payload_fixed'
+.smbd-deps/libsmb2/lib/pdu.c	1168	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_process_request_payload_variable'
+.smbd-deps/libsmb2/lib/smb2-cmd-cancel.c	84	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_cancel_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-close.c	88	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_close_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-close.c	149	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_close_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-echo.c	84	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_echo_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-echo.c	134	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_echo_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-error.c	89	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_error_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-flush.c	87	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_flush_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-flush.c	137	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_flush_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-logoff.c	84	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_logoff_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-logoff.c	135	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_logoff_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	221	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_negotiate_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	336	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_negotiate_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-notify-change.c	91	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_change_notify_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-notify-change.c	178	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_change_notify_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	86	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_oplock_break_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	141	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_oplock_break_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	196	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_oplock_break_notification_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	252	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_lease_break_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	309	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_lease_break_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	369	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_lease_break_notification_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-query-info.c	59	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_encode_query_info_request'
+.smbd-deps/libsmb2/lib/smb2-cmd-query-info.c	104	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_query_info_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-query-info.c	345	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_query_info_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-read.c	138	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_read_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-read.c	222	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_read_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-session-setup.c	110	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_session_setup_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-session-setup.c	189	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_session_setup_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	281	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_set_info_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	331	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_set_info_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-connect.c	108	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_tree_connect_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-connect.c	165	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_tree_connect_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	85	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_tree_disconnect_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	136	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_tree_disconnect_reply_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-write.c	126	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_write_async'
+.smbd-deps/libsmb2/lib/smb2-cmd-write.c	191	warning	-Wmissing-prototypes	no previous prototype for function 'smb2_cmd_write_reply_async'
+.smbd-deps/libsmb2/lib/smb2-signing.c	318	warning	-Wmissing-prototypes	no previous prototype for function 'smb3_aes_cmac_128'
+build/generated/ata_bd_exports.c	29	warning	-Wmissing-prototypes	no previous prototype for function '_retonly'
+build/generated/hdl_info_exports.c	12	warning	-Wmissing-prototypes	no previous prototype for function '_retonly'
+build/generated/mcman_physical_exports.c	92	warning	-Wmissing-prototypes	no previous prototype for function '_dummy'
+build/generated/udpfs_smap_exports.c	15	warning	-Wmissing-prototypes	no previous prototype for function '_retonly'
+build/generated/usbd_ra_exports.c	24	warning	-Wmissing-prototypes	no previous prototype for function '_retonly'
+build/generated/vmcman_exports.c	92	warning	-Wmissing-prototypes	no previous prototype for function '_dummy'
+ee_libs/tcpips/ps2ipc.c	114	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_accept'
+ee_libs/tcpips/ps2ipc.c	144	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_bind'
+ee_libs/tcpips/ps2ipc.c	170	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_disconnect'
+ee_libs/tcpips/ps2ipc.c	193	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_connect'
+ee_libs/tcpips/ps2ipc.c	219	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_listen'
+ee_libs/tcpips/ps2ipc.c	265	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_recv'
+ee_libs/tcpips/ps2ipc.c	298	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_recvfrom'
+ee_libs/tcpips/ps2ipc.c	341	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_send'
+ee_libs/tcpips/ps2ipc.c	385	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_sendto'
+ee_libs/tcpips/ps2ipc.c	433	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_socket'
+ee_libs/tcpips/ps2ipc.c	459	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_ps2ip_setconfig'
+ee_libs/tcpips/ps2ipc.c	483	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_ps2ip_getconfig'
+ee_libs/tcpips/ps2ipc.c	538	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_select'
+ee_libs/tcpips/ps2ipc.c	585	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_ioctl'
+ee_libs/tcpips/ps2ipc.c	616	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_getsockname'
+ee_libs/tcpips/ps2ipc.c	643	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_getpeername'
+ee_libs/tcpips/ps2ipc.c	670	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_getsockopt'
+ee_libs/tcpips/ps2ipc.c	700	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_setsockopt'
+ee_libs/tcpips/ps2ipc.c	731	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_gethostbyname'
+ee_libs/tcpips/ps2ipc.c	774	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_dns_setserver'
+ee_libs/tcpips/ps2ipc.c	793	warning	-Wmissing-prototypes	no previous prototype for function 'ps2ipc_dns_getserver'
+iop/AllowDVDV/AllowDVDV.c	41	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/ata_bd/src/ps2atad.c	263	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/ata_bd/src/ps2atad.c	389	warning	-Wmissing-prototypes	no previous prototype for function '_exit'
+iop/dev9_poweroff/main.c	7	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/hdl_info/hdd.c	101	warning	-Wmissing-prototypes	no previous prototype for function 'hio_iop_probe'
+iop/hdl_info/main.c	15	warning	-Wmissing-prototypes	no previous prototype for function 'shutdown'
+iop/hdl_info/main.c	26	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/mmceman/src/mmce_fs.c	217	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_init'
+iop/mmceman/src/mmce_fs.c	227	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_deinit'
+iop/mmceman/src/mmce_fs.c	232	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_open'
+iop/mmceman/src/mmce_fs.c	344	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_close'
+iop/mmceman/src/mmce_fs.c	488	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_write'
+iop/mmceman/src/mmce_fs.c	566	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_lseek'
+iop/mmceman/src/mmce_fs.c	618	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_ioctl'
+iop/mmceman/src/mmce_fs.c	625	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_remove'
+iop/mmceman/src/mmce_fs.c	689	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_mkdir'
+iop/mmceman/src/mmce_fs.c	753	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_rmdir'
+iop/mmceman/src/mmce_fs.c	817	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_dopen'
+iop/mmceman/src/mmce_fs.c	891	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_dclose'
+iop/mmceman/src/mmce_fs.c	938	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_dread'
+iop/mmceman/src/mmce_fs.c	1068	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_getstat'
+iop/mmceman/src/mmce_fs.c	1183	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_rename'
+iop/mmceman/src/mmce_fs.c	1315	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_devctl'
+iop/mmceman/src/mmce_fs.c	1413	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_ioctl2'
+iop/mmceman/src/mmce_fs.c	1469	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_register'
+iop/mmceman/src/mmce_fs.c	1479	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_fs_unregister'
+iop/mmceman/src/mmce_sio2.c	41	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_sio2_intr_handler'
+iop/mmceman/src/mmce_sio2.c	52	warning	-Wmissing-prototypes	no previous prototype for function 'mmce_sio2_timeout_handler'
+iop/mmceman/src/mmceman.c	61	warning	-Wmissing-prototypes	no previous prototype for function '__start'
+iop/mmceman/src/mmceman.c	91	warning	-Wmissing-prototypes	no previous prototype for function '__stop'
+iop/mmceman/src/mmceman.c	101	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/mx4sio_bd/src/mx4sio.c	30	warning	-Wmissing-prototypes	no previous prototype for function 'mx_sio2_dma_isr_rx'
+iop/mx4sio_bd/src/mx4sio.c	84	warning	-Wmissing-prototypes	no previous prototype for function 'mx_sio2_dma_isr_tx'
+iop/mx4sio_bd/src/mx4sio.c	141	warning	-Wmissing-prototypes	no previous prototype for function 'mx_sio2_init_ports'
+iop/mx4sio_bd/src/mx4sio.c	149	warning	-Wmissing-prototypes	no previous prototype for function 'mx_sio2_init_td'
+iop/mx4sio_bd/src/mx4sio.c	839	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/nfsman/nfsman.c	1378	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/oldlibs/ps2ftpd/src/FtpClient.c	44	warning	-Wmissing-prototypes	no previous prototype for function 'itoa'
+iop/oldlibs/ps2ftpd/src/FtpClient.c	63	warning	-Wmissing-prototypes	no previous prototype for function 'uitoa'
+iop/oldlibs/ps2ftpd/src/main.c	24	warning	-Wmissing-prototypes	no previous prototype for function 'process_args'
+iop/oldlibs/ps2ftpd/src/main.c	72	warning	-Wmissing-prototypes	no previous prototype for function 'server'
+iop/oldlibs/ps2ftpd/src/main.c	86	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/pccf/main.c	67	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/ps2hdd_osd/hdd.c	211	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/ps2host/net_fsys.c	415	warning	-Wmissing-prototypes	no previous prototype for function 'fsysMount'
+iop/ps2host/net_fsys.c	432	warning	-Wmissing-prototypes	no previous prototype for function 'fsysUnmount'
+iop/ps2host/ps2host.c	23	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/ps2ips_rpc/ps2ips.c	664	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/smb2man/smb2man.c	1615	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/smb2man/usmb2/md5.c	52	warning	-Wmissing-prototypes	no previous prototype for function 'rotateLeft'
+iop/smb2man/usmb2/usmb2.c	504	warning	-Wmissing-prototypes	no previous prototype for function 'usmb2_negotiateprotocol'
+iop/smb2man/usmb2/usmb2.c	563	warning	-Wmissing-prototypes	no previous prototype for function 'usmb2_sessionsetup'
+iop/smbd/smbd.c	328	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/smbman/auth.c	19	warning	-Wmissing-prototypes	no previous prototype for function 'LM_Password_Hash'
+iop/smbman/auth.c	48	warning	-Wmissing-prototypes	no previous prototype for function 'NTLM_Password_Hash'
+iop/smbman/auth.c	72	warning	-Wmissing-prototypes	no previous prototype for function 'LM_Response'
+iop/smbman/des.c	510	warning	-Wmissing-prototypes	no previous prototype for function 'DES'
+iop/smbman/md4.c	145	warning	-Wmissing-prototypes	no previous prototype for function 'MD4'
+iop/smbman/smb.c	903	warning	-Wmissing-prototypes	no previous prototype for function 'smb_NTCreateAndX'
+iop/smbman/smb_fio.c	407	warning	-Wmissing-prototypes	no previous prototype for function 'smb_closeAll'
+iop/smbman/smb_fio.c	908	warning	-Wmissing-prototypes	no previous prototype for function 'DMA_sendEE'
+iop/smbman/smbman.c	25	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/udpfs_smap/src/main.c	11	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/usbd-ra/src/driver.c	56	warning	-Wmissing-prototypes	no previous prototype for function 'probeDeviceTree'
+iop/usbd-ra/src/driver.c	120	warning	-Wmissing-prototypes	no previous prototype for function 'disconnectDriver'
+iop/usbd-ra/src/hcd.c	33	warning	-Wmissing-prototypes	no previous prototype for function 'cleanUpFunc'
+iop/usbd-ra/src/hcd.c	65	warning	-Wmissing-prototypes	no previous prototype for function 'openDeviceEndpoint'
+iop/usbd-ra/src/hcd.c	164	warning	-Wmissing-prototypes	no previous prototype for function 'doOpenEndpoint'
+iop/usbd-ra/src/hcd.c	175	warning	-Wmissing-prototypes	no previous prototype for function 'doCloseEndpoint'
+iop/usbd-ra/src/hcd.c	185	warning	-Wmissing-prototypes	no previous prototype for function 'doGetDeviceStaticDescriptor'
+iop/usbd-ra/src/hcd.c	208	warning	-Wmissing-prototypes	no previous prototype for function 'handleRhsc'
+iop/usbd-ra/src/hcd.c	239	warning	-Wmissing-prototypes	no previous prototype for function 'hcdProcessIntr'
+iop/usbd-ra/src/hcd.c	310	warning	-Wmissing-prototypes	no previous prototype for function 'hcdIrqThread'
+iop/usbd-ra/src/hcd.c	327	warning	-Wmissing-prototypes	no previous prototype for function 'usbdIntrHandler'
+iop/usbd-ra/src/hcd.c	333	warning	-Wmissing-prototypes	no previous prototype for function 'initHardware'
+iop/usbd-ra/src/hcd.c	355	warning	-Wmissing-prototypes	no previous prototype for function 'initHcdStructs'
+iop/usbd-ra/src/hcd.c	500	warning	-Wmissing-prototypes	no previous prototype for function 'hcdInit'
+iop/usbd-ra/src/hub.c	43	warning	-Wmissing-prototypes	no previous prototype for function 'initHubDriver'
+iop/usbd-ra/src/hub.c	71	warning	-Wmissing-prototypes	no previous prototype for function 'allocHubBuffer'
+iop/usbd-ra/src/hub.c	83	warning	-Wmissing-prototypes	no previous prototype for function 'freeHubBuffer'
+iop/usbd-ra/src/hub.c	91	warning	-Wmissing-prototypes	no previous prototype for function 'HubControlTransfer'
+iop/usbd-ra/src/hub.c	107	warning	-Wmissing-prototypes	no previous prototype for function 'hubStatusChangeCallback'
+iop/usbd-ra/src/hub.c	169	warning	-Wmissing-prototypes	no previous prototype for function 'cancelTimerCallback'
+iop/usbd-ra/src/hub.c	189	warning	-Wmissing-prototypes	no previous prototype for function 'addTimerCallback'
+iop/usbd-ra/src/hub.c	228	warning	-Wmissing-prototypes	no previous prototype for function 'killEndpoint'
+iop/usbd-ra/src/hub.c	281	warning	-Wmissing-prototypes	no previous prototype for function 'removeEndpointFromDevice'
+iop/usbd-ra/src/hub.c	301	warning	-Wmissing-prototypes	no previous prototype for function 'hubDeviceResetCallback'
+iop/usbd-ra/src/hub.c	309	warning	-Wmissing-prototypes	no previous prototype for function 'hubResetDevice'
+iop/usbd-ra/src/hub.c	333	warning	-Wmissing-prototypes	no previous prototype for function 'checkDelayedResetsTree'
+iop/usbd-ra/src/hub.c	349	warning	-Wmissing-prototypes	no previous prototype for function 'checkDelayedResets'
+iop/usbd-ra/src/hub.c	357	warning	-Wmissing-prototypes	no previous prototype for function 'killDevice'
+iop/usbd-ra/src/hub.c	364	warning	-Wmissing-prototypes	no previous prototype for function 'flushPort'
+iop/usbd-ra/src/hub.c	402	warning	-Wmissing-prototypes	no previous prototype for function 'fetchConfigDescriptors'
+iop/usbd-ra/src/hub.c	444	warning	-Wmissing-prototypes	no previous prototype for function 'requestDevDescrptCb'
+iop/usbd-ra/src/hub.c	477	warning	-Wmissing-prototypes	no previous prototype for function 'hubPeekDeviceDescriptor'
+iop/usbd-ra/src/hub.c	487	warning	-Wmissing-prototypes	no previous prototype for function 'hubSetFuncAddressCB'
+iop/usbd-ra/src/hub.c	516	warning	-Wmissing-prototypes	no previous prototype for function 'hubTimedSetFuncAddress'
+iop/usbd-ra/src/hub.c	590	warning	-Wmissing-prototypes	no previous prototype for function 'hubSetPortPower'
+iop/usbd-ra/src/hub.c	606	warning	-Wmissing-prototypes	no previous prototype for function 'hubSetupPorts'
+iop/usbd-ra/src/hub.c	628	warning	-Wmissing-prototypes	no previous prototype for function 'hubCheckPorts'
+iop/usbd-ra/src/hub.c	641	warning	-Wmissing-prototypes	no previous prototype for function 'hubCheckDeviceDesc'
+iop/usbd-ra/src/usbd.c	335	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/usbd-ra/src/usbio.c	40	warning	-Wmissing-prototypes	no previous prototype for function 'enqueueEndpoint'
+iop/usbd-ra/src/usbio.c	67	warning	-Wmissing-prototypes	no previous prototype for function 'setupControlTransfer'
+iop/usbd-ra/src/usbio.c	152	warning	-Wmissing-prototypes	no previous prototype for function 'setupIsocronTransfer'
+iop/usbd-ra/src/usbio.c	214	warning	-Wmissing-prototypes	no previous prototype for function 'setupBulkTransfer'
+iop/usbmass_bd/src/main.c	16	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/usbmass_bd/src/usb_mass.c	456	warning	-Wmissing-prototypes	no previous prototype for function 'usb_queue_cmd'
+iop/usbmass_bd/src/usb_mass.c	829	warning	-Wmissing-prototypes	no previous prototype for function 'usb_mass_init'
+iop/vmcman/src/main.c	151	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+iop/xparam/src/xparam.c	16	warning	-Wmissing-prototypes	no previous prototype for function 'SetDummyXparamValue'
+iop/xparam/src/xparam.c	22	warning	-Wmissing-prototypes	no previous prototype for function '_start'
+loader/loader.c	34	warning	-Wmissing-prototypes	no previous prototype for function '_libcglue_init'
+loader/loader.c	38	warning	-Wmissing-prototypes	no previous prototype for function '_libcglue_deinit'
+loader/loader.c	42	warning	-Wmissing-prototypes	no previous prototype for function '_libcglue_args_parse'
+loader/loader.c	80	warning	-Wmissing-prototypes	no previous prototype for function '_ps2sdk_fileXio_init'
+loader/loader.c	84	warning	-Wmissing-prototypes	no previous prototype for function '_ps2sdk_fileXio_deinit'
+loader/loader.c	88	warning	-Wmissing-prototypes	no previous prototype for function '_ps2sdk_fileXio_set_block_size'
+loader/loader.c	154	warning	-Wmissing-prototypes	no previous prototype for function 'ForTimer_InitAlarm'
+loader/loader.c	155	warning	-Wmissing-prototypes	no previous prototype for function '__libpthreadglue_init'
+loader/loader.c	155	warning	-Wmissing-prototypes	no previous prototype for function '__libpthreadglue_deinit'
+loader/loader.c	162	warning	-Wmissing-prototypes	no previous prototype for function 'pthread_setcancelstate'
+src/chkesr.c	38	warning	-Wmissing-prototypes	no previous prototype for function 'Check_ESR_Disc'
+src/cloud_http.c	104	warning	-Wmissing-prototypes	no previous prototype for function 'mbedtls_hardware_poll'
+src/config.c	788	warning	-Wmissing-prototypes	no previous prototype for function 'saveConfig'
+src/dash_icons.c	939	warning	-Wmissing-prototypes	no previous prototype for function 'dashHeaderIcon'
+src/draw_text.c	142	warning	-Wmissing-prototypes	no previous prototype for function 'drawChar2'
+src/filer.c	490	warning	-Wmissing-prototypes	no previous prototype for function 'readMC'
+src/filer.c	560	warning	-Wmissing-prototypes	no previous prototype for function 'readXFROM'
+src/filer.c	605	warning	-Wmissing-prototypes	no previous prototype for function 'readCD'
+src/filer.c	775	warning	-Wmissing-prototypes	no previous prototype for function 'setPartyList'
+src/filer.c	783	warning	-Wmissing-prototypes	no previous prototype for function 'filerDirReadNeedsPrep'
+src/filer.c	834	warning	-Wmissing-prototypes	no previous prototype for function 'setDVRPPartyList'
+src/filer.c	1112	warning	-Wmissing-prototypes	no previous prototype for function 'readVMC'
+src/filer.c	1171	warning	-Wmissing-prototypes	no previous prototype for function 'readHDD'
+src/filer.c	1252	warning	-Wmissing-prototypes	no previous prototype for function 'readHDDDVRP'
+src/filer.c	1402	warning	-Wmissing-prototypes	no previous prototype for function 'scan_USB_mass'
+src/filer.c	1682	warning	-Wmissing-prototypes	no previous prototype for function 'makeFslPath'
+src/filer.c	1740	warning	-Wmissing-prototypes	no previous prototype for function 'readHOST'
+src/filer.c	1889	warning	-Wmissing-prototypes	no previous prototype for function 'readUDPFS'
+src/filer.c	2519	warning	-Wmissing-prototypes	no previous prototype for function 'filerUsbDriveMask'
+src/filer.c	2531	warning	-Wmissing-prototypes	no previous prototype for function 'filerUsbRefreshDriveMask'
+src/filer.c	2539	warning	-Wmissing-prototypes	no previous prototype for function 'filerUsbDriversLoaded'
+src/filer.c	2544	warning	-Wmissing-prototypes	no previous prototype for function 'filerShowHddUnit'
+src/filer.c	2549	warning	-Wmissing-prototypes	no previous prototype for function 'filerShowAtaUnit'
+src/lang.c	181	warning	-Wmissing-prototypes	no previous prototype for function 'get_LANG_string'
+src/makeicon.c	110	warning	-Wmissing-prototypes	no previous prototype for function 'tex_drawChar'
+src/makeicon.c	165	warning	-Wmissing-prototypes	no previous prototype for function 'tex_printXY'
+src/makeicon.c	236	warning	-Wmissing-prototypes	no previous prototype for function 'tex_compresRLE'
+src/pad.c	34	warning	-Wmissing-prototypes	no previous prototype for function 'readpad_noKBnoRepeat'
+src/pad.c	151	warning	-Wmissing-prototypes	no previous prototype for function 'simPadKB'
+build/generated/IEEE1394_bd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_IEEE1394_bd_irx'
+build/generated/IEEE1394_bd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'IEEE1394_bd_irx'
+build/generated/allowdvdv_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_allowdvdv_irx'
+build/generated/allowdvdv_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'allowdvdv_irx'
+build/generated/ata_bd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ata_bd_irx'
+build/generated/ata_bd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ata_bd_irx'
+build/generated/audsrv_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_audsrv_irx'
+build/generated/audsrv_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'audsrv_irx'
+build/generated/bdm_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_bdm_irx'
+build/generated/bdm_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'bdm_irx'
+build/generated/bdmfs_fatfs_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_bdmfs_fatfs_irx'
+build/generated/bdmfs_fatfs_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'bdmfs_fatfs_irx'
+build/generated/cdvd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_cdvd_irx'
+build/generated/cdvd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'cdvd_irx'
+build/generated/dev9_poweroff_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_dev9_poweroff_irx'
+build/generated/dev9_poweroff_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'dev9_poweroff_irx'
+build/generated/dvrdrv_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_dvrdrv_irx'
+build/generated/dvrdrv_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'dvrdrv_irx'
+build/generated/dvrfile_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_dvrfile_irx'
+build/generated/dvrfile_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'dvrfile_irx'
+build/generated/extflash_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_extflash_irx'
+build/generated/extflash_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'extflash_irx'
+build/generated/filexio_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_filexio_irx'
+build/generated/filexio_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'filexio_irx'
+build/generated/hdl_info_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_hdl_info_irx'
+build/generated/hdl_info_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'hdl_info_irx'
+build/generated/iLinkman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_iLinkman_irx'
+build/generated/iLinkman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'iLinkman_irx'
+build/generated/iomanx_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_iomanx_irx'
+build/generated/iomanx_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'iomanx_irx'
+build/generated/libsd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_libsd_irx'
+build/generated/libsd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'libsd_irx'
+build/generated/loader_elf_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_loader_elf_irx'
+build/generated/loader_elf_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'loader_elf_irx'
+build/generated/mcman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_mcman_irx'
+build/generated/mcman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mcman_irx'
+build/generated/mcman_physical_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_mcman_physical_irx'
+build/generated/mcman_physical_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mcman_physical_irx'
+build/generated/mcserv_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_mcserv_irx'
+build/generated/mcserv_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mcserv_irx'
+build/generated/mmceman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_mmceman_irx'
+build/generated/mmceman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mmceman_irx'
+build/generated/mx4sio_bd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_mx4sio_bd_irx'
+build/generated/mx4sio_bd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mx4sio_bd_irx'
+build/generated/netman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_netman_irx'
+build/generated/netman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'netman_irx'
+build/generated/nfsman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_nfsman_irx'
+build/generated/nfsman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'nfsman_irx'
+build/generated/padman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_padman_irx'
+build/generated/padman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'padman_irx'
+build/generated/pccf_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_pccf_irx'
+build/generated/pccf_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'pccf_irx'
+build/generated/poweroff_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_poweroff_irx'
+build/generated/poweroff_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'poweroff_irx'
+build/generated/ps2atad_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2atad_irx'
+build/generated/ps2atad_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2atad_irx'
+build/generated/ps2dev9_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2dev9_irx'
+build/generated/ps2dev9_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2dev9_irx'
+build/generated/ps2fs_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2fs_irx'
+build/generated/ps2fs_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2fs_irx'
+build/generated/ps2ftpd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2ftpd_irx'
+build/generated/ps2ftpd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2ftpd_irx'
+build/generated/ps2hdd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2hdd_irx'
+build/generated/ps2hdd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2hdd_irx'
+build/generated/ps2host_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2host_irx'
+build/generated/ps2host_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2host_irx'
+build/generated/ps2ip_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2ip_irx'
+build/generated/ps2ip_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2ip_irx'
+build/generated/ps2ips_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2ips_irx'
+build/generated/ps2ips_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2ips_irx'
+build/generated/ps2kbd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2kbd_irx'
+build/generated/ps2kbd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2kbd_irx'
+build/generated/ps2netfs_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2netfs_irx'
+build/generated/ps2netfs_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2netfs_irx'
+build/generated/ps2smap_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_ps2smap_irx'
+build/generated/ps2smap_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps2smap_irx'
+build/generated/secrsif_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_secrsif_irx'
+build/generated/secrsif_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'secrsif_irx'
+build/generated/sio2man_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_sio2man_irx'
+build/generated/sio2man_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'sio2man_irx'
+build/generated/smap_netman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_smap_netman_irx'
+build/generated/smap_netman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smap_netman_irx'
+build/generated/smb2man_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_smb2man_irx'
+build/generated/smb2man_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smb2man_irx'
+build/generated/smbd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_smbd_irx'
+build/generated/smbd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smbd_irx'
+build/generated/smbman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_smbman_irx'
+build/generated/smbman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smbman_irx'
+build/generated/udpfs_smap_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_udpfs_smap_irx'
+build/generated/udpfs_smap_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'udpfs_smap_irx'
+build/generated/usbd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_usbd_irx'
+build/generated/usbd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'usbd_irx'
+build/generated/usbmass_bd_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_usbmass_bd_irx'
+build/generated/usbmass_bd_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'usbmass_bd_irx'
+build/generated/vmcman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_vmcman_irx'
+build/generated/vmcman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'vmcman_irx'
+build/generated/wle_igr_elf_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_wle_igr_elf_irx'
+build/generated/wle_igr_elf_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'wle_igr_elf_irx'
+build/generated/xfromman_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_xfromman_irx'
+build/generated/xfromman_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'xfromman_irx'
+build/generated/xfromserv_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_xfromserv_irx'
+build/generated/xfromserv_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'xfromserv_irx'
+build/generated/xparam_irx.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'size_xparam_irx'
+build/generated/xparam_irx.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'xparam_irx'
+ee_libs/tcpips/ps2ipc.c	66	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ip_addr_any'
+igr/wle_igr.c	71	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'wleIgrEmbeddedConfig'
+iop/AllowDVDV/AllowDVDV.c	6	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/ata_bd/src/ps2atad.c	51	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/dev9_poweroff/main.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/mmceman/src/mmceman.c	23	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mmce_product_ids'
+iop/mmceman/src/mmceman.c	25	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/mx4sio_bd/src/mx4sio.c	18	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/mx4sio_bd/src/spi_sdcard_crc7.c	28	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'crc7_table'
+iop/nfsman/nfsman.c	64	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/oldlibs/ps2ftpd/src/main.c	70	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'srv'
+iop/pccf/main.c	15	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/ps2hdd_osd/apa.c	33	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'apaMBRMagic'
+iop/ps2hdd_osd/hdd.c	38	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/ps2hdd_osd/hdd.c	89	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'hddDevices'
+iop/ps2hdd_osd/hdd_fio.c	34	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'hddFileSlots'
+iop/ps2hdd_osd/hdd_fio.c	35	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'fioSema'
+iop/ps2hdd_osd/hdd_fio.c	36	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'apaMaxOpen'
+iop/ps2host/net_fsys.c	65	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'lastopen_fd'
+iop/ps2host/net_fsys.c	66	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'renamed_fd'
+iop/ps2host/net_fsys.c	67	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'remove_flag'
+iop/ps2host/net_fsys.c	68	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'remove_result'
+iop/ps2host/net_fsys.c	392	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'fsys_functarray'
+iop/ps2host/net_fsys.c	411	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'fsys_driver'
+iop/ps2ips_rpc/ps2ips.c	39	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/smb2man/smb2man.c	70	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/smb2man/usmb2/hmac-md5.c	22	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'k_pad'
+iop/smbd/smbd.c	26	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/smbman/smb_fio.c	25	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smbman_io_sema'
+iop/smbman/smb_fio.c	90	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'smbman_fdhandles'
+iop/smbman/smbman.c	22	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/udpfs_smap/src/main.c	7	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/udpfs_smap/src/smap.c	55	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'SmapDriverData'
+iop/udpfs_smap/src/smap.c	56	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'g_dma_max_block_size'
+iop/usbd-ra/src/driver.c	28	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'drvListStart'
+iop/usbd-ra/src/driver.c	28	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'drvListEnd'
+iop/usbd-ra/src/driver.c	29	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'drvAutoLoader'
+iop/usbd-ra/src/driver.c	30	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'cbListStart'
+iop/usbd-ra/src/driver.c	30	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'cbListEnd'
+iop/usbd-ra/src/driver.c	32	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'callbackEvent'
+iop/usbd-ra/src/driver.c	33	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'callbackTid'
+iop/usbd-ra/src/hcd.c	30	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'hcdIrqEvent'
+iop/usbd-ra/src/hcd.c	31	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'hcdTid'
+iop/usbd-ra/src/hub.c	33	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'HubDriver'
+iop/usbd-ra/src/usbd.c	26	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/usbd-ra/src/usbd.c	63	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'usbdSema'
+iop/usbmass_bd/src/main.c	12	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/vmcman/src/main.c	20	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+iop/xparam/src/xparam.c	11	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable '_irx_id'
+src/draw.c	12	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'drawMsgOverride'
+src/draw.c	21	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'updateScr_2'
+src/draw.c	22	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'updateScr_t'
+src/draw.c	24	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'LastMessage'
+src/draw_text.c	9	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'font404'
+src/font_uLE.c	4	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'FontBuffer'
+src/font_uLE.c	5	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'font_uLE'
+src/hdl_rpc.c	24	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'Hdl_Inited'
+src/icon.c	2	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'icon_folder'
+src/icon.c	1030	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'icon_warning'
+src/lang.c	61	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'Lang_Extern'
+src/main.c	30	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'mainMsg'
+src/main.c	32	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'CNF'
+src/main.c	71	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'default_ESR_path'
+src/main.c	72	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'default_OSDSYS_path'
+src/main.c	73	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'default_OSDSYS_path2'
+src/main.c	79	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'old_cdmode'
+src/main.c	88	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'DiscTypes'
+src/main_gameid_table.c	9	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps1_generic_game_ids'
+src/main_gameid_table.c	136	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'ps1_generic_game_ids_count'
+src/pad.c	7	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'buttons_t'
+src/pad.c	8	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'padtype_t'
+src/pad.c	9	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'paddata'
+src/pad.c	9	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'paddata_t'
+src/pad.c	10	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'old_pad'
+src/pad.c	10	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'old_pad_t'
+src/pad.c	11	warning	-Wmissing-variable-declarations	no previous extern declaration for non-static variable 'new_pad_t'
+iop/mmceman/src/mmce_cmds.c	215	warning	-Wpointer-sign	initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_cmds.c	240	warning	-Wpointer-sign	initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	314	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	665	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	729	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	793	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	863	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1043	warning	-Wpointer-sign	passing 'char[256]' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1107	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1226	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1234	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+src/main_actions.c	728	warning	-Wself-assign	explicitly assigning value of variable of type 'int' to itself
+iop/hdl_info/hdd.c	21	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	30	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	43	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	56	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	65	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	73	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	86	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/hdl_info/hdd.c	101	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mmceman/src/mmce_fs.c	1389	warning	-Wshadow	declaration shadows a local variable
+iop/mx4sio_bd/src/spi_sdcard_driver.c	72	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mx4sio_bd/src/spi_sdcard_driver.c	101	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mx4sio_bd/src/spi_sdcard_driver.c	590	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mx4sio_bd/src/spi_sdcard_driver.c	655	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mx4sio_bd/src/spi_sdcard_driver.c	726	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/mx4sio_bd/src/spi_sdcard_driver.c	732	warning	-Wshadow	declaration shadows a variable in the global scope
+iop/oldlibs/ps2ftpd/src/FtpClient.c	269	warning	-Wshadow	declaration shadows a local variable
+iop/oldlibs/ps2ftpd/src/FtpClient.c	413	warning	-Wshadow	declaration shadows a local variable
+iop/smb2man/usmb2/md5.c	137	warning	-Wshadow	declaration shadows a local variable
+iop/usbmass_bd/src/scsi.c	265	warning	-Wshadow	declaration shadows a local variable
+src/config_network.c	86	warning	-Wshadow	declaration shadows a variable in the global scope
+src/config_network.c	113	warning	-Wshadow	declaration shadows a variable in the global scope
+src/config_network.c	113	warning	-Wshadow	declaration shadows a variable in the global scope
+src/dash_browser.c	3045	warning	-Wshadow	declaration shadows a local variable
+src/dash_card_tool.c	1944	warning	-Wshadow	declaration shadows a variable in the global scope
+src/dash_card_tool.c	2009	warning	-Wshadow	declaration shadows a variable in the global scope
+src/dash_card_tool.c	2182	warning	-Wshadow	declaration shadows a variable in the global scope
+src/dash_card_tool.c	2717	warning	-Wshadow	declaration shadows a variable in the global scope
+src/dash_font.c	632	warning	-Wshadow	declaration shadows a local variable
+src/dash_font.c	645	warning	-Wshadow	declaration shadows a local variable
+src/dash_gfx.c	795	warning	-Wshadow	declaration shadows a local variable
+src/dash_tools.c	1281	warning	-Wshadow	declaration shadows a local variable
+src/filer_browser.c	1910	warning	-Wshadow	declaration shadows a local variable
+src/filer_browser.c	1976	warning	-Wshadow	declaration shadows a local variable
+src/filer_browser.c	2124	warning	-Wshadow	declaration shadows a local variable
+src/filer_copy.c	565	warning	-Wshadow	declaration shadows a variable in the global scope
+src/kelf_signer.c	375	warning	-Wshadow	declaration shadows a variable in the global scope
+src/lang.c	183	warning	-Wshadow	declaration shadows a variable in the global scope
+src/main_info_screens.c	215	warning	-Wshadow	declaration shadows a variable in the global scope
+.smbd-deps/libsmb2/lib/asn1-ber.c	1015	warning	-Wunreachable-code	code will never be executed
+src/main_actions.c	641	warning	-Wunreachable-code	code will never be executed
+iop/AllowDVDV/AllowDVDV.c	10	warning	-Wunterminated-string-initialization	initializer-string for character array is too long, array size is 11 but initializer has size 12 (including the null terminating character); did you mean to use the 'nonstring' attribute?
+src/filer_browser.c	1822	warning	-Wunterminated-string-initialization	initializer-string for character array is too long, array size is 6 but initializer has size 7 (including the null terminating character); did you mean to use the 'nonstring' attribute?
+iop/ps2host/net_fsys.c	56	warning	-Wunused-but-set-global	variable 'fsys_pid' set but not used
+src/dash_main.c	25	warning	-Wunused-but-set-global	variable 'prev_section' set but not used
+src/dash_themes.c	44	warning	-Wunused-but-set-global	variable 'store_seen' set but not used
+iop/hdl_info/hdd.c	127	warning	-Wunused-but-set-variable	variable 'count' set but not used
+iop/hdl_info/hdd.c	162	warning	-Wunused-but-set-variable	variable 'count' set but not used
+src/config.c	885	warning	-Wunused-but-set-variable	variable 'var_cnt' set but not used
+src/main_startup.c	168	warning	-Wunused-but-set-variable	variable 'var_cnt' set but not used
+iop/smbd/smbd.c	293	warning	-Wunused-function	unused function 'my_iomanx_retval_0_s64'
+iop/smbman/smb_fio.c	27	warning	-Wunused-function	unused function 'my_iomanx_retval_EIO_s64'
+.smbd-deps/libsmb2/lib/alloc.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/asn1-ber.c	24	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/init.c	25	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/ntlmssp.c	116	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/ntlmssp.c	117	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/ntlmssp.c	122	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/sha224-256.c	45	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-cancel.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-close.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-create.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-create.c	57	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-create.c	398	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-echo.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-error.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-flush.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-ioctl.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-lock.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-logoff.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	578	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-notify-change.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-query-directory.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-query-info.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-read.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-session-setup.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-connect.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-cmd-write.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-data-reparse-point.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-data-security-descriptor.c	25	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-share-enum.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-share-enum.c	82	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-signing.c	62	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/smb2-signing.c	65	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/socket.c	121	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/spnego-wrapper.c	735	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/sync.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/timestamps.c	23	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/unicode.c	23	warning	-Wunused-macros	macro is not used
+build/generated/IEEE1394_bd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/allowdvdv_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ata_bd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/audsrv_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/bdm_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/bdmfs_fatfs_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/cdvd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/dev9_poweroff_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/dvrdrv_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/dvrfile_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/extflash_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/filexio_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/hdl_info_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/iLinkman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/iomanx_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/libsd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/loader_elf_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/mcman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/mcman_physical_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/mcserv_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/mmceman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/mx4sio_bd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/netman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/nfsman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/padman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/pccf_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/poweroff_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2atad_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2dev9_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2fs_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2ftpd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2hdd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2host_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2ip_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2ips_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2kbd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2netfs_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/ps2smap_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/secrsif_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/sio2man_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/smap_netman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/smb2man_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/smbd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/smbman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/udpfs_smap_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/usbd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/usbmass_bd_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/vmcman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/wle_igr_elf_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/xfromman_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/xfromserv_irx.c	2	warning	-Wunused-macros	macro is not used
+build/generated/xparam_irx.c	2	warning	-Wunused-macros	macro is not used
+ee_libs/hdd/libhdd.c	34	warning	-Wunused-macros	macro is not used
+iop/ata_bd/src/ps2atad.c	193	warning	-Wunused-macros	macro is not used
+iop/hdl_info/apa.c	15	warning	-Wunused-macros	macro is not used
+iop/hdl_info/apa.c	17	warning	-Wunused-macros	macro is not used
+iop/mmceman/src/mmce_fs.c	13	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	23	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	26	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	34	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	36	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	37	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	38	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	39	warning	-Wunused-macros	macro is not used
+iop/mx4sio_bd/src/spi_sdcard_driver.c	40	warning	-Wunused-macros	macro is not used
+iop/nfsman/nfsman.c	20	warning	-Wunused-macros	macro is not used
+iop/nfsman/nfsman.c	165	warning	-Wunused-macros	macro is not used
+iop/oldlibs/ps2ftpd/src/FileSystem.c	19	warning	-Wunused-macros	macro is not used
+iop/oldlibs/ps2ftpd/src/FtpClient.c	41	warning	-Wunused-macros	macro is not used
+iop/oldlibs/ps2ftpd/src/FtpServer.c	15	warning	-Wunused-macros	macro is not used
+iop/smb2man/smb2man.c	26	warning	-Wunused-macros	macro is not used
+iop/smb2man/usmb2/unicode.c	7	warning	-Wunused-macros	macro is not used
+iop/smbd/smbd_fs.c	15	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	21	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	22	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	23	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	24	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	28	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	29	warning	-Wunused-macros	macro is not used
+iop/usbmass_bd/src/usb_mass.c	35	warning	-Wunused-macros	macro is not used
+iop/vmcman/src/main.c	11	warning	-Wunused-macros	macro is not used
+src/cloud_google.c	31	warning	-Wunused-macros	macro is not used
+src/dash_art.c	31	warning	-Wunused-macros	macro is not used
+src/dash_bg_geo.c	10	warning	-Wunused-macros	macro is not used
+src/dash_icons.c	15	warning	-Wunused-macros	macro is not used
+src/elf.c	20	warning	-Wunused-macros	macro is not used
+src/filer.c	162	warning	-Wunused-macros	macro is not used
+src/main.c	21	warning	-Wunused-macros	macro is not used
+src/main.c	24	warning	-Wunused-macros	macro is not used
+.smbd-deps/libsmb2/lib/aes128ccm.c	123	warning	-Wunused-parameter	unused parameter 'plen'
+.smbd-deps/libsmb2/lib/alloc.c	87	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/alloc.c	131	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/compat.c	137	warning	-Wunused-parameter	unused parameter 'tloc'
+.smbd-deps/libsmb2/lib/compat.c	542	warning	-Wunused-parameter	unused parameter 'buf'
+.smbd-deps/libsmb2/lib/compat.c	542	warning	-Wunused-parameter	unused parameter 'size'
+.smbd-deps/libsmb2/lib/init.c	592	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/init.c	649	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/init.c	649	warning	-Wunused-parameter	unused parameter 'error_string'
+.smbd-deps/libsmb2/lib/init.c	673	warning	-Wunused-parameter	unused parameter 'error_string'
+.smbd-deps/libsmb2/lib/init.c	809	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/init.c	1065	warning	-Wunused-parameter	unused parameter 'in'
+.smbd-deps/libsmb2/lib/init.c	1065	warning	-Wunused-parameter	unused parameter 'out'
+.smbd-deps/libsmb2/lib/libsmb2.c	236	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	252	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	268	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	277	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	288	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	455	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	697	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	1858	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	1908	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	2253	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	2267	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	2267	warning	-Wunused-parameter	unused parameter 'private_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	2655	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	2823	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	2824	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	2834	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	2962	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	2973	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	3495	warning	-Wunused-parameter	unused parameter 'status'
+.smbd-deps/libsmb2/lib/libsmb2.c	3978	warning	-Wunused-parameter	unused parameter 'status'
+.smbd-deps/libsmb2/lib/libsmb2.c	4120	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/libsmb2.c	4426	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	4477	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	4759	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	4759	warning	-Wunused-parameter	unused parameter 'cb_data'
+.smbd-deps/libsmb2/lib/libsmb2.c	4775	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/ntlmssp.c	339	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/ntlmssp.c	960	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	325	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	788	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	799	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	805	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	811	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/pdu.c	960	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-echo.c	159	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-flush.c	162	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-lock.c	201	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-lock.c	220	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-logoff.c	159	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-logoff.c	160	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	648	warning	-Wunused-parameter	unused parameter 'req'
+.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c	679	warning	-Wunused-parameter	unused parameter 'req'
+.smbd-deps/libsmb2/lib/smb2-cmd-query-directory.c	223	warning	-Wunused-parameter	unused parameter 'flags'
+.smbd-deps/libsmb2/lib/smb2-cmd-query-directory.c	224	warning	-Wunused-parameter	unused parameter 'room'
+.smbd-deps/libsmb2/lib/smb2-cmd-read.c	326	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	308	warning	-Wunused-parameter	unused parameter 'req'
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	356	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-set-info.c	357	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	159	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	166	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c	167	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	57	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	58	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	129	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	154	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	155	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	169	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	368	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	369	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	378	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	499	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	500	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-file-info.c	529	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	139	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	140	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	157	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	174	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	175	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	190	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	280	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	281	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	300	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	319	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	320	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	338	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	356	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	357	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	373	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	389	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	390	warning	-Wunused-parameter	unused parameter 'memctx'
+.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c	413	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-signing.c	543	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/smb2-signing.c	544	warning	-Wunused-parameter	unused parameter 'pdu'
+.smbd-deps/libsmb2/lib/sync.c	150	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/sync.c	224	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	278	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	278	warning	-Wunused-parameter	unused parameter 'status'
+.smbd-deps/libsmb2/lib/sync.c	321	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	322	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/sync.c	383	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	384	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/sync.c	429	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	430	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/sync.c	910	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	968	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	1107	warning	-Wunused-parameter	unused parameter 'smb2'
+.smbd-deps/libsmb2/lib/sync.c	1108	warning	-Wunused-parameter	unused parameter 'command_data'
+.smbd-deps/libsmb2/lib/sync.c	1158	warning	-Wunused-parameter	unused parameter 'status'
+iop/hdl_info/hdd.c	73	warning	-Wunused-parameter	unused parameter 'hio'
+iop/hdl_info/main.c	26	warning	-Wunused-parameter	unused parameter 'argc'
+iop/hdl_info/main.c	26	warning	-Wunused-parameter	unused parameter 'argv'
+iop/hdl_info/main.c	52	warning	-Wunused-parameter	unused parameter 'param'
+iop/hdl_info/main.c	60	warning	-Wunused-parameter	unused parameter 'Size'
+iop/mmceman/src/mmce_fs.c	217	warning	-Wunused-parameter	unused parameter 'f'
+iop/mmceman/src/mmce_fs.c	227	warning	-Wunused-parameter	unused parameter 'f'
+iop/mmceman/src/mmce_fs.c	232	warning	-Wunused-parameter	unused parameter 'mode'
+iop/mmceman/src/mmce_fs.c	618	warning	-Wunused-parameter	unused parameter 'file'
+iop/mmceman/src/mmce_fs.c	618	warning	-Wunused-parameter	unused parameter 'cmd'
+iop/mmceman/src/mmce_fs.c	618	warning	-Wunused-parameter	unused parameter 'data'
+iop/mmceman/src/mmce_fs.c	689	warning	-Wunused-parameter	unused parameter 'flags'
+iop/mmceman/src/mmce_fs.c	1315	warning	-Wunused-parameter	unused parameter 'name'
+iop/mmceman/src/mmce_fs.c	1315	warning	-Wunused-parameter	unused parameter 'buflen'
+iop/mmceman/src/mmce_fs.c	1413	warning	-Wunused-parameter	unused parameter 'arg'
+iop/mmceman/src/mmce_fs.c	1413	warning	-Wunused-parameter	unused parameter 'arglen'
+iop/mmceman/src/mmce_fs.c	1413	warning	-Wunused-parameter	unused parameter 'data'
+iop/mmceman/src/mmce_fs.c	1413	warning	-Wunused-parameter	unused parameter 'datalen'
+iop/mmceman/src/mmceman.c	61	warning	-Wunused-parameter	unused parameter 'argc'
+iop/mmceman/src/mmceman.c	61	warning	-Wunused-parameter	unused parameter 'argv'
+iop/mmceman/src/mmceman.c	61	warning	-Wunused-parameter	unused parameter 'startaddr'
+iop/mmceman/src/mmceman.c	91	warning	-Wunused-parameter	unused parameter 'argc'
+iop/mmceman/src/mmceman.c	91	warning	-Wunused-parameter	unused parameter 'argv'
+iop/mmceman/src/mmceman.c	91	warning	-Wunused-parameter	unused parameter 'startaddr'
+iop/mmceman/src/mmceman.c	91	warning	-Wunused-parameter	unused parameter 'mi'
+iop/oldlibs/ps2ftpd/src/main.c	72	warning	-Wunused-parameter	unused parameter 'argv'
+iop/ps2host/net_fio.c	694	warning	-Wunused-parameter	unused parameter 'argv'
+iop/ps2host/net_fsys.c	73	warning	-Wunused-parameter	unused parameter 'driver'
+iop/ps2host/net_fsys.c	261	warning	-Wunused-parameter	unused parameter 'file'
+iop/ps2host/net_fsys.c	277	warning	-Wunused-parameter	unused parameter 'file'
+iop/ps2host/net_fsys.c	295	warning	-Wunused-parameter	unused parameter 'file'
+iop/ps2host/ps2host.c	23	warning	-Wunused-parameter	unused parameter 'argc'
+iop/ps2host/ps2host.c	23	warning	-Wunused-parameter	unused parameter 'argv'
+iop/udpfs_smap/src/smap.c	456	warning	-Wunused-parameter	unused parameter 'flag'
+iop/udpfs_smap/src/smap.c	501	warning	-Wunused-parameter	unused parameter 'argc'
+iop/udpfs_smap/src/smap.c	501	warning	-Wunused-parameter	unused parameter 'argv'
+iop/udpfs_smap/src/xfer.c	38	warning	-Wunused-parameter	unused parameter 'bcr'
+iop/udpfs_smap/src/xfer.c	63	warning	-Wunused-parameter	unused parameter 'smap_regbase'
+iop/vmcman/src/main.c	151	warning	-Wunused-parameter	unused parameter 'startaddr'
+iop/vmcman/src/mcdev.c	310	warning	-Wunused-parameter	unused parameter 'mode'
+src/init.c	1896	warning	-Wunused-parameter	unused parameter 'name'
+src/makeicon.c	110	warning	-Wunused-parameter	unused parameter 'colour'
+src/filer_actions.c	1803	warning	-Wunused-variable	unused variable 'timestamp'

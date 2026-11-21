@@ -1,0 +1,9 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o		3504	0	64	0	560	0	1270	5398
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o		3480	256	16	0	168	0	1463	5383
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o		1116	0	0	0	188	0	687	1991
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o		576	0	0	0	0	0	72	648
+linker-internal	<internal>		0	521	0	0	0	0	0	521
+first-party	build/obj/mx4sio_bd_fork/imports.o		476	0	0	0	0	0	0	476
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o		76	256	0	0	0	0	32	364
+first-party	build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o		144	0	0	0	0	0	8	152

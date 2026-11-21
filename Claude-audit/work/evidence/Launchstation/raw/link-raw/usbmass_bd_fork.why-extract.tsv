@@ -1,0 +1,2 @@
+reference	extracted	symbol
+obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj)	__udivdi3

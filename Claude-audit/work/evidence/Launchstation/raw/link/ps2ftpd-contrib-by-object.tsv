@@ -1,0 +1,10 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o		5716	208	0	0	32768	0	1834	40526
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o		10536	0	4	0	704	0	3042	14286
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o		1048	0	0	0	6808	0	722	8578
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o		3064	0	0	0	516	0	1241	4821
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o		1320	0	0	0	896	0	658	2874
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o		2212	0	0	0	0	0	600	2812
+linker-internal	<internal>		0	2404	0	0	0	0	0	2404
+first-party	build/obj/ps2ftpd/imports.o		584	0	0	0	0	0	0	584
+first-party	build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o		0	0	112	0	0	0	224	336

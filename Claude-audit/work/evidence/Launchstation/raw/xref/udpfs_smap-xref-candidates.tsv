@@ -1,0 +1,11 @@
+# CANDIDATE LIST ONLY (udpfs_smap link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/udpfs_smap/exports.o	_retonly	FUNC	8	GLOBAL	.text	4	yes
+build/obj/udpfs_smap/imports.o	bzero	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/udpfs_smap/imports.o	printf	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/udpfs_smap/iop/udpfs_smap/src/main.o	_start	FUNC	64	GLOBAL	.text	0	yes
+build/obj/udpfs_smap/iop/udpfs_smap/src/main.o	_irx_id	OBJECT	8	GLOBAL	.data	0	yes

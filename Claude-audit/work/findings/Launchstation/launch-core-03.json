@@ -1,0 +1,198 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-03",
+  "coverage": [
+    {"path": "src/cloud_google.c", "status": "read_full", "note": ""},
+    {"path": "include/cloud_http.h", "status": "read_full", "note": ""},
+    {"path": "src/cloud_http.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "cloud_google.c implements the Google OAuth device-code link flow, token and custom-client storage (WLE-CLOUD.CNF/.TOK/.TOK.NEW/-CA.PEM in the dashboard store folder), Drive metadata browsing, verified recovery of .mcd/.ps2/.psu backups from Drive, and the recursive WLE-MMCE-Backups upload sync with a per-folder UPLOADED.TXT ledger. It uses a tiny hand-rolled JSON extractor, URL/form/JSON/Drive-query escapers and SHA-256 hashing of local files. cloud_http.c is the shared HTTPS transport over the PS2IPS socket RPC and Mbed TLS: it supplies the Mbed TLS platform hooks (mbedtls_ms_time, mbedtls_hardware_poll, required by MBEDTLS_PLATFORM_MS_TIME_ALT and MBEDTLS_ENTROPY_HARDWARE_ALT in scripts/build_cloud_tls.sh), a buffered request/response path (also used by the GitHub update check in dash_tools.c), a streamed upload, and a streamed download engine with redirects, chunked decoding, size cap and SHA-256, used by the self-updater (RAM sink) and Drive recovery (bearer token, file sink).",
+  "reusable_helpers": [
+    {"name": "json_string", "path": "src/cloud_google.c", "line": 61, "what": "extracts and unescapes a string value for a key from flat JSON text"},
+    {"name": "json_int", "path": "src/cloud_google.c", "line": 109, "what": "reads an integer value for a key from JSON text with a default"},
+    {"name": "append_url", "path": "src/cloud_google.c", "line": 123, "what": "percent-encodes a string into a buffer at an offset (RFC 3986 unreserved set)"},
+    {"name": "form_field", "path": "src/cloud_google.c", "line": 145, "what": "appends key=value to an application/x-www-form-urlencoded body"},
+    {"name": "json_escape", "path": "src/cloud_google.c", "line": 157, "what": "escapes quotes/backslashes and drops control chars for a JSON string"},
+    {"name": "hash_open_backup", "path": "src/cloud_google.c", "line": 1228, "what": "SHA-256 of an open file descriptor in 16 KB blocks, returns lowercase hex"},
+    {"name": "hash_local_file", "path": "src/cloud_google.c", "line": 1468, "what": "opens a path and returns its SHA-256 hex"},
+    {"name": "header_value", "path": "src/cloud_http.c", "line": 501, "what": "case-insensitive HTTP header lookup in a CRLF header block"},
+    {"name": "decode_chunked", "path": "src/cloud_http.c", "line": 528, "what": "in-place HTTP chunked transfer decoding of a buffered body"},
+    {"name": "split_https_url", "path": "src/cloud_http.c", "line": 753, "what": "splits an https:// URL into host and path"},
+    {"name": "ps2_tcp_connect", "path": "src/cloud_http.c", "line": 213, "what": "DNS lookup plus non-blocking TCP connect with timeout over PS2IPS RPC"},
+    {"name": "cloudHttpRequest", "path": "src/cloud_http.c", "line": 728, "what": "one-shot HTTPS request returning status, body and Location"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "cloudHttpDownloadFdInternal and read_response repeat the same 3-5 line cleanup at about 35 exit points",
+      "category": 2,
+      "locations": [
+        {"path": "src/cloud_http.c", "start": 994, "end": 1266},
+        {"path": "src/cloud_http.c", "start": 573, "end": 683}
+      ],
+      "problem": "In cloudHttpDownloadFdInternal every error exit repeats its own cleanup: within lines 953-1277 there are 21 tls_free(&tls), 24 free(io_buf), 17 free(raw) and 10 mbedtls_sha256_free(&sha) statements spread over about 24 exits. read_response repeats free(raw) 13 times over 11 exits. The repetition makes each new check cost 4-6 lines and invites a missed free.",
+      "fix": "Initialise raw/io_buf to NULL and keep a flag for an opened TLS session and a started SHA context, then make each error path set_error and goto one fail label that frees what is set; do the same with one fail label in read_response.",
+      "justification": "",
+      "benefit": "About 72 cleanup lines in the download loop collapse to ~24 gotos plus an ~8 line label, and ~10 lines go from read_response: ~50 lines net (INFERRED from the counts above). No size claim measured.",
+      "benefit_rank": 2,
+      "lines_removed": 50,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read cloud_http.c 558-684 and 953-1277 in full. awk count over 953-1277: tls_free(&tls) 21, free(io_buf) 24, free(raw) 17, mbedtls_sha256_free(&sha) 10; over 558-684: free(raw) 13. The function serves both the updater (self_update.c:204 via cloudHttpDownloadMem) and Drive recovery (cloud_google.c:1043, 1150), so it needs testing on both."
+    },
+    {
+      "n": 2,
+      "title": "Four explicit ensureDashboardIpNetworkReady calls duplicate the one oauth_post makes immediately after; sync starts Ethernet before storage",
+      "category": 3,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 854, "end": 857},
+        {"path": "src/cloud_google.c", "start": 1022, "end": 1025},
+        {"path": "src/cloud_google.c", "start": 1130, "end": 1133},
+        {"path": "src/cloud_google.c", "start": 1598, "end": 1601},
+        {"path": "src/cloud_google.c", "start": 361, "end": 364}
+      ],
+      "problem": "Each of these four blocks is followed directly by refresh_access_token (858, 1026, 1134, 1626), whose oauth_post calls ensureDashboardIpNetworkReady again at 361. Each call repeats showLoadingModulesMsg, getIpConfig, load_ps2ip and a ps2ip_init RPC rebind (init.c:2884-2914). In cloudGoogleSyncBackupRoot the extra call at 1598 also runs before ensurePathDeviceStackReady at 1602, the reverse of the storage-first order the comment at 1014-1015 asks for in recovery.",
+      "fix": "Delete the four explicit blocks and rely on the call in oauth_post. In sync this also moves network start after ensurePathDeviceStackReady, matching the recovery order.",
+      "justification": "",
+      "benefit": "16 lines removed and one redundant network-ready pass (loading message, IP config refresh, PS2IPS rebind) per browse, recovery and sync (READ). The sync order change is a consistency gain; whether the old order ever failed is INFERRED.",
+      "benefit_rank": 2,
+      "lines_removed": 16,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read cloud_google.c 357-401, 839-917, 982-1182, 1581-1635 and init.c:2884-2914 (idempotent apart from the repeated work listed). Every Drive request in these functions comes after refresh_access_token, so oauth_post's call always runs first. Only error text changes (e.g. 'Ethernet is unavailable for Drive recovery' becomes 'Ethernet could not be started'). Tests: test_native_cloud.py:106 only needs the name to stay in the file; test_cloud_recovery.py:140 counts calls but asserts nothing on the count."
+    },
+    {
+      "n": 3,
+      "title": "cloudGoogleRecoverSnapshot and cloudGoogleRecoverSaveVersion copy the same claim/session/download/digest sequence",
+      "category": 2,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 1004, "end": 1054},
+        {"path": "src/cloud_google.c", "start": 1114, "end": 1161},
+        {"path": "src/cloud_google.c", "start": 1082, "end": 1089},
+        {"path": "src/cloud_google.c", "start": 1177, "end": 1181}
+      ],
+      "problem": "Both functions run the same steps with the same error strings: claim a RECOVER-CLOUD name, check result length, start the storage device, load the session, start the network, refresh the token, build the alt=media URL, re-check the names, open the .DOWNLOAD.PART file, call cloudHttpDownloadGoogleFd, close it and compare the SHA-256. The only differences are the extension, the size cap (CLOUD_RECOVERY_MAX_BYTES vs MMCE_SAVE_VERSION_MAX) and one word in an error message. About 45 lines appear twice.",
+      "fix": "Move the shared sequence into one static function that takes the item, dest_dir, extension and max_bytes, fills result/stage/download, and returns after the digest check. Each public function keeps only its format checks and publish step.",
+      "justification": "",
+      "benefit": "~45 duplicated lines become one copy plus a ~10 line signature and two calls: ~30 lines net (INFERRED). .text size change not measured.",
+      "benefit_rank": 2,
+      "lines_removed": 30,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read 982-1182 side by side; dupes-blocks.tsv also pairs 1005-1028 with 1115-1136 (18 normalised lines), and the copy runs on to the digest check (1054/1161). Callers: dash_tools.c:1306 (save version) and 1329 (snapshot). tests/test_cloud_recovery.py compiles these functions from source text, so it must be re-run after the change."
+    },
+    {
+      "n": 4,
+      "title": "read_file in cloud_http.c re-implements dashLoadTextFile",
+      "category": 2,
+      "locations": [
+        {"path": "src/cloud_http.c", "start": 272, "end": 307},
+        {"path": "src/cloud_http.c", "start": 400, "end": 400},
+        {"path": "src/dash_store.c", "start": 105, "end": 146}
+      ],
+      "problem": "read_file opens a file, rejects size <= 0 or > 256 KB, reads it all into a malloc'd buffer and NUL-terminates it. dashLoadTextFile (dash_store.c:105) does the same with a size cap argument and is already used for the same CA file type in cloud_google.c:535 (256 * 1024). read_file has one caller, tls_open at 400.",
+      "fix": "Delete read_file and call dashLoadTextFile(ca_path, 256 * 1024, &ca_len) in tls_open, with an include of dash_internal.h (or its prototype). Update the read_file stub in tests/test_https_tls.py:89.",
+      "justification": "",
+      "benefit": "36 lines removed, 1 added; a few hundred bytes of .text (INFERRED, not measured).",
+      "benefit_rank": 2,
+      "lines_removed": 35,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep read_file over the repo: definition cloud_http.c:272, call :400, host-test stub tests/test_https_tls.py:89; the iop/ps2host matches are pko_read_file, a different name. dashLoadTextFile read at dash_store.c:105-146: returns NUL-terminated memalign memory (free() works) and adds genFixPath on the path. The ca_len + 1 at 405 still works because the buffer is NUL-terminated."
+    },
+    {
+      "n": 5,
+      "title": "read_response parses Content-Length and Transfer-Encoding up to three times and checks the header size twice",
+      "category": 3,
+      "locations": [
+        {"path": "src/cloud_http.c", "start": 591, "end": 614},
+        {"path": "src/cloud_http.c", "start": 638, "end": 671}
+      ],
+      "problem": "Once the header end is in the buffer, every later read iteration parses Content-Length and Transfer-Encoding again (595-599) and checks header_len and the body cap (602-611). After the loop, the header_len check is repeated (638-642), Content-Length is parsed again for the cap/truncation check (643-655) and a third time at 667, and Transfer-Encoding again at 658, although content_length and chunked already hold those values.",
+      "fix": "Parse the headers and do the two size checks once, the first time the header end is found; after the loop use content_length and chunked, and delete the repeated parses and the second header_len check.",
+      "justification": "",
+      "benefit": "~18 lines removed and no header rescans per TLS record of a large body (READ). The time saved is small (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 18,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read cloud_http.c 558-684. Header parses: Content-Length 595, 643, 667; Transfer-Encoding 597, 658; header_len > CLOUD_HTTP_HEADER_MAX at 602 and 638; body cap at 607 and 645. All callers (cloudHttpRequest 745, cloudHttpUploadFd 817) use the same function. tests/test_http_body_cap.py extracts header_value/decode_chunked from source, so re-run it."
+    },
+    {
+      "n": 6,
+      "title": "cloudHttpDownloadFd has no caller (self-updater moved to cloudHttpDownloadMem)",
+      "category": 1,
+      "locations": [
+        {"path": "src/cloud_http.c", "start": 1279, "end": 1287},
+        {"path": "include/cloud_http.h", "start": 30, "end": 36}
+      ],
+      "problem": "The only C mentions of cloudHttpDownloadFd are its definition, its prototype and a comment at cloud_http.h:42. self_update.c:204 calls cloudHttpDownloadMem, and Drive recovery calls cloudHttpDownloadGoogleFd. The linker already drops it: the gc log lists .text.cloudHttpDownloadFd (80 bytes) as removed.",
+      "fix": "Delete cloudHttpDownloadFd and its prototype. Move the behaviour comment (redirects, max_bytes, digest) onto cloudHttpDownloadMem/cloudHttpDownloadGoogleFd, and change the assertions in tests/test_self_update.py:13-14 that only check the name is present.",
+      "justification": "",
+      "benefit": "~13 lines removed. No ELF change: MEASURED, evidence/Launchstation/raw/link-raw/wLaunchELF.gc-sections.log:60 shows the 80-byte section already discarded.",
+      "benefit_rank": 1,
+      "lines_removed": 13,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep cloudHttpDownloadFd over the whole repo (c, h, S, py, md, yaml): cloud_http.c:1280 (definition), cloud_http.h:33 (prototype), :42 (comment), tests/test_self_update.py:13-14 (presence assertions), tests/test_cloud_history_browser.py:64 (absence assertion), and the cloudHttpDownloadFdInternal matches. raw/xref/wLaunchELF-xref-candidates.tsv:19 shows 0 references; raw/link/wLaunchELF-gc-discarded-first-party.tsv:11 lists it."
+    },
+    {
+      "n": 7,
+      "title": "save_refresh_token re-reads and re-parses the staged token although dashWriteFile already verified it byte for byte",
+      "category": 3,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 333, "end": 344},
+        {"path": "src/dash_store.c", "start": 163, "end": 174}
+      ],
+      "problem": "dashWriteFile writes the file and then reads it back and compares every byte, returning -1 on any difference (dash_store.c:163-174). save_refresh_token then reads the same WLE-CLOUD.TOK.NEW a second time, parses it and compares the token (333-344). A byte-identical file always parses to the same token, so this check can never fail when dashWriteFile succeeded. It only costs one more 8 KB allocation and a memory-card read per link.",
+      "fix": "Delete the read-back block 333-344 (and the now unused verify, saved, saved_len locals). The wider TOK.NEW staging scheme could also go, since losing the token only means linking again, but that is optional.",
+      "justification": "",
+      "benefit": "~14 lines removed and one card read per Google link (READ). Dropping the whole staging scheme would remove roughly 30 more lines (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 14,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read cloud_google.c 248-355 and dash_store.c:148-175 (dashWriteFile: write, close, reopen, memcmp in 1 KB blocks, check EOF). The text written at 323 is fixed format, so token_kv parses it deterministically. tests/test_native_cloud.py:122-128 assert the staging strings (TOK.NEW, dashWriteFile/dashLoadTextFile on token_stage_path, Stage_Complete). Only the dashLoadTextFile(s->token_stage_path assertion at :125 still matches through load_session:288, so the tests keep passing."
+    },
+    {
+      "n": 8,
+      "title": "Small dead or redundant bits in cloud_google.c: unused macro, forwarder, constant parameter, duplicate filter, dead fd test, needless copy",
+      "category": 1,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 31, "end": 31},
+        {"path": "src/cloud_google.c", "start": 205, "end": 212},
+        {"path": "src/cloud_google.c", "start": 243, "end": 246},
+        {"path": "src/cloud_google.c", "start": 684, "end": 695},
+        {"path": "src/cloud_google.c", "start": 826, "end": 830},
+        {"path": "src/cloud_google.c", "start": 1368, "end": 1373},
+        {"path": "src/cloud_google.c", "start": 1083, "end": 1084},
+        {"path": "src/cloud_google.c", "start": 1614, "end": 1624}
+      ],
+      "problem": "(a) CLOUD_JSON_MAX (31) is never used. (b) builtin_client_available (205-212) has one caller, the public cloudGoogleHasBuiltinClient (243-246), which only forwards to it. (c) drive_request's content_type parameter is \"application/json\" at all three calls (736, 904, 1196), so the NULL fallback at 695 never runs. (d) drive_browse_parse open-codes the WLE-/MCD/PS2/PSU test (826-830) that is_backup_file (1368-1373) implements. (e) In cloudGoogleRecoverSnapshot fd is always -1 at every goto fail (set at 1048 before the first goto), so 1083-1084 are dead. (f) cloudGoogleSyncBackupRoot copies local_root, already a writable char array, into probe just to pass it to genDopen (1615-1617).",
+      "fix": "Delete CLOUD_JSON_MAX; put the #ifdef body into cloudGoogleHasBuiltinClient and delete builtin_client_available; drop the content_type parameter and hard-code the header; move is_backup_file above drive_browse_parse and call it; delete the fd >= 0 close at the fail label; pass local_root to genDopen directly and drop probe.",
+      "justification": "",
+      "benefit": "~20 lines removed in total. Static helpers are already inlined or dropped, so no measurable ELF change (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep over the whole repo: CLOUD_JSON_MAX only at cloud_google.c:31; builtin_client_available only at :205 and :245; cloudGoogleHasBuiltinClient called from dash_tools.c:1078 and 1361 (keep it). drive_request call sites 736, 904, 1196 all pass \"application/json\". is_backup_file used only at :1525. genDopen takes char * (launchelf.h:611) and copies the path internally (filer_fileops.c:636). tests/test_native_cloud.py:164 slices source between 'static void load_client(' and 'int cloudGoogleHasBuiltinClient'; that slice still works after removing the forwarder, which sits before cloudGoogleHasBuiltinClient."
+    }
+  ]
+}

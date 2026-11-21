@@ -1,0 +1,3 @@
+## Symbols with no reference outside their definition (symbols-unreferenced.tsv). Class no-other-mention = the name appears nowhere else in the repo; only-prototype-or-export-mentions = it appears only in a prototype or export list
+- src/dash_ui.c:176  function `dashOkLabelKey`  (only-prototype-or-export-mentions) | also mentioned: include/dash_internal.h:1130 const char *dashOkLabelKey(void);
+- src/dash_ui.c:611  function `dashDrawFocusFrame`  (only-prototype-or-export-mentions) | also mentioned: include/dash_internal.h:884 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength);

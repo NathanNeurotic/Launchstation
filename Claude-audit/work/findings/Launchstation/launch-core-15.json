@@ -1,0 +1,216 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-15",
+  "coverage": [
+    {"path": "src/dash_widgets.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_worker.c", "status": "read_full", "note": ""},
+    {"path": "src/draw.c", "status": "read_full", "note": ""},
+    {"path": "src/draw_gs.c", "status": "read_full", "note": ""},
+    {"path": "src/draw_text.c", "status": "read_full", "note": ""},
+    {"path": "src/editor.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_widgets.c holds the dashboard's modal on-screen keyboard (pad and USB entry, filename/IP variants) and the worker-backed file/folder picker dashPickPath. dash_worker.c is the single background EE thread with a 32-entry job queue, status channel, IOP-reset parking handshake and the activity pill. draw.c, draw_gs.c and draw_text.c are the classic uLE gsKit drawing layer: header/message line, sprites and frames, GS mode setup and switching, the 8x16 font renderer, ELISA Shift-JIS rendering and SJIS-to-ASCII transcoding, all routed through the dashboard legacy theme when it is on. editor.c is the classic multi-window TextEditor main loop (pad/virtual keyboard input, drawing, tooltips); the dashboard uses dash_editor.c instead but the classic editor is still reachable from the classic filer and the Misc/TextEditor launch path.",
+  "reusable_helpers": [
+    {"name": "dashWorkerSubmit", "path": "src/dash_worker.c", "line": 231, "what": "queue a run/done job pair on the background worker thread; done runs on the UI thread"},
+    {"name": "dashWorkerAwait", "path": "src/dash_worker.c", "line": 298, "what": "wait for a worker job while animating, with optional cancel and a delayed loading overlay"},
+    {"name": "dashWorkerStatus", "path": "src/dash_worker.c", "line": 183, "what": "semaphore-protected progress text and done/total counters written by jobs"},
+    {"name": "dashPickPath", "path": "src/dash_widgets.c", "line": 1087, "what": "modal file/folder picker with device list, extension filter and worker-read listings"},
+    {"name": "pickExtOk", "path": "src/dash_widgets.c", "line": 894, "what": "match a filename against a '|' separated extension list, with 'NAME/' folder tokens"},
+    {"name": "pickLastDirIs", "path": "src/dash_widgets.c", "line": 869, "what": "case-insensitive test of the last folder name of a path"},
+    {"name": "transcpy_sjis", "path": "src/draw_text.c", "line": 333, "what": "convert a Shift-JIS save title to ASCII using two 256-entry lookup tables"},
+    {"name": "is576pSupported", "path": "src/draw_gs.c", "line": 6, "what": "ROMVER based check for native 576p support"},
+    {"name": "fadeScreenToBlack", "path": "src/draw.c", "line": 248, "what": "8-frame fade of the current GS frame to black before a handoff or mode switch"},
+    {"name": "clearScreenToBlack", "path": "src/draw.c", "line": 263, "what": "clear both GS framebuffers and BGCOLOR to black"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "loadIcon is never called: TexIcon, FOLDER/WARNING and the whole of src/icon.c are dead with it",
+      "category": 1,
+      "locations": [
+        {"path": "src/draw.c", "start": 206, "end": 227},
+        {"path": "src/draw.c", "start": 15, "end": 15},
+        {"path": "include/launchelf.h", "start": 466, "end": 470},
+        {"path": "include/launchelf.h", "start": 473, "end": 473},
+        {"path": "include/launchelf.h", "start": 505, "end": 505},
+        {"path": "src/icon.c", "whole": true},
+        {"path": "ps2.yaml", "start": 559, "end": 559}
+      ],
+      "problem": "loadIcon appears only at its definition (draw.c:206) and prototype (launchelf.h:505). It is the only user of TexIcon (draw.c:15, launchelf.h:473) and of icon_folder/icon_warning, the two 1024-byte arrays that make up all 2055 lines of src/icon.c (compiled via ps2.yaml:559). The FOLDER/WARNING index macros (launchelf.h:466-467) are used nowhere. loadIcon would also free() static arrays if it ever ran.",
+      "fix": "Delete loadIcon, TexIcon, the FOLDER/WARNING macros, the icon_folder/icon_warning/TexIcon externs and the loadIcon prototype; delete src/icon.c and its ps2.yaml entry.",
+      "justification": "",
+      "benefit": "~2085 source lines removed (2055 of them a byte table). MEASURED: linker already discards .text.loadIcon (308 B) and icon.o .data (2048 B); TexIcon 80 B .bss stays in the shipped ELF (no -fdata-sections) and goes away.",
+      "benefit_rank": 4,
+      "lines_removed": 2085,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -w loadIcon|TexIcon|icon_folder|icon_warning over the whole repo (src include tests scripts docs ps2.yaml): only draw.c:15,206-226, icon.c:2,1030, launchelf.h:469,470,473,505. Grep -w FOLDER|WARNING over *.c/*.h: only launchelf.h:466-467 plus unrelated string text. evidence/Launchstation/raw/link/wLaunchELF-gc-discarded-first-party.tsv lists draw.o .text.loadIcon 308 and icon.o .data 2048; raw/sizes/wLaunchELF-unstripped-all-symbols-by-size.tsv has TexIcon 80 .bss. No test references icon.c or loadIcon."
+    },
+    {
+      "n": 2,
+      "title": "Commented-out WriteFont_C font dumper in draw.c and its leftovers",
+      "category": 1,
+      "locations": [
+        {"path": "src/draw.c", "start": 343, "end": 399},
+        {"path": "include/launchelf.h", "start": 507, "end": 508},
+        {"path": "src/main_info_screens.c", "start": 303, "end": 303}
+      ],
+      "problem": "WriteFont_C (a developer tool that dumps font_uLE as C source) exists only inside a /* */ block in draw.c, with a commented prototype in launchelf.h and a commented call in main_info_screens.c. No build can enable it without editing three files.",
+      "fix": "Delete the commented block, its banner, the commented prototype and the commented call.",
+      "justification": "",
+      "benefit": "~60 comment lines removed; no binary change (INFERRED: code is commented out).",
+      "benefit_rank": 2,
+      "lines_removed": 60,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep WriteFont_C over the repo: draw.c:343,346,399 (inside the comment), launchelf.h:507-508 (comments), main_info_screens.c:303 (commented call). Nothing else."
+    },
+    {
+      "n": 3,
+      "title": "Orphan 'endfunc' banners and headings for functions that moved out of draw.c and editor.c",
+      "category": 7,
+      "locations": [
+        {"path": "src/draw.c", "start": 228, "end": 231},
+        {"path": "src/draw.c", "start": 322, "end": 341},
+        {"path": "src/editor.c", "start": 41, "end": 50},
+        {"path": "src/editor.c", "start": 103, "end": 111},
+        {"path": "src/dash_widgets.c", "start": 362, "end": 364}
+      ],
+      "problem": "draw.c keeps empty banners for loadFont, drawChar, drawChar2, printXY, printXY_sjis and transcpy_sjis, which now live in draw_text.c. editor.c keeps 'ends menu', 'endfunc Virt_KeyBoard_Entry', 'endfunc KeyBoard_Entry' and 'ends Window_Selector' banners for code split into editor_menu.c/editor_input.c. dash_widgets.c:362-363 is a heading with no code under it.",
+      "fix": "Delete these comment-only blocks.",
+      "justification": "",
+      "benefit": "~46 comment lines removed; no binary change.",
+      "benefit_rank": 1,
+      "lines_removed": 46,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read the cited ranges: comment lines only. Grep 'int loadFont|void drawChar|int printXY' finds the definitions in draw_text.c:67,107,142,159,206,333. editorMenu/editorSelectWindow are in editor_menu.c:6,139 and editorVirtualKeyboardEntry/editorKeyboardEntry in editor_input.c:169,428. Grep 'endfunc' in tests: only banners of filer_actions.c, filer_browser.c and init.c are used as slice markers, none of the cited ones."
+    },
+    {
+      "n": 4,
+      "title": "printXY_sjis repeats the Shift-JIS to ELISA index mapping and symbol table that dash_font.c also has",
+      "category": 2,
+      "locations": [
+        {"path": "src/draw_text.c", "start": 220, "end": 292},
+        {"path": "src/dash_font.c", "start": 46, "end": 68},
+        {"path": "src/dash_font.c", "start": 121, "end": 125}
+      ],
+      "problem": "draw_text.c:266-292 converts SJIS to EUC and walks font404 to get the ELISA glyph index; dash_font.c:46-68 (elisaGlyphIndex, commented 'Same ... mapping as the classic renderer') does the same arithmetic. The five PlayStation-button codes (0x819B, 0x817E, 0x81A0, 0x81A2, 0x81A1) are hand-written as five copy-paste switch cases in draw_text.c:222-260 and again as an if-chain in dash_font.c:121-125.",
+      "fix": "Make elisaGlyphIndex non-static (or move it next to font404 in draw_text.c) and call it from printXY_sjis (glyph * 8 is the byte offset); replace the five switch cases with one small code-to-glyph table shared by both files.",
+      "justification": "",
+      "benefit": "~45 lines removed (INFERRED: 39 lines of switch cases become ~6, 27 lines of mapping become one call); a few hundred bytes of .text (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 45,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read draw_text.c:206-332 and dash_font.c:39-144. Both compute code -= 0x4000 for >=0xE000, the same lead/trail shuffle, +0xA1A1, row*94 and the font404 subtraction loop; dash_font adds a lead/trail validity check and bounds n < 55016/8, while draw_text bounds n*8 <= 55008 (same limit). printXY_sjis callers: filer_browser.c:1815. Check before merging: glyph range edge (55008 vs 55016) and the y+1 nudge for code <= 0x829A stay in printXY_sjis."
+    },
+    {
+      "n": 5,
+      "title": "editor.c: NEW and OPEN menu branches are copies, and the open-window count loop is written five times",
+      "category": 2,
+      "locations": [
+        {"path": "src/editor.c", "start": 270, "end": 316},
+        {"path": "src/editor.c", "start": 330, "end": 334}
+      ],
+      "problem": "The ret == NEW and ret == OPEN branches (270-292 and 293-316) are identical except for editorNew vs editorOpenFile and one drawMsg. The loop 'Num_Window = 0; for i < 10 if Window[i][OPENED] Num_Window++' appears at 271-275, 288-292, 295-299, 312-316 and 330-334, and the first-free-window search twice (277-282, 301-306).",
+      "fix": "Add one static countOpenWindows() and merge NEW/OPEN into one branch that picks editorNew or editorOpenFile.",
+      "justification": "The helper replaces five copies of the same loop and the merge removes a 23-line duplicate branch; net source shrinks.",
+      "benefit": "~30 lines removed (INFERRED from cited ranges); small .text saving (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 30,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read editor.c:267-357 line by line. TextEditor is still called from filer_browser.c:1554 and main_actions.c:231,771, so the code is live."
+    },
+    {
+      "n": 6,
+      "title": "draw_gs.c: TV mode to GS mode mapping written twice, and updateScreenMode recomputes what applyGSParams sets",
+      "category": 2,
+      "locations": [
+        {"path": "src/draw_gs.c", "start": 104, "end": 121},
+        {"path": "src/draw_gs.c", "start": 156, "end": 165}
+      ],
+      "problem": "setupGS and updateScreenMode each contain a switch mapping TV_mode_* to GS_MODE_*. updateScreenMode then recomputes height/interlace/field from the GS mode with ternaries that restate the per-mode values already encoded in applyGSParams.",
+      "fix": "Use one static tvModeToGsMode() in both functions. tests/test_display_feedback.py:132 asserts the source contains 'case TV_mode_576P:' twice and must be updated with it.",
+      "justification": "One mapping function replaces two copies; net lines go down.",
+      "benefit": "~14 lines removed (INFERRED from cited ranges); no measurable size change.",
+      "benefit_rank": 1,
+      "lines_removed": 14,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read draw_gs.c in full. tests/test_display_feedback.py:132 pins gs.count('case TV_mode_576P:') == 2; tests/test_r3z_video_switch.py and test_dashboard_present_buffers.py slice the source between 'void setupGS(void)' and 'void updateScreenMode(void)', so keep those signatures."
+    },
+    {
+      "n": 7,
+      "title": "loadFont closes a failed descriptor and seeks to 0 twice",
+      "category": 3,
+      "locations": [
+        {"path": "src/draw_text.c", "start": 74, "end": 84}
+      ],
+      "problem": "When genOpen fails (fd < 0) loadFont still calls genClose(fd) on the negative value (line 76). Line 79 seeks to 0 on a freshly opened file right before seeking to the end, and line 84 seeks to 0 again.",
+      "fix": "Delete the genClose in the fd < 0 branch and the first genLseek(fd, 0, SEEK_SET).",
+      "justification": "",
+      "benefit": "2 lines and two IO calls removed (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read draw_text.c:67-106. Callers: config_startup.c:131,173, config.c:1611, dash_settings.c:2128,2132,2565, main_actions.c:786, main_startup.c:708,716."
+    },
+    {
+      "n": 8,
+      "title": "dashPickPath: pickParent ignores its size argument and the 'go to parent' block is written twice",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_widgets.c", "start": 1066, "end": 1085},
+        {"path": "src/dash_widgets.c", "start": 1164, "end": 1170},
+        {"path": "src/dash_widgets.c", "start": 1218, "end": 1223}
+      ],
+      "problem": "pickParent takes int size only to cast it to void (line 1084). Both callers (Back at 1164-1170, the Up row at 1218-1223) do the same four steps: copy pk.dir to a local buffer, pickParent, pickOpen, sel = 0.",
+      "fix": "Drop the size parameter and fold the copy + pickOpen into pickParent (pickUp), so both call sites become one call plus sel = 0.",
+      "justification": "",
+      "benefit": "~8 lines removed (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 8,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep pickParent over the repo: dash_widgets.c:1066 (definition), 1167, 1221 (calls); no test extracts it."
+    },
+    {
+      "n": 9,
+      "title": "visibleWork() in dash_worker.c only forwards to dashWorkerQueued(DASH_JOB_VISIBLE)",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_worker.c", "start": 351, "end": 354}
+      ],
+      "problem": "visibleWork is a one-line static wrapper with one caller (dash_worker.c:358).",
+      "fix": "Delete visibleWork and call dashWorkerQueued(DASH_JOB_VISIBLE) at line 358.",
+      "justification": "",
+      "benefit": "4 lines removed; no binary change (inlined already, INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep visibleWork: dash_worker.c:351 and :358 only. tests/test_worker_queue.py slices dash_worker.c only up to '// Waiting for results' (line 293), so it does not touch this function."
+    }
+  ]
+}

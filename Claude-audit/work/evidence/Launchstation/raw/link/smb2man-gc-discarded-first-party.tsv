@@ -1,0 +1,9 @@
+# zero-size sections and ABI metadata (.reginfo, .MIPS.abiflags, .pdr) are left out
+category	file	section	kind	size_bytes
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o	.text.smb2auth_init	code	100
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o	.text.usmb2_init_context	code	296
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o	.text.usmb2_size	code	192
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o	.text.usmb2_negotiateprotocol	code	128
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o	.text.usmb2_open	code	76
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o	.text.rotateLeft	code	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o	.text.utf16_to_utf8	code	408

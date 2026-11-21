@@ -1,0 +1,73 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      138     4 .rel.text
+       0        0      138     4         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.rel.data)
+       0        0      278    16 .text
+       0        0      218    16         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.text)
+      14       14        0     1                 SecrDiskBootFile
+      24       24      1f4     1                 _start
+     220      220       58    16         obj/allowdvdv/imports.o:(.text)
+     234      234        0     1                 memset
+     23c      23c        0     1                 memcpy
+     260      260        0     1                 open
+     268      268        0     1                 close
+       0        0       40    16 .rodata
+       0        0        b    16         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.rodata)
+       0        0        b     1                 psxver
+      10       10        a    16         <internal>:(.rodata.str1.1)
+      20       20       20    16         <internal>:(.rodata.cst32)
+  4002e0   4002e0    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       a0    16 .data
+       0        0       a0    16         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10       31     1                 ps2Part2
+      50       50       31     1                 psxPart2
+      90       90       10     1                 CT
+      a0       a0        0    16         obj/allowdvdv/imports.o:(.data)
+  440380   440380        0     1 __bss_start = .
+       0        0       b0    16 .bss
+       0        0       a1    16         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.bss)
+       0        0       89     1                 buf
+      90       90        1     1                 ps2Part1.0
+      a0       a0        1     1                 psxPart1.0
+      b0       b0        0    16         obj/allowdvdv/imports.o:(.bss)
+  440430   440430        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.mdebug.abi32)
+       0        0        0     1         obj/allowdvdv/imports.o:(.mdebug.abi32)
+       0        0       20     4 .pdr
+       0        0       20     4         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.pdr)
+       0        0        8     4 .rel.pdr
+       0        0        8     4         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.rel.pdr)
+       0        0        1     1 .llvm_addrsig
+       0        0        1     1         obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o:(.llvm_addrsig)
+       1        1        0     1         obj/allowdvdv/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      1e0     4 .symtab
+       0        0      1e0     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0       c7     1 .strtab
+       0        0       c7     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+SecrDiskBootFile                                  obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+_start                                            obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+memset                                            obj/allowdvdv/imports.o
+                                                  obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+memcpy                                            obj/allowdvdv/imports.o
+                                                  obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+open                                              obj/allowdvdv/imports.o
+                                                  obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+close                                             obj/allowdvdv/imports.o
+                                                  obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+_irx_id                                           obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o

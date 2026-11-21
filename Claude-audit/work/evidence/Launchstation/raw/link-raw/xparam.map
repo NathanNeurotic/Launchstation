@@ -1,0 +1,68 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0       18     4 .rel.text
+       0        0       18     4         obj/xparam/iop/xparam/src/xparam.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/xparam/iop/xparam/src/xparam.o:(.rel.data)
+       0        0       ac    16 .text
+       0        0       74    16         obj/xparam/iop/xparam/src/xparam.o:(.text)
+       0        0       14     1                 SetDummyXparamValue
+      14       14       10     1                 _start
+      24       24       50     1                 CheckGameID
+      80       80        0    16         obj/xparam/iop/xparam/src/database_merged.o:(.text)
+      80       80       2c    16         obj/xparam/imports.o:(.text)
+      94       94        0     1                 strcmp
+      9c       9c        0     1                 strtol
+       0        0     16d7    16 .rodata
+       0        0     16d0    16         obj/xparam/iop/xparam/src/database_merged.o:(.rodata)
+       0        0     16d0     1                 XPARAMS
+    16d0     16d0        7    16         <internal>:(.rodata.str1.1)
+  4017a7   4017a7    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       10    16 .data
+       0        0        8    16         obj/xparam/iop/xparam/src/xparam.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10        0    16         obj/xparam/iop/xparam/src/database_merged.o:(.data)
+      10       10        0    16         obj/xparam/imports.o:(.data)
+  4417c0   4417c0        0     1 __bss_start = .
+       0        0        0    16 .bss
+       0        0        0    16         obj/xparam/iop/xparam/src/xparam.o:(.bss)
+       0        0        0    16         obj/xparam/iop/xparam/src/database_merged.o:(.bss)
+       0        0        0    16         obj/xparam/imports.o:(.bss)
+  4417c0   4417c0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/xparam/iop/xparam/src/xparam.o:(.mdebug.abi32)
+       0        0        0     1         obj/xparam/iop/xparam/src/database_merged.o:(.mdebug.abi32)
+       0        0        0     1         obj/xparam/imports.o:(.mdebug.abi32)
+       0        0       60     4 .pdr
+       0        0       60     4         obj/xparam/iop/xparam/src/xparam.o:(.pdr)
+       0        0       18     4 .rel.pdr
+       0        0       18     4         obj/xparam/iop/xparam/src/xparam.o:(.rel.pdr)
+       0        0        1     1 .llvm_addrsig
+       0        0        1     1         obj/xparam/iop/xparam/src/xparam.o:(.llvm_addrsig)
+       1        1        0     1         obj/xparam/iop/xparam/src/database_merged.o:(.llvm_addrsig)
+       1        1        0     1         obj/xparam/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      160     4 .symtab
+       0        0      160     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0       93     1 .strtab
+       0        0       93     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+SetDummyXparamValue                               obj/xparam/iop/xparam/src/xparam.o
+_start                                            obj/xparam/iop/xparam/src/xparam.o
+CheckGameID                                       obj/xparam/iop/xparam/src/xparam.o
+XPARAMS                                           obj/xparam/iop/xparam/src/database_merged.o
+                                                  obj/xparam/iop/xparam/src/xparam.o
+strcmp                                            obj/xparam/imports.o
+                                                  obj/xparam/iop/xparam/src/xparam.o
+_irx_id                                           obj/xparam/iop/xparam/src/xparam.o
+strtol                                            obj/xparam/imports.o

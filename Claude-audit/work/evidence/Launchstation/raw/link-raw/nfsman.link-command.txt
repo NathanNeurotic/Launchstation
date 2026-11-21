@@ -1,0 +1,1 @@
+$SDK/llvm-toolchain/llvm/bin/ld.lld.exe -Tiop/nfsman/linkfile -o evidence-relink/nfsman.relink.elf obj/nfsman/iop/nfsman/nfsman.o obj/nfsman/imports.o -r -L$SDK/packages-llvm/core/startup/iop/lib -L$SDK/llvm-toolchain/iop/mipsel-none-elf/lib --gc-sections -u _irx_id -lclang_rt.builtins-mipsel -liopmini -lstartup

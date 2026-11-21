@@ -1,0 +1,29 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-03.b",
+  "verdicts": [
+    {
+      "n": 1,
+      "verdict": "confirmed",
+      "note": "Re-read cloud_google.c sync_tree 1485-1579 (ledger gated on psu at 1544-1545), drive_upload_file 1270-1367 (hash at 1302, lookup at 1310), drive_find_child 705-748 and drive_request 684-703, cloud_http.c request_open 694-726 (tls_open per request at 701, Connection: close at 715). Callers dash_tools.c:360-363 and 676-679 (dashLoadingBegin on the UI path) and main.c:198 (IGR) match; dash_store.c:260 sets keep = 10. Grep of UPLOADED/ledger: only cloud_google.c, docs/NATIVE_CLOUD.md:147-152 and tests/test_cloud_upload_ledger.py (assertions 51-53, docstring line 6 states the card-image exclusion); git log of de11ede gives no reason for it. Retention filters by name: mmce_backup.c prune_history uses history_name_match (132, 454), and dash_browser.c activeHistoryScan uses activeHistoryMatch, so an UPLOADED.TXT in card folders is ignored. With the fix the hash moves to hash_local_file and is passed as known_sha256, so no extra read is added. Ratings are fair."
+    },
+    {
+      "n": 2,
+      "verdict": "confirmed",
+      "note": "Re-read refresh_access_token 370-401 (only access_token parsed; expires_in ignored), cloudGoogleSyncBackupRoot 1581-1635 (one refresh at 1626), drive_find_child non-200 handling 739-743 and the abort paths in sync_tree 1518-1524 and 1561-1567. Grep over src/cloud_*.c: refresh_access_token is called only at 858, 1026, 1134 and 1626; expires_in appears only for the device code (611); there is no 401 handling. Every Drive call reuses s->access_token (690-695, 1326, 1353). The trigger (a sync longer than the roughly one-hour token lifetime) is plausible for a first sync of many 8 MB images, but it is correctly marked INFERRED. A rerun resumes because lookups are content-addressed, which fits the honest rank 2. The addition is justified."
+    },
+    {
+      "n": 3,
+      "verdict": "corrected",
+      "note": "Re-read cloudGoogleRecoverSnapshot 982-1090 and cloudGoogleRecoverSaveVersion 1092-1182, download_write cloud_http.c:840-869 (SHA updated from the in-memory data at 863) and the full cloudHttpDownloadFdInternal 953-1277 (it never re-reads the file). mcCardBackupNoEccImpl mc_card_export.c:298-351: the copy pass (315-324) reads 8 MB and writes 8 MB, and the verify pass (327-337) reads 16 MB, so the totals are 24 MB read and 8 MB write. read_exact_at/write_exact_at (87-130) open and close the file on every 64 KB chunk, about 512 calls. mcCardValidateNoEcc checks only the header and the size. The problem and savings are right. The fix understates the test work: besides 58-59, the test harness stubs and counts assume a .mcd.PART stage (111-112, 129-131, 186). Also, hash_local_file (1468) is defined after the recovery functions, so it must be moved or forward-declared.",
+      "corrected": {
+        "fix": "After the download, hash the written file with hash_local_file (move it above the recovery functions or forward-declare it) and compare it with snapshot->sha256 (and version->sha256 for .psu). For .mcd rename download to result directly, as cloudGoogleRecoverSaveVersion does; keep mcCardImportPcsx2 only for .ps2. Update tests/test_cloud_recovery.py: the source assertions at 58-59 and the harness stubs and counts that assume a .mcd.PART stage (111-112, 129-131, 186), adding a hash_local_file stub."
+      }
+    },
+    {
+      "n": 4,
+      "verdict": "confirmed",
+      "note": "Re-read cloudGoogleListBackupHistory 839-917: it rejects tokens over 240 characters at 892-895 and stores nextPageToken via json_string at 913-914. json_string (61-107) copies at most out_size-1 characters and returns 1, so it truncates silently. include/cloud_google.h:56 sets next_page_token[256], and dash_tools.c cloudBrowseHistory has token[256] (1194), copied at 1273 and shown as Next page at 1248. Path arithmetic was re-checked. The fixed text in the 884-887 format string is 115 characters. The encoded query is at most 236-237 characters (drive_safe_id ids are under 192 characters of alnum, '-' and '_'). Adding 11 for the pageToken key and at most 765 for an encoded 255-character token stays well under path[2304]. Whether Google issues tokens of 241-255 characters is unverified; the finding says so and rates itself 1/Low/INFERRED, which is honest."
+    }
+  ]
+}

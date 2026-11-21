@@ -1,0 +1,223 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-26",
+  "coverage": [
+    {"path": "src/mc_card_view.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_card_write.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_card_write.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_ps1_card.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_ps1_card.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_save_export.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_save_export.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_save_formats.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "Pure-C, host-testable memory card image tooling used by the dashboard card tool (src/dash_card_tool.c, src/dash_ps1_card.c), MMCE backup/fingerprinting (src/mmce_backup.c, src/main.c) and save versions (src/mmce_save_versions.c). mc_card_view.c is a bounded read-only PS2 card image parser (superblock, FAT, directory walks, SHA-256 index fingerprint) over a read callback; mc_card_write.c adds crash-ordered save copy/delete, .psu conversion, card formatting and Game ID helpers on top of it. mc_ps1_card.c handles 128 KB PS1 card images and PS1 single-save files (.mcs/.psv/.psx/raw); mc_save_export.c writes signed PS3 .psv, .psx, a stored .zip and the PS1 card containers (.gme/.vgs/.vmp/.mcx) using Mbed TLS AES/HMAC. mc_save_formats.h is the interface of the PS2 save-format readers in mc_save_formats.c. The classic uLE .psu code in src/psu_functions.c is a separate file-streaming codec for live cards; the two are not easy to merge.",
+  "reusable_helpers": [
+    {"name": "mcCardNameOk", "path": "src/mc_card_write.c", "line": 41, "what": "validates a 32-byte PS2 card name field (1..31 printable ASCII, no . / .. / \\ * ?)"},
+    {"name": "mcGameIdValid", "path": "src/mc_card_write.c", "line": 999, "what": "checks a game id of the form ABCD-12345"},
+    {"name": "mcSaveGameId", "path": "src/mc_card_write.c", "line": 1016, "what": "extracts SLUS-21050 style game id from a PS2 save folder name"},
+    {"name": "mcCardSaveToPsu", "path": "src/mc_card_write.c", "line": 850, "what": "serialises an in-memory save to .psu bytes"},
+    {"name": "mcCardSaveFromPsu", "path": "src/mc_card_write.c", "line": 892, "what": "parses and fully validates a .psu buffer into McSaveData"},
+    {"name": "mcCardFormat", "path": "src/mc_card_write.c", "line": 1031, "what": "writes an empty PS2 card image of 1..64 MB in 32 KB pieces"},
+    {"name": "mcViewOpen", "path": "src/mc_card_view.c", "line": 191, "what": "opens and validates a PS2 card image (ECC or not) over a read callback"},
+    {"name": "mcViewFingerprint", "path": "src/mc_card_view.c", "line": 463, "what": "SHA-256 over a card's superblock and directory index"},
+    {"name": "ps1NameOk", "path": "src/mc_ps1_card.c", "line": 49, "what": "validates a PS1 save name (1..20 printable ASCII)"},
+    {"name": "mcPsvFileName", "path": "src/mc_save_export.c", "line": 246, "what": "builds the PS3 .PSV file name from a save name (12 chars + hex)"},
+    {"name": "mcSaveToZip", "path": "src/mc_save_export.c", "line": 446, "what": "writes a stored (uncompressed) zip of one folder of files in memory"},
+    {"name": "aes", "path": "src/mc_save_export.c", "line": 35, "what": "AES-128 ECB block or in-place CBC through Mbed TLS"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Little-endian rd16/rd32/wr16/wr32 helpers copied into five mc_*.c files",
+      "category": 2,
+      "locations": [
+        {"path": "src/mc_card_view.c", "start": 31, "end": 35},
+        {"path": "src/mc_card_write.c", "start": 20, "end": 36},
+        {"path": "src/mc_ps1_card.c", "start": 17, "end": 31},
+        {"path": "src/mc_save_export.c", "start": 14, "end": 24},
+        {"path": "src/mc_save_formats.c", "start": 26, "end": 42},
+        {"path": "src/mc_save_export.c", "start": 196, "end": 196},
+        {"path": "src/mc_save_export.c", "start": 206, "end": 206}
+      ],
+      "problem": "The same static byte-order helpers are defined five times (65 lines in all); mc_save_export.c additionally open-codes rd16 of the entry mode at lines 196 and 206. mc_card_write.h, mc_save_export.h and mc_save_formats.h all include mc_card_view.h, so one definition there reaches four of the five files.",
+      "fix": "Define rd16/rd32/wr16/wr32 once as static inline functions in include/mc_card_view.h (mc_ps1_card.c includes it or keeps its own copy), delete the per-file copies, and use rd16 at mc_save_export.c:196 and 206.",
+      "justification": "Adds one ~17-line header block but deletes four to five identical copies (48-65 lines); net code shrinks and the helpers cannot drift apart.",
+      "benefit": "~48 lines net removed (65 copied lines minus one 17-line shared copy). No ELF change expected: the statics are already inlined (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 48,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep 'static (inline )?uint32_t rd(16|32)|static (inline )?void wr(16|32)' over src/Launchstation: src/mc_card_view.c:31-32, mc_card_write.c:20-30, mc_ps1_card.c:17-27, mc_save_export.c:14-18, mc_save_formats.c:26-36 (plus iop/smb2man, a different binary). Read each copy: bodies identical (ps1 wr32 is written via wr16, same result). mc_card_write.h:24, mc_save_export.h:41, mc_save_formats.h:41 include mc_card_view.h directly or via mc_card_write.h."
+    },
+    {
+      "n": 2,
+      "title": "mc_save_export.c zipCrc re-implements zlib crc32, which is already linked",
+      "category": 2,
+      "locations": [
+        {"path": "src/mc_save_export.c", "start": 373, "end": 388},
+        {"path": "src/mc_save_export.c", "start": 483, "end": 483}
+      ],
+      "problem": "zipCrc is a private nibble-table CRC-32 (the zip/zlib polynomial). zlib's crc32() is already in the shipped ELF: the link pulls libz.a(crc32.o), 6,908 bytes, for libpng. The host test already links -lz.",
+      "fix": "Delete zipCrc and call crc32(0, f->data, f->size) from <zlib.h> at line 483.",
+      "justification": "",
+      "benefit": "16 lines removed; 64-byte table zipCrc.t (MEASURED, all-symbols tsv) plus the inlined loop (INFERRED ~40 bytes) leave the ELF; zlib's table-driven CRC is also faster on the EE for large saves.",
+      "benefit_rank": 2,
+      "lines_removed": 16,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "evidence/Launchstation/raw/link/wLaunchELF-archive-members.tsv:343: libz.a crc32.o 6908 bytes, pulled by libpng.a(png.o) for symbol crc32. sizes/wLaunchELF-unstripped-all-symbols-by-size.tsv:3808 zipCrc.t 64 bytes (zipCrc itself inlined). Grep 'crc32(|zipCrc' over src/: only mc_save_export.c:375,483. tests/test_mc_save_export.py:34 and test_dash_card_tool.py:41 already link -lz; no test asserts on zipCrc text."
+    },
+    {
+      "n": 3,
+      "title": "mcSaveFormatExt and mcSaveFormatName are never called",
+      "category": 1,
+      "locations": [
+        {"path": "include/mc_save_formats.h", "start": 60, "end": 62},
+        {"path": "src/mc_save_formats.c", "start": 878, "end": 902}
+      ],
+      "problem": "Grep over the whole repo finds the two names only at their definitions (mc_save_formats.c:878, 891) and prototypes (mc_save_formats.h:61-62); no source, host test or Python test calls them, and the link garbage-collects both (56 bytes each).",
+      "fix": "Delete both functions and their prototypes and comment.",
+      "justification": "",
+      "benefit": "~28 lines removed. Code already gc'd (MEASURED: gc-discarded-first-party.tsv lines 67-68); their string literals stay in .rodata without -fdata-sections (INFERRED ~150 bytes).",
+      "benefit_rank": 2,
+      "lines_removed": 28,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep '\\b(mcSaveFormatExt|mcSaveFormatName)\\b' over src/Launchstation (all file types, excluding nothing but the header): only mc_save_formats.c:878 and :891. Header lines 60-62 hold the comment and prototypes. evidence/Launchstation/raw/link/wLaunchELF-gc-discarded-first-party.tsv:67-68 lists .text.mcSaveFormatExt and .text.mcSaveFormatName (56 bytes each) as discarded."
+    },
+    {
+      "n": 4,
+      "title": "FAT chain step and FAT-cluster lookup written twice (nextOf vs chainNext, fatGet vs mcViewFatLocate)",
+      "category": 2,
+      "locations": [
+        {"path": "src/mc_card_write.c", "start": 61, "end": 75},
+        {"path": "src/mc_card_view.c", "start": 99, "end": 118},
+        {"path": "src/mc_card_view.c", "start": 73, "end": 97},
+        {"path": "src/mc_card_view.c", "start": 501, "end": 527}
+      ],
+      "problem": "nextOf in mc_card_write.c repeats chainNext in mc_card_view.c check for check (in-use bit, 0xFFFFFFFF end, mask, alloc_usable bound). fatGet and mcViewFatLocate both carry the same indirect-FAT lookup (ind_index/dbl, ifc_list bound, loadCluster32 of the ifc cluster, ifc_cache index), and mcViewFatGet re-checks the bound that its callers already ensure.",
+      "fix": "Export chainNext (for example as mcViewChainNext) and delete nextOf; implement fatGet as mcViewFatLocate followed by the FAT cluster load, so the indirect lookup exists once.",
+      "justification": "",
+      "benefit": "~20 lines removed (15-line nextOf, ~12 duplicated lookup lines, minus a 5-line export). Code size: a few hundred bytes of .text at most (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read mc_card_view.c:74-118 and 501-527 and mc_card_write.c:61-75 side by side. nextOf callers: mc_card_write.c:86, 535, 685. mcViewFatGet callers: mc_card_write.c:65, 350 only (grep). INFERRED part: routing fatGet through mcViewFatLocate adds its 'FAT cluster below alloc_offset' check to read paths; the PS2 format places FAT clusters below the data area (mcCardFormat at mc_card_write.c:1058 lays it out that way), so valid cards are unaffected, but a damaged card would now be rejected one step earlier."
+    },
+    {
+      "n": 5,
+      "title": "Public wrappers that only forward to statics: mcViewReadChain, mcViewWalkDir, mcCardSameSave",
+      "category": 3,
+      "locations": [
+        {"path": "src/mc_card_view.c", "start": 529, "end": 537},
+        {"path": "src/mc_card_write.c", "start": 820, "end": 823}
+      ],
+      "problem": "mcViewReadChain and mcViewWalkDir only call the static chainRead and walkDir with the same arguments; mcCardSameSave only adds a NULL check in front of the static sameSave (mc_card_write.c:481). Each pair is two names for one function.",
+      "fix": "Give the static functions the public names (drop static) and delete the wrappers; fold the NULL check of mcCardSameSave into sameSave.",
+      "justification": "",
+      "benefit": "~12 lines removed; no ELF change (INFERRED: the forwarders are tail calls or inlined).",
+      "benefit_rank": 1,
+      "lines_removed": 12,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read mc_card_view.c:529-537 and mc_card_write.c:481-496, 820-823. Callers: mcViewReadChain mc_card_write.c:275; mcViewWalkDir mc_card_write.c:150, 241, 252, 704, 777; mcCardSameSave dash_card_tool.c:421, 780, tests/mc_save_export_host.c:91; sameSave also mc_card_write.c:660."
+    },
+    {
+      "n": 6,
+      "title": "PS1 save validity check written three times (validSave/ps1CardWrite, ps1SaveToMcs, ps1Check)",
+      "category": 2,
+      "locations": [
+        {"path": "src/mc_ps1_card.c", "start": 231, "end": 242},
+        {"path": "src/mc_ps1_card.c", "start": 378, "end": 381},
+        {"path": "src/mc_save_export.c", "start": 115, "end": 122}
+      ],
+      "problem": "The same test (s, s->data, 1 <= blocks <= 15, then ps1NameOk giving PS1_ERR_NAME) appears in validSave plus the re-evaluation at ps1CardWrite:242, in ps1SaveToMcs, and as ps1Check in mc_save_export.c. ps1CardWrite even repeats the validSave expression to choose between INVALID and NAME.",
+      "fix": "Keep one function in mc_ps1_card.c that returns PS1_ERR_INVALID or PS1_ERR_NAME (ps1Check's shape, without the out/len clearing, which callers can do), declare it in mc_ps1_card.h, and use it in ps1CardWrite, ps1SaveToMcs, ps1SaveToPsv and ps1SaveToPsx; delete validSave and ps1Check.",
+      "justification": "",
+      "benefit": "~10 lines removed; one rule for what a valid PS1 save is.",
+      "benefit_rank": 1,
+      "lines_removed": 10,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read mc_ps1_card.c:231-242, 373-381 and mc_save_export.c:115-122, 124-171. Grep 'validSave' in mc_ps1_card.c: definition :231 and use :241 only; ps1Check used at mc_save_export.c:128, 158 only."
+    },
+    {
+      "n": 7,
+      "title": "ps1SaveFromFile raw branch re-implements takeBlocks",
+      "category": 2,
+      "locations": [
+        {"path": "src/mc_ps1_card.c", "start": 342, "end": 360},
+        {"path": "src/mc_ps1_card.c", "start": 296, "end": 311}
+      ],
+      "problem": "The PS1F_RAW branch builds the name and then repeats takeBlocks inline: the size checks, ps1NameOk, malloc, memcpy, blocks and strcpy. The other three formats call takeBlocks.",
+      "fix": "After building name, set r to PS1_ERR_NAME when the stem is longer than 20, else r = takeBlocks(buf, len, name, out).",
+      "justification": "",
+      "benefit": "~13 lines removed. Only change: when both the size and the name are bad the result becomes PS1_ERR_INVALID instead of PS1_ERR_NAME.",
+      "benefit_rank": 1,
+      "lines_removed": 13,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read mc_ps1_card.c:296-311 and 336-360; scMagic(buf) is already true on entry to the branch (line 336), so takeBlocks' own scMagic check passes. Tests call ps1SaveFromFile via tests/mc_ps1_card_host.c:87,118 and mc_save_export_host.c:47,64; the error-precedence change only matters for a raw file with both a bad size and a bad name."
+    },
+    {
+      "n": 8,
+      "title": "McView version, cardtype and cardflags are filled in but never read; has_ecc and title_break are read only by a test",
+      "category": 1,
+      "locations": [
+        {"path": "include/mc_card_view.h", "start": 40, "end": 43},
+        {"path": "include/mc_card_view.h", "start": 56, "end": 56},
+        {"path": "src/mc_card_view.c", "start": 216, "end": 216},
+        {"path": "src/mc_card_view.c", "start": 229, "end": 230},
+        {"path": "src/mc_card_view.c", "start": 246, "end": 247},
+        {"path": "src/mc_card_view.c", "start": 311, "end": 315}
+      ],
+      "problem": "mcViewOpen copies the superblock version string, card type and flags into McView, but nothing in the repo reads v->version, v->cardtype or v->cardflags (mcCardFormat and mcCardReadIdentity take the identity from the raw superblock). has_ecc duplicates page_stride == 528 and is read only by tests/mc_card_view_host.c:37; McViewSave.title_break is read only by that test (line 44) and also set in dash_card_tool.c:2320-2324.",
+      "fix": "Delete the version, cardtype and cardflags fields and their assignments. Optionally also drop has_ecc (the test can print page_stride) and title_break with its two fillers, adjusting the host test output.",
+      "justification": "",
+      "benefit": "~6 lines removed (up to ~14 with has_ecc/title_break); 15 bytes per McView (INFERRED: char[13] + 2 x uint8_t).",
+      "benefit_rank": 1,
+      "lines_removed": 6,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep '\\b(has_ecc|cardtype|cardflags|title_break)\\b|(\\.|->)version\\b' over src/Launchstation excluding iop/: McView fields written only at mc_card_view.c:216, 229-230, 246-247; no reader in src/, include/ or tests/ for version/cardtype/cardflags (other hits are unrelated structs). has_ecc read only at tests/mc_card_view_host.c:37; title_break read only at tests/mc_card_view_host.c:44."
+    },
+    {
+      "n": 9,
+      "title": "mcPsvSign and ps1VmpSign are exported but used only inside mc_save_export.c",
+      "category": 1,
+      "locations": [
+        {"path": "include/mc_save_export.h", "start": 95, "end": 97},
+        {"path": "src/mc_save_export.c", "start": 90, "end": 102}
+      ],
+      "problem": "No file outside mc_save_export.c (sources or host tests) calls mcPsvSign or ps1VmpSign; their only callers are ps1SaveToPsv (:145), mcSaveToPsv (:237) and ps1CardSeal (:347). The link discards their out-of-line copies (108 bytes each) because every use is inlined.",
+      "fix": "Make both static and delete their prototypes and comment from mc_save_export.h.",
+      "justification": "",
+      "benefit": "3 header lines removed and a smaller public interface; no ELF change (MEASURED: both already gc-discarded, gc-discarded-first-party.tsv lines 64-65).",
+      "benefit_rank": 1,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep '\\b(mcPsvSign|ps1VmpSign)\\b' over src/Launchstation excluding mc_save_export.c/.h: no match (tests/ included). Within mc_save_export.c: definitions :90, :97; calls :145, :237, :347. evidence/Launchstation/raw/link/wLaunchELF-gc-discarded-first-party.tsv:64-65 shows .text.mcPsvSign and .text.ps1VmpSign discarded."
+    }
+  ]
+}

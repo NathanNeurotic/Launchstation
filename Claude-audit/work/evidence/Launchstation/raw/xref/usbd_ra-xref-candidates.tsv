@@ -1,0 +1,62 @@
+# CANDIDATE LIST ONLY (usbd_ra link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/usbd_ra/exports.o	_retonly	FUNC	8	GLOBAL	.text	3	yes
+build/obj/usbd_ra/imports.o	DelayThread	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/usbd_ra/imports.o	DeleteSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/usbd_ra/imports.o	DeleteThread	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/usbd_ra/imports.o	strtol	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	callbackThreadFunc	FUNC	260	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	probeDeviceTree	FUNC	196	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	disconnectDriver	FUNC	164	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	callbackEvent	OBJECT	4	GLOBAL	.bss	6	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	cbListEnd	OBJECT	4	GLOBAL	.bss	6	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	cbListStart	OBJECT	4	GLOBAL	.bss	4	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	drvAutoLoader	OBJECT	4	GLOBAL	.bss	8	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	drvListEnd	OBJECT	4	GLOBAL	.bss	6	yes
+build/obj/usbd_ra/iop/usbd-ra/src/driver.o	drvListStart	OBJECT	4	GLOBAL	.bss	10	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	initHcdStructs	FUNC	1288	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	hcdProcessIntr	FUNC	468	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	handleRhsc	FUNC	360	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	cleanUpFunc	FUNC	232	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	initHardware	FUNC	140	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	hcdIrqThread	FUNC	120	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	usbdIntrHandler	FUNC	32	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hcd.o	hcdIrqEvent	OBJECT	4	GLOBAL	.bss	4	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	killEndpoint	FUNC	544	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubDrvConnect	FUNC	480	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubGetPortStatusCallback	FUNC	428	GLOBAL	.text	4	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubStatusChangeCallback	FUNC	360	GLOBAL	.text	4	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	fetchConfigDescriptors	FUNC	332	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubGetHubStatusCallback	FUNC	192	GLOBAL	.text	6	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubSetupPorts	FUNC	192	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	checkDelayedResetsTree	FUNC	180	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubSetFuncAddressCB	FUNC	160	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubSetPortPower	FUNC	152	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	requestDevDescrptCb	FUNC	144	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubCheckDeviceDesc	FUNC	140	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubCheckPorts	FUNC	132	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	HubControlTransfer	FUNC	112	GLOBAL	.text	8	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	cancelTimerCallback	FUNC	96	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	getHubStatusChange	FUNC	96	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	requestDeviceDescriptor	FUNC	96	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubDrvDisconnect	FUNC	88	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubDrvProbe	FUNC	80	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubSetFuncAddress	FUNC	76	GLOBAL	.text	4	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubDeviceResetCallback	FUNC	60	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	allocHubBuffer	FUNC	52	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	checkDelayedResets	FUNC	52	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	HubDriver	OBJECT	48	GLOBAL	.data	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	hubPeekDeviceDescriptor	FUNC	48	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	killDevice	FUNC	48	GLOBAL	.text	3	yes
+build/obj/usbd_ra/iop/usbd-ra/src/hub.o	freeHubBuffer	FUNC	40	GLOBAL	.text	0	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbd.o	_irx_id	OBJECT	8	GLOBAL	.data	0	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbd.o	usbdSema	OBJECT	4	GLOBAL	.bss	6	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbio.o	setupControlTransfer	FUNC	604	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbio.o	setupIsocronTransfer	FUNC	440	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbio.o	setupBulkTransfer	FUNC	372	GLOBAL	.text	1	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbio.o	handleIoReqList	FUNC	92	GLOBAL	.text	2	yes
+build/obj/usbd_ra/iop/usbd-ra/src/usbio.o	enqueueEndpoint	FUNC	88	GLOBAL	.text	3	yes

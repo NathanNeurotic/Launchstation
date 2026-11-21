@@ -1,0 +1,201 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-05",
+  "coverage": [
+    {"path": "src/dash_apps.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_art.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg_geo.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg_ps2.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_apps.c is the dashboard Applications section: a filtered index over dashApps[] drawn as grid, list or carousel, with an options menu (launch, favourite, pin, details, metadata). dash_art.c is the artwork cache: 40 GS texture slots, a want list filled while drawing, a worker job that probes candidate PNG paths and decodes one, plus the THEME/ texture cache and the shared app tile/focus drawing. dash_bg.c is the background renderer entry point (scene switch, brightness, focused-app wallpaper cross-fade, scanline overlay, launch flash, adaptive effects level) and holds the original Crystal scene. dash_bg_geo.c and dash_bg_ps2.c hold the procedural scenes (gradient, grid, lines, cubes, stream, tiles, brushed, wave; tunnel, mist, towers, disc, orbit, clock ring, streaks, clouds), all drawn with gsKit primitives through the dash_gfx helpers.",
+  "reusable_helpers": [
+    {"name": "dashBgHash", "path": "src/dash_bg.c", "line": 65, "what": "integer pair hash returning a float in 0..1, used as deterministic per-element noise"},
+    {"name": "frand", "path": "src/dash_bg.c", "line": 57, "what": "static xorshift32 random float in 0..1"},
+    {"name": "dashBgVignette", "path": "src/dash_bg.c", "line": 74, "what": "top/bottom gradient darkening tinted by the theme base colour"},
+    {"name": "drawCover", "path": "src/dash_bg.c", "line": 356, "what": "static: draws a texture cover-fitted to the 4:3 screen by cropping UVs"},
+    {"name": "colA", "path": "src/dash_bg_geo.c", "line": 12, "what": "static: returns a DashColor with its alpha set to a clamped int (second copy in dash_bg_ps2.c)"},
+    {"name": "fracf", "path": "src/dash_bg_geo.c", "line": 18, "what": "static: fractional part of a float"},
+    {"name": "fileExists", "path": "src/dash_art.c", "line": 151, "what": "static: genFixPath + genOpen/genClose existence probe (another copy in neutrino_iso.c:26)"},
+    {"name": "dashDrawTileFocus", "path": "src/dash_art.c", "line": 672, "what": "theme-styled focus outline for a tile, pixel-snapped"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dashBgSceneClouds: clouds with dir = -1 are drawn off screen after the first minute",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_bg_ps2.c", "start": 803, "end": 809}
+      ],
+      "problem": "For even i, x = fmodf(-t*sp + i*211, span) becomes negative once t*sp > i*211 (immediately for i = 0, within ~53 s for i = 8); fmodf keeps the sign, so x = span - x lies in [span, 2*span) and after -180 the centre is at 820..1820 on a 640 px screen. Five of nine clouds (three of five in SUBTLE) then sit off screen and also move right instead of left. The scene is selectable as \"clouds\" (src/dash_themes.c:114, dispatched at src/dash_bg.c:524-525).",
+      "fix": "Take the modulo of the positive term, x = fmodf(t * sp + i * 211.0f, span), and keep the existing mirror (span - x) for dir < 0.",
+      "justification": "",
+      "benefit": "Fixes a visible scene defect (more than half the clouds missing); 0 lines changed in count.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_bg_ps2.c:795-822. DASH_VW 640 (include/dash_internal.h:17), span = 1000. dir = (i&1)?1:-1 so even i have dir -1; C fmodf result has the sign of the dividend. Rendered radius rx <= 270, so a centre >= 820 leaves at most a sliver at the right edge for the first ~90 px of travel, then nothing. Grep BG_CLOUDS|\"clouds\" in src: dash_bg.c:524, dash_bg_ps2.c:795, dash_themes.c:114."
+    },
+    {
+      "n": 2,
+      "title": "Unused: dashAppsFocusPath, dashAppsVisibleCount, dashArtShutdown, dashDrawAppTile, dashBgDrawStatic, ART_MAX_CANDIDATES",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_apps.c", "start": 94, "end": 106},
+        {"path": "src/dash_art.c", "start": 31, "end": 31},
+        {"path": "src/dash_art.c", "start": 71, "end": 74},
+        {"path": "src/dash_art.c", "start": 787, "end": 790},
+        {"path": "src/dash_bg.c", "start": 543, "end": 547},
+        {"path": "include/dash_internal.h", "start": 741, "end": 741},
+        {"path": "include/dash_internal.h", "start": 758, "end": 758},
+        {"path": "include/dash_internal.h", "start": 769, "end": 769},
+        {"path": "include/dash_internal.h", "start": 1136, "end": 1139}
+      ],
+      "problem": "Repo-wide grep finds only the definitions and prototypes for dashAppsFocusPath, dashAppsVisibleCount, dashArtShutdown, dashDrawAppTile and dashBgDrawStatic, and only the #define for ART_MAX_CANDIDATES. The link map confirms the linker discards all five functions; the dashBgDrawStatic prototype comment (\"legacy screens / FX off\") describes callers that no longer exist.",
+      "fix": "Delete the five functions, their prototypes in dash_internal.h and the ART_MAX_CANDIDATES define.",
+      "justification": "",
+      "benefit": "~33 source lines removed. No ELF change: MEASURED, evidence/Launchstation/raw/link/wLaunchELF-gc-discarded-first-party.tsv lists all five .text sections as discarded (256+12+132+52+28 = 480 bytes).",
+      "benefit_rank": 2,
+      "lines_removed": 33,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep over src/Launchstation (all file types incl. tests, py, docs) for dashAppsFocusPath|dashAppsVisibleCount|dashArtShutdown|dashDrawAppTile|ART_MAX_CANDIDATES|dashBgDrawStatic: only dash_apps.c:94,103, dash_art.c:31,71,787, dash_bg.c:543 and dash_internal.h:741,758,769,1136,1139. No tests mention them. gc-discarded TSV rows: .text.dashAppsFocusPath 256, .text.dashAppsVisibleCount 12, .text.dashArtShutdown 132, .text.dashDrawAppTile 52, .text.dashBgDrawStatic 28."
+    },
+    {
+      "n": 3,
+      "title": "artRun opens every candidate artwork file twice: fileExists probe before dashPngLoadFile",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_art.c", "start": 151, "end": 163},
+        {"path": "src/dash_art.c", "start": 375, "end": 375}
+      ],
+      "problem": "fileExists does genFixPath + genOpen + genClose; tryDecode then calls dashPngLoadFile -> dashLoadTextFile (src/dash_store.c:105-119), which does the same genFixPath + genOpen and returns NULL cleanly when the file is missing. The probe adds nothing except an extra open/close for every candidate that exists, on the worker, against memory card / USB / HDD paths.",
+      "fix": "Delete fileExists and call tryDecode(j, cand) directly at line 375.",
+      "justification": "",
+      "benefit": "14 lines removed; one fewer open/close per found artwork file on the worker thread (INFERRED: each MC open is a slow IOP round trip).",
+      "benefit_rank": 2,
+      "lines_removed": 14,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_art.c:151-163, 341-378, dash_png.c:226-238 (dashPngLoadFile returns -1 when dashLoadTextFile returns NULL), dash_store.c:105-124. Grep fileExists( over the repo: dash_art.c:151 and :375 are the only uses in this file (neutrino_iso.c has its own static copy; tests/test_neutrino_smb.py:125 refers to that one)."
+    },
+    {
+      "n": 4,
+      "title": "CT32 GSTEXTURE setup re-typed five times while dash_gfx.c already has setupTex (static)",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_gfx.c", "start": 196, "end": 207},
+        {"path": "src/dash_art.c", "start": 409, "end": 415},
+        {"path": "src/dash_art.c", "start": 532, "end": 539},
+        {"path": "src/dash_bg.c", "start": 432, "end": 440},
+        {"path": "src/dash_bg_geo.c", "start": 257, "end": 265},
+        {"path": "src/dash_image.c", "start": 130, "end": 137}
+      ],
+      "problem": "Each copy writes the same memset/Width/Height/PSM=CT32/Mem/Filter/Delayed=1/gsKit_setup_tbw (and in two cases SyncDCache) sequence that setupTex in dash_gfx.c:196-207 implements, but setupTex is static and hard-codes GS_FILTER_LINEAR, so the other files repeat it (the scanline copy needs NEAREST).",
+      "fix": "Make setupTex non-static as dashTexSetup(tex, w, h, mem, filter), declare it in dash_internal.h and replace the five copies with one call each.",
+      "justification": "Exports an existing function instead of adding a new one; replaces five 7-9 line blocks with single calls, a net reduction of about 30 lines. The SyncDCache it adds to the art and image paths is harmless (the pixels must be flushed before the GS DMA upload anyway).",
+      "benefit": "~30 source lines removed, a few hundred bytes of .text (INFERRED: five inlined field-store sequences become calls).",
+      "benefit_rank": 2,
+      "lines_removed": 30,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep 'Delayed = 1' over src: dash_gfx.c:204, dash_art.c:414,538, dash_bg.c:438, dash_bg_geo.c:263, dash_image.c:136, plus dash_font.c:99,291,436 and dash_icons.c:852 which are T8+CLUT textures and are not included. Read every cited block; dash_art.c:409-415 skips the memset because slotFree already zeroed the slot."
+    },
+    {
+      "n": 5,
+      "title": "Dead locals and a redundant prototype in dash_apps.c (drawGrid fx/fy/r/fr, drawTitleBar (void)a, local dashHomeRebuild prototype)",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_apps.c", "start": 12, "end": 12},
+        {"path": "src/dash_apps.c", "start": 513, "end": 513},
+        {"path": "src/dash_apps.c", "start": 519, "end": 519},
+        {"path": "src/dash_apps.c", "start": 541, "end": 544},
+        {"path": "src/dash_apps.c", "start": 553, "end": 560}
+      ],
+      "problem": "In drawGrid, fx/fy are assigned only to be (void)-cast, and r/fr are computed only to be (void)-cast; drawTitleBar casts a to void although it is used at line 499. dashHomeRebuild is already declared in include/dash_internal.h:733, which dash_apps.c includes at line 10.",
+      "fix": "Delete fx, fy, r, fr, their assignments and the three (void) casts in drawGrid, the (void)a in drawTitleBar and the local prototype at line 12.",
+      "justification": "",
+      "benefit": "~11 lines removed; no ELF change (INFERRED: the compiler already drops unused locals).",
+      "benefit_rank": 1,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_apps.c:493-563: fx/fy/r/fr have no read other than the (void) casts at 558-560. Grep dashHomeRebuild: declared include/dash_internal.h:733, defined dash_home.c:562."
+    },
+    {
+      "n": 6,
+      "title": "colA copied in dash_bg_geo.c and dash_bg_ps2.c; TAU_F defined but unused in dash_bg_geo.c",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_bg_geo.c", "start": 10, "end": 16},
+        {"path": "src/dash_bg_ps2.c", "start": 48, "end": 54}
+      ],
+      "problem": "The 5-line static colA (set alpha with clamp) is byte-identical in both files, and both define TAU_F; dash_bg_geo.c never uses TAU_F (lines 1-333 read).",
+      "fix": "Delete TAU_F from dash_bg_geo.c. Move colA once into dash_internal.h as a static inline next to dashColorA (line 63) and delete both file copies.",
+      "justification": "",
+      "benefit": "~7 lines removed; no ELF change (INFERRED: static helper inlined either way).",
+      "benefit_rank": 1,
+      "lines_removed": 7,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep 'static DashColor colA|define TAU_F' over src: dash_bg_geo.c:10,12 and dash_bg_ps2.c:48,50 only. Read both copies (identical bodies). dashColorA at dash_internal.h:63 multiplies alpha, so it is not a drop-in replacement; colA sets it."
+    },
+    {
+      "n": 7,
+      "title": "Crystal light streak is cut off at 47% brightness: lifetime 2.2 s but fade computed over 2.6 s",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_bg.c", "start": 193, "end": 195},
+        {"path": "src/dash_bg.c", "start": 330, "end": 333}
+      ],
+      "problem": "dashBgUpdate ends the streak when streak_t > 2.2, but sceneCrystal fades it as sin(streak_t / 2.6 * pi); at 2.2 the alpha is still sin(0.846 pi) = 0.47 and the centre is at x = 680, so a 240 px wide glow visibly pops out instead of fading.",
+      "fix": "Use one constant for both (end the streak at 2.6, or divide by 2.2).",
+      "justification": "",
+      "benefit": "Removes a visible pop in the Crystal scene; 0 lines.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_bg.c:184-197 and 325-337. sx = -200 + p*(640+400); p = 2.2/2.6 = 0.846 gives sx = 680 and a = 0.468, glow alpha 110*0.468 = 51 with half-width 240."
+    },
+    {
+      "n": 8,
+      "title": "Small leftovers in the background code: once-only guard, one-line wrapper, oversized OrbMat, per-cloud blend toggles",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_bg.c", "start": 51, "end": 51},
+        {"path": "src/dash_bg.c", "start": 103, "end": 104},
+        {"path": "src/dash_bg.c", "start": 126, "end": 126},
+        {"path": "src/dash_bg.c", "start": 135, "end": 138},
+        {"path": "src/dash_bg_ps2.c", "start": 517, "end": 520},
+        {"path": "src/dash_bg_ps2.c", "start": 816, "end": 818}
+      ],
+      "problem": "dashBgInit is called once from firstInit (src/dash_main.c:1282), so bg_ready is never seen set; bgAnimated is a one-line wrapper with one caller (line 143); OrbMat has m[9] but only indices 0,2,3,5,6,8 are ever written or read, in a static array of 33; dashBgSceneClouds switches the blend mode to ADD and back for every cloud instead of once around the loop.",
+      "fix": "Delete bg_ready and its checks; inline dashCfg.effects > 0 at line 143 and delete bgAnimated; shrink OrbMat to six floats (renumber the six uses); move the two dashGfxBlend calls outside the cloud loop.",
+      "justification": "",
+      "benefit": "~10 lines removed; 396 bytes .bss (INFERRED: 33 mats x 3 floats x 4 bytes); 16 fewer blend-state changes per frame in Clouds FULL.",
+      "benefit_rank": 1,
+      "lines_removed": 10,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep dashBgInit: dash_internal.h:766, dash_bg.c:96, dash_main.c:1282 (in firstInit). Grep bgAnimated: dash_bg.c:135,143. OrbMat uses: dash_bg_ps2.c:532-537 (writes m[0,2,3,5,6,8]) and 548-550 (reads same); mats is static [ORB_SAMPLES+1] = 33 at line 612. Clouds loop dash_bg_ps2.c:800-820."
+    }
+  ]
+}

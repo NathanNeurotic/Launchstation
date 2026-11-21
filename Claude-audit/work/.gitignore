@@ -1,0 +1,7 @@
+!*
+!*/
+src/
+pr/
+__pycache__/
+tmp/STOP_PUBLISH
+tmp/publish.log

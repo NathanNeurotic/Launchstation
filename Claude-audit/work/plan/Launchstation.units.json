@@ -1,0 +1,1032 @@
+[
+ {
+  "id": "launch-core-01",
+  "chunk": "launch-core-01",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3595,
+  "nfiles": 14,
+  "label": "ee_libs/hdd, ee_libs/iopreboot, ee_libs/tcpips +2 more",
+  "order": 0
+ },
+ {
+  "id": "launch-core-01.b",
+  "chunk": "launch-core-01",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3595,
+  "nfiles": 14,
+  "label": "ee_libs/hdd, ee_libs/iopreboot, ee_libs/tcpips +2 more",
+  "order": 0
+ },
+ {
+  "id": "launch-core-02",
+  "chunk": "launch-core-02",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2017,
+  "nfiles": 17,
+  "label": "include, include/snippets, loader +1 more",
+  "order": 1
+ },
+ {
+  "id": "launch-core-02.b",
+  "chunk": "launch-core-02",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2017,
+  "nfiles": 17,
+  "label": "include, include/snippets, loader +1 more",
+  "order": 1
+ },
+ {
+  "id": "launch-core-03",
+  "chunk": "launch-core-03",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3003,
+  "nfiles": 3,
+  "label": "src",
+  "order": 2
+ },
+ {
+  "id": "launch-core-03.b",
+  "chunk": "launch-core-03",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3003,
+  "nfiles": 3,
+  "label": "src",
+  "order": 2
+ },
+ {
+  "id": "launch-core-04",
+  "chunk": "launch-core-04",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3198,
+  "nfiles": 5,
+  "label": "src",
+  "order": 3
+ },
+ {
+  "id": "launch-core-04.b",
+  "chunk": "launch-core-04",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3198,
+  "nfiles": 5,
+  "label": "src",
+  "order": 3
+ },
+ {
+  "id": "launch-core-05",
+  "chunk": "launch-core-05",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3377,
+  "nfiles": 5,
+  "label": "src",
+  "order": 4
+ },
+ {
+  "id": "launch-core-05.b",
+  "chunk": "launch-core-05",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3377,
+  "nfiles": 5,
+  "label": "src",
+  "order": 4
+ },
+ {
+  "id": "launch-core-06",
+  "chunk": "launch-core-06",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3665,
+  "nfiles": 1,
+  "label": "src",
+  "order": 5
+ },
+ {
+  "id": "launch-core-06.b",
+  "chunk": "launch-core-06",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3665,
+  "nfiles": 1,
+  "label": "src",
+  "order": 5
+ },
+ {
+  "id": "launch-core-07",
+  "chunk": "launch-core-07",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3455,
+  "nfiles": 3,
+  "label": "src",
+  "order": 6
+ },
+ {
+  "id": "launch-core-07.b",
+  "chunk": "launch-core-07",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3455,
+  "nfiles": 3,
+  "label": "src",
+  "order": 6
+ },
+ {
+  "id": "launch-core-08",
+  "chunk": "launch-core-08",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3318,
+  "nfiles": 4,
+  "label": "src",
+  "order": 7
+ },
+ {
+  "id": "launch-core-08.b",
+  "chunk": "launch-core-08",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3318,
+  "nfiles": 4,
+  "label": "src",
+  "order": 7
+ },
+ {
+  "id": "launch-core-09",
+  "chunk": "launch-core-09",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3371,
+  "nfiles": 4,
+  "label": "src",
+  "order": 8
+ },
+ {
+  "id": "launch-core-09.b",
+  "chunk": "launch-core-09",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3371,
+  "nfiles": 4,
+  "label": "src",
+  "order": 8
+ },
+ {
+  "id": "launch-core-10",
+  "chunk": "launch-core-10",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3450,
+  "nfiles": 6,
+  "label": "src",
+  "order": 9
+ },
+ {
+  "id": "launch-core-10.b",
+  "chunk": "launch-core-10",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3450,
+  "nfiles": 6,
+  "label": "src",
+  "order": 9
+ },
+ {
+  "id": "launch-core-11",
+  "chunk": "launch-core-11",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2542,
+  "nfiles": 3,
+  "label": "src",
+  "order": 10
+ },
+ {
+  "id": "launch-core-11.b",
+  "chunk": "launch-core-11",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2542,
+  "nfiles": 3,
+  "label": "src",
+  "order": 10
+ },
+ {
+  "id": "launch-core-12",
+  "chunk": "launch-core-12",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 4103,
+  "nfiles": 1,
+  "label": "src",
+  "order": 11
+ },
+ {
+  "id": "launch-core-12.b",
+  "chunk": "launch-core-12",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 4103,
+  "nfiles": 1,
+  "label": "src",
+  "order": 11
+ },
+ {
+  "id": "launch-core-13",
+  "chunk": "launch-core-13",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2968,
+  "nfiles": 6,
+  "label": "src",
+  "order": 12
+ },
+ {
+  "id": "launch-core-13.b",
+  "chunk": "launch-core-13",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2968,
+  "nfiles": 6,
+  "label": "src",
+  "order": 12
+ },
+ {
+  "id": "launch-core-14",
+  "chunk": "launch-core-14",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3291,
+  "nfiles": 2,
+  "label": "src",
+  "order": 13
+ },
+ {
+  "id": "launch-core-14.b",
+  "chunk": "launch-core-14",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3291,
+  "nfiles": 2,
+  "label": "src",
+  "order": 13
+ },
+ {
+  "id": "launch-core-15",
+  "chunk": "launch-core-15",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3414,
+  "nfiles": 6,
+  "label": "src",
+  "order": 14
+ },
+ {
+  "id": "launch-core-15.b",
+  "chunk": "launch-core-15",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3414,
+  "nfiles": 6,
+  "label": "src",
+  "order": 14
+ },
+ {
+  "id": "launch-core-16",
+  "chunk": "launch-core-16",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2884,
+  "nfiles": 8,
+  "label": "src",
+  "order": 15
+ },
+ {
+  "id": "launch-core-16.b",
+  "chunk": "launch-core-16",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2884,
+  "nfiles": 8,
+  "label": "src",
+  "order": 15
+ },
+ {
+  "id": "launch-core-17",
+  "chunk": "launch-core-17",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2630,
+  "nfiles": 2,
+  "label": "src",
+  "order": 16
+ },
+ {
+  "id": "launch-core-17.b",
+  "chunk": "launch-core-17",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2630,
+  "nfiles": 2,
+  "label": "src",
+  "order": 16
+ },
+ {
+  "id": "launch-core-18",
+  "chunk": "launch-core-18",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2259,
+  "nfiles": 1,
+  "label": "src",
+  "order": 17
+ },
+ {
+  "id": "launch-core-18.b",
+  "chunk": "launch-core-18",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2259,
+  "nfiles": 1,
+  "label": "src",
+  "order": 17
+ },
+ {
+  "id": "launch-core-19",
+  "chunk": "launch-core-19",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2546,
+  "nfiles": 2,
+  "label": "src",
+  "order": 18
+ },
+ {
+  "id": "launch-core-19.b",
+  "chunk": "launch-core-19",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2546,
+  "nfiles": 2,
+  "label": "src",
+  "order": 18
+ },
+ {
+  "id": "launch-core-20",
+  "chunk": "launch-core-20",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3517,
+  "nfiles": 8,
+  "label": "src",
+  "order": 19
+ },
+ {
+  "id": "launch-core-20.b",
+  "chunk": "launch-core-20",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3517,
+  "nfiles": 8,
+  "label": "src",
+  "order": 19
+ },
+ {
+  "id": "launch-core-21",
+  "chunk": "launch-core-21",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2232,
+  "nfiles": 14,
+  "label": "src",
+  "order": 20
+ },
+ {
+  "id": "launch-core-21.b",
+  "chunk": "launch-core-21",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2232,
+  "nfiles": 14,
+  "label": "src",
+  "order": 20
+ },
+ {
+  "id": "launch-core-22",
+  "chunk": "launch-core-22",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3226,
+  "nfiles": 2,
+  "label": "src",
+  "order": 21
+ },
+ {
+  "id": "launch-core-22.b",
+  "chunk": "launch-core-22",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3226,
+  "nfiles": 2,
+  "label": "src",
+  "order": 21
+ },
+ {
+  "id": "launch-core-23",
+  "chunk": "launch-core-23",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3437,
+  "nfiles": 11,
+  "label": "src",
+  "order": 22
+ },
+ {
+  "id": "launch-core-23.b",
+  "chunk": "launch-core-23",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3437,
+  "nfiles": 11,
+  "label": "src",
+  "order": 22
+ },
+ {
+  "id": "launch-core-24",
+  "chunk": "launch-core-24",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3228,
+  "nfiles": 8,
+  "label": "src",
+  "order": 23
+ },
+ {
+  "id": "launch-core-24.b",
+  "chunk": "launch-core-24",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3228,
+  "nfiles": 8,
+  "label": "src",
+  "order": 23
+ },
+ {
+  "id": "launch-core-25",
+  "chunk": "launch-core-25",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3242,
+  "nfiles": 11,
+  "label": "src",
+  "order": 24
+ },
+ {
+  "id": "launch-core-25.b",
+  "chunk": "launch-core-25",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3242,
+  "nfiles": 11,
+  "label": "src",
+  "order": 24
+ },
+ {
+  "id": "launch-core-26",
+  "chunk": "launch-core-26",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3051,
+  "nfiles": 8,
+  "label": "src",
+  "order": 25
+ },
+ {
+  "id": "launch-core-26.b",
+  "chunk": "launch-core-26",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3051,
+  "nfiles": 8,
+  "label": "src",
+  "order": 25
+ },
+ {
+  "id": "launch-core-27",
+  "chunk": "launch-core-27",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3433,
+  "nfiles": 10,
+  "label": "src",
+  "order": 26
+ },
+ {
+  "id": "launch-core-27.b",
+  "chunk": "launch-core-27",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3433,
+  "nfiles": 10,
+  "label": "src",
+  "order": 26
+ },
+ {
+  "id": "launch-core-28",
+  "chunk": "launch-core-28",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3356,
+  "nfiles": 13,
+  "label": "src",
+  "order": 27
+ },
+ {
+  "id": "launch-core-28.b",
+  "chunk": "launch-core-28",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3356,
+  "nfiles": 13,
+  "label": "src",
+  "order": 27
+ },
+ {
+  "id": "launch-core-29",
+  "chunk": "launch-core-29",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 3098,
+  "nfiles": 9,
+  "label": "src",
+  "order": 28
+ },
+ {
+  "id": "launch-core-29.b",
+  "chunk": "launch-core-29",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 3098,
+  "nfiles": 9,
+  "label": "src",
+  "order": 28
+ },
+ {
+  "id": "launch-core-30",
+  "chunk": "launch-core-30",
+  "tier": "core",
+  "lens": "structure",
+  "lines": 2127,
+  "nfiles": 6,
+  "label": "src",
+  "order": 29
+ },
+ {
+  "id": "launch-core-30.b",
+  "chunk": "launch-core-30",
+  "tier": "core",
+  "lens": "defects",
+  "lines": 2127,
+  "nfiles": 6,
+  "label": "src",
+  "order": 29
+ },
+ {
+  "id": "launch-module-01",
+  "chunk": "launch-module-01",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4524,
+  "nfiles": 18,
+  "label": "iop/AllowDVDV, iop/ata_bd, iop/dev9_poweroff +1 more",
+  "order": 30
+ },
+ {
+  "id": "launch-module-01.b",
+  "chunk": "launch-module-01",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4524,
+  "nfiles": 18,
+  "label": "iop/AllowDVDV, iop/ata_bd, iop/dev9_poweroff +1 more",
+  "order": 30
+ },
+ {
+  "id": "launch-module-02",
+  "chunk": "launch-module-02",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 3607,
+  "nfiles": 34,
+  "label": "iop/ds34usb, iop/hdl_info, iop/include_compat +1 more",
+  "order": 31
+ },
+ {
+  "id": "launch-module-02.b",
+  "chunk": "launch-module-02",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 3607,
+  "nfiles": 34,
+  "label": "iop/ds34usb, iop/hdl_info, iop/include_compat +1 more",
+  "order": 31
+ },
+ {
+  "id": "launch-module-03",
+  "chunk": "launch-module-03",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 3092,
+  "nfiles": 6,
+  "label": "iop/mmceman",
+  "order": 32
+ },
+ {
+  "id": "launch-module-03.b",
+  "chunk": "launch-module-03",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 3092,
+  "nfiles": 6,
+  "label": "iop/mmceman",
+  "order": 32
+ },
+ {
+  "id": "launch-module-04",
+  "chunk": "launch-module-04",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4612,
+  "nfiles": 24,
+  "label": "iop/mx4sio_bd, iop/nfsman",
+  "order": 33
+ },
+ {
+  "id": "launch-module-04.b",
+  "chunk": "launch-module-04",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4612,
+  "nfiles": 24,
+  "label": "iop/mx4sio_bd, iop/nfsman",
+  "order": 33
+ },
+ {
+  "id": "launch-module-05",
+  "chunk": "launch-module-05",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4898,
+  "nfiles": 19,
+  "label": "iop/nfsman, iop/oldlibs",
+  "order": 34
+ },
+ {
+  "id": "launch-module-05.b",
+  "chunk": "launch-module-05",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4898,
+  "nfiles": 19,
+  "label": "iop/nfsman, iop/oldlibs",
+  "order": 34
+ },
+ {
+  "id": "launch-module-06",
+  "chunk": "launch-module-06",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4763,
+  "nfiles": 31,
+  "label": "iop/pccf, iop/ps2hdd_osd",
+  "order": 35
+ },
+ {
+  "id": "launch-module-06.b",
+  "chunk": "launch-module-06",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4763,
+  "nfiles": 31,
+  "label": "iop/pccf, iop/ps2hdd_osd",
+  "order": 35
+ },
+ {
+  "id": "launch-module-07",
+  "chunk": "launch-module-07",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 3199,
+  "nfiles": 13,
+  "label": "iop/ps2hdd_osd, iop/ps2host, iop/ps2ips_rpc",
+  "order": 36
+ },
+ {
+  "id": "launch-module-07.b",
+  "chunk": "launch-module-07",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 3199,
+  "nfiles": 13,
+  "label": "iop/ps2hdd_osd, iop/ps2host, iop/ps2ips_rpc",
+  "order": 36
+ },
+ {
+  "id": "launch-module-08",
+  "chunk": "launch-module-08",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4070,
+  "nfiles": 20,
+  "label": "iop/smb2man",
+  "order": 37
+ },
+ {
+  "id": "launch-module-08.b",
+  "chunk": "launch-module-08",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4070,
+  "nfiles": 20,
+  "label": "iop/smb2man",
+  "order": 37
+ },
+ {
+  "id": "launch-module-09",
+  "chunk": "launch-module-09",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4025,
+  "nfiles": 22,
+  "label": "iop/smb2man, iop/smbd, iop/smbman",
+  "order": 38
+ },
+ {
+  "id": "launch-module-09.b",
+  "chunk": "launch-module-09",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4025,
+  "nfiles": 22,
+  "label": "iop/smb2man, iop/smbd, iop/smbman",
+  "order": 38
+ },
+ {
+  "id": "launch-module-10",
+  "chunk": "launch-module-10",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 3855,
+  "nfiles": 5,
+  "label": "iop/smbman",
+  "order": 39
+ },
+ {
+  "id": "launch-module-10.b",
+  "chunk": "launch-module-10",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 3855,
+  "nfiles": 5,
+  "label": "iop/smbman",
+  "order": 39
+ },
+ {
+  "id": "launch-module-11",
+  "chunk": "launch-module-11",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4754,
+  "nfiles": 26,
+  "label": "iop/udpfs_smap, iop/usbd-ra",
+  "order": 40
+ },
+ {
+  "id": "launch-module-11.b",
+  "chunk": "launch-module-11",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4754,
+  "nfiles": 26,
+  "label": "iop/udpfs_smap, iop/usbd-ra",
+  "order": 40
+ },
+ {
+  "id": "launch-module-12",
+  "chunk": "launch-module-12",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 2781,
+  "nfiles": 15,
+  "label": "iop/usbd-ra, iop/usbmass_bd, iop/vmcman",
+  "order": 41
+ },
+ {
+  "id": "launch-module-12.b",
+  "chunk": "launch-module-12",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 2781,
+  "nfiles": 15,
+  "label": "iop/usbd-ra, iop/usbmass_bd, iop/vmcman",
+  "order": 41
+ },
+ {
+  "id": "launch-module-13",
+  "chunk": "launch-module-13",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 4398,
+  "nfiles": 1,
+  "label": "iop/vmcman",
+  "order": 42
+ },
+ {
+  "id": "launch-module-13.b",
+  "chunk": "launch-module-13",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 4398,
+  "nfiles": 1,
+  "label": "iop/vmcman",
+  "order": 42
+ },
+ {
+  "id": "launch-module-14",
+  "chunk": "launch-module-14",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 3714,
+  "nfiles": 5,
+  "label": "iop/vmcman",
+  "order": 43
+ },
+ {
+  "id": "launch-module-14.b",
+  "chunk": "launch-module-14",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 3714,
+  "nfiles": 5,
+  "label": "iop/vmcman",
+  "order": 43
+ },
+ {
+  "id": "launch-module-15",
+  "chunk": "launch-module-15",
+  "tier": "module",
+  "lens": "structure",
+  "lines": 1593,
+  "nfiles": 5,
+  "label": "iop/vmcman, iop/xparam",
+  "order": 44
+ },
+ {
+  "id": "launch-module-15.b",
+  "chunk": "launch-module-15",
+  "tier": "module",
+  "lens": "defects",
+  "lines": 1593,
+  "nfiles": 5,
+  "label": "iop/vmcman, iop/xparam",
+  "order": 44
+ },
+ {
+  "id": "launch-support-01",
+  "chunk": "launch-support-01",
+  "tier": "support",
+  "lens": "support",
+  "lines": 7381,
+  "nfiles": 52,
+  "label": ".claude, .claude/hooks, .github +13 more",
+  "order": 45
+ },
+ {
+  "id": "launch-support-02",
+  "chunk": "launch-support-02",
+  "tier": "support",
+  "lens": "support",
+  "lines": 7843,
+  "nfiles": 46,
+  "label": "ship, ship/neutrino-ilink, ship/shortcuts +1 more",
+  "order": 46
+ },
+ {
+  "id": "launch-support-03",
+  "chunk": "launch-support-03",
+  "tier": "support",
+  "lens": "support",
+  "lines": 7973,
+  "nfiles": 51,
+  "label": "tests",
+  "order": 47
+ },
+ {
+  "id": "launch-support-04",
+  "chunk": "launch-support-04",
+  "tier": "support",
+  "lens": "support",
+  "lines": 7963,
+  "nfiles": 56,
+  "label": "tests",
+  "order": 48
+ },
+ {
+  "id": "launch-support-05",
+  "chunk": "launch-support-05",
+  "tier": "support",
+  "lens": "support",
+  "lines": 7884,
+  "nfiles": 59,
+  "label": "tests",
+  "order": 49
+ },
+ {
+  "id": "launch-support-06",
+  "chunk": "launch-support-06",
+  "tier": "support",
+  "lens": "support",
+  "lines": 5092,
+  "nfiles": 43,
+  "label": "tests, tests/card-tool-shim, tests/fixtures +3 more",
+  "order": 50
+ },
+ {
+  "id": "launch-support-07",
+  "chunk": "launch-support-07",
+  "tier": "support",
+  "lens": "support",
+  "lines": 2351,
+  "nfiles": 27,
+  "label": "tests/pccf-stubs, tests/smb2man_live, tests/smbd_live +1 more",
+  "order": 51
+ },
+ {
+  "id": "launch-buildci-01",
+  "chunk": "launch-buildci-01",
+  "tier": "buildci",
+  "lens": "buildci",
+  "lines": 2173,
+  "nfiles": 11,
+  "label": "(root), .github/workflows",
+  "order": 52
+ },
+ {
+  "id": "launch-docs-01",
+  "chunk": "launch-docs-01",
+  "tier": "docs",
+  "lens": "docs",
+  "lines": 8408,
+  "nfiles": 83,
+  "label": "(root), __Headers, docs +1 more",
+  "order": 53
+ },
+ {
+  "id": "launch-docs-02",
+  "chunk": "launch-docs-02",
+  "tier": "docs",
+  "lens": "docs",
+  "lines": 4679,
+  "nfiles": 51,
+  "label": "docs/follow-ups, docs/licenses, docs/plans +21 more",
+  "order": 54
+ },
+ {
+  "id": "launch-skim-01",
+  "chunk": "launch-skim-01",
+  "tier": "skim",
+  "lens": "skim",
+  "lines": 27149,
+  "nfiles": 4,
+  "label": "generated bitmap font data arrays",
+  "order": 55
+ },
+ {
+  "id": "launch-skim-02",
+  "chunk": "launch-skim-02",
+  "tier": "skim",
+  "lens": "skim",
+  "lines": 2942,
+  "nfiles": 2,
+  "label": "generated icon and title-database data arrays",
+  "order": 56
+ },
+ {
+  "id": "launch-skim-03",
+  "chunk": "launch-skim-03",
+  "tier": "skim",
+  "lens": "skim",
+  "lines": 7157,
+  "nfiles": 10,
+  "label": "language files",
+  "order": 57
+ }
+]

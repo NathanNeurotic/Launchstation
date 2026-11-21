@@ -1,0 +1,18 @@
+# CANDIDATE LIST ONLY (loader link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/loader/loader/loader.o	ExecPS2	FUNC	32	GLOBAL	.text.ExecPS2	0	no
+build/obj/loader/loader/loader.o	iRotateThreadReadyQueue	FUNC	32	GLOBAL	.text.iRotateThreadReadyQueue	0	no
+build/obj/loader/loader/loader.o	iSuspendThread	FUNC	32	GLOBAL	.text.iSuspendThread	0	no
+build/obj/loader/loader/loader.o	pthread_setcancelstate	FUNC	24	GLOBAL	.text.pthread_setcancelstate	0	no
+build/obj/loader/loader/loader.o	LoadExecPS2	FUNC	16	GLOBAL	.text.LoadExecPS2	0	no
+build/obj/loader/loader/loader.o	puts	FUNC	12	GLOBAL	.discard.linker_only	0	no
+build/obj/loader/loader/loader.o	ForTimer_InitAlarm	FUNC	8	GLOBAL	.text.ForTimer_InitAlarm	0	no
+build/obj/loader/loader/loader.o	__libpthreadglue_deinit	FUNC	8	GLOBAL	.text.__libpthreadglue_deinit	0	no
+build/obj/loader/loader/loader.o	__libpthreadglue_init	FUNC	8	GLOBAL	.text.__libpthreadglue_init	0	no
+build/obj/loader/loader/loader.o	_libcglue_rtc_update	FUNC	8	GLOBAL	.text._libcglue_rtc_update	0	no
+build/obj/loader/loader/loader.o	_libcglue_timezone_update	FUNC	8	GLOBAL	.text._libcglue_timezone_update	0	no
+build/obj/loader/loader/loader.o	_ps2sdk_fileXio_set_block_size	FUNC	8	GLOBAL	.text._ps2sdk_fileXio_set_block_size	0	no

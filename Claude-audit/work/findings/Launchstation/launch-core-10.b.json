@@ -1,0 +1,133 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-10.b",
+  "coverage": [
+    {"path": "src/dash_home.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_icons.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_image.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_info.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_jpeg.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_lib.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_home.c is the HOME screen: a Continue carousel built from pins, recents, favorites and a library sample (resolved through dash_lib), a chip row (Applications, Last folder, launch keys) and a nested Applications view. dash_icons.c rasterizes the whole dashboard icon set once at start-up from signed distance functions into one 512x580 PSMT8 atlas and draws icons from it. dash_image.c is the modal PNG/JPEG viewer (rotate, zoom, pan, slideshow) and dash_jpeg.c the bounded libjpeg decoder that box-filters rows straight into a CT32 texture (dash_png.c holds the PNG twin). dash_info.c holds the About, Build information, System information and font-viewer sheets plus the cached console identity text. dash_lib.c is the application library: naming, sidecar metadata (title.cfg, <ELF>.cfg), the DASHLIB.CNF cache and the background folder scan that is applied by the main loop.",
+  "reusable_helpers": [
+    {"name": "dashLibPrettyName", "path": "src/dash_lib.c", "line": 106, "what": "turns an ELF path into a friendly title (known names, generic file names fall back to the folder, APP_ prefix and underscores cleaned)"},
+    {"name": "splitPath", "path": "src/dash_lib.c", "line": 341, "what": "splits a device path into directory, file name and base name without extension"},
+    {"name": "nextField", "path": "src/dash_lib.c", "line": 531, "what": "bounded copy of the next '|' separated field of a line"},
+    {"name": "hashHue", "path": "src/dash_lib.c", "line": 158, "what": "djb2-style string hash reduced to a 0-359 hue"},
+    {"name": "dashLibDeviceLabel", "path": "src/dash_lib.c", "line": 167, "what": "maps a path prefix (mc0, mass, hdd, mmce, smb, ...) to a human device label"},
+    {"name": "dashLibDeviceIcon", "path": "src/dash_lib.c", "line": 229, "what": "maps a path prefix to a device icon id"},
+    {"name": "prefixMatchNoCase", "path": "src/dash_lib.c", "line": 741, "what": "case-insensitive ASCII prefix test"},
+    {"name": "flushRow", "path": "src/dash_jpeg.c", "line": 30, "what": "averages box-filter accumulators into one CT32 texture row"},
+    {"name": "dashJpegDecode", "path": "src/dash_jpeg.c", "line": 43, "what": "bounded JPEG decode with libjpeg prescale plus box downscale into a CT32 buffer"},
+    {"name": "sheetAdd/sheetShow", "path": "src/dash_info.c", "line": 36, "what": "printf-style scrollable text sheet in a modal panel"},
+    {"name": "wrapCol", "path": "src/dash_home.c", "line": 237, "what": "wraps an index into 0..n-1 (negative safe)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Launch-key launch writes LK_Title into the shared library entry (dash_home.c activateChip, dash_main.c runLaunchKey)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_home.c", "start": 214, "end": 222},
+        {"path": "src/dash_main.c", "repo": "Launchstation", "start": 959, "end": 969},
+        {"path": "src/dash_lib.c", "start": 471, "end": 482}
+      ],
+      "problem": "dashLibResolve returns &dashApps[i] when the launch-key path is already in the library, and both callers then copy LK_Title into a->title. The library entry is renamed in RAM: Home and Applications show the launch-key title after a failed or cancelled launch, and dashLaunchApp saves DASHLIB.CNF when art is dirty (dash_main.c:647-648), so the wrong title is persisted until a rescan of that device rebuilds it.",
+      "fix": "When dashLibResolve returns a library entry, copy it into the local tmp before overriding the title (tmp = *a; a = &tmp) in runLaunchKey; dashLaunchApp already works on its own copy. Let activateChip call runLaunchKey (make it non-static) instead of repeating the same branch, so the fix is made once.",
+      "justification": "Adds one struct copy per launch-key start; it is the smallest way to stop a launch from renaming a library entry, and sharing runLaunchKey removes the duplicate branch in dash_home.c, so the net line count goes down.",
+      "benefit": "Fixes a user-visible rename of library entries that can be persisted to DASHLIB.CNF; about 5 lines removed net (duplicate branch replaced by one call). INFERRED.",
+      "benefit_rank": 2,
+      "lines_removed": 5,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_home.c:214-222 (DashApp tmp, *a = dashLibResolve(p,&tmp); dashStrCopy(a->title, LK_Title...)), dash_main.c:959-969 (same pattern), dash_lib.c:471-482 (returns dashLibFind result, a pointer into dashApps, when found). dash_main.c:592-682 dashLaunchApp: copies app, line 647-648 dashLibSaveCache() if dashArtTakeDirty(), returns on cancel (634-635, 652-655) or failed launch (670-681). Home rows point into dashApps (dash_home.c:69), so the changed title is shown. LK_Title is user-settable (dash_settings.c:2247-2249, config.c:1088). grep runLaunchKey: dash_main.c:959 definition, callers 1005/1081/1111/1125; compile.yml:398-399 stack-chain check and tests/test_background_only_hotkeys.py:60 stub use the name, so keep the name when exporting it."
+    },
+    {
+      "n": 2,
+      "title": "dash_info.c keeps four separate static 6.3 KB Sheet buffers (one per info screen)",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_info.c", "start": 22, "end": 34},
+        {"path": "src/dash_info.c", "start": 129, "end": 129},
+        {"path": "src/dash_info.c", "start": 147, "end": 147},
+        {"path": "src/dash_info.c", "start": 220, "end": 220},
+        {"path": "src/dash_info.c", "start": 347, "end": 348}
+      ],
+      "problem": "dashShowTextLines, dashShowAbout, dashShowBuildInfo and dashShowSystemInfo each declare their own static Sheet (48 lines x 132 B + count = 6340 B), so 25,360 B of .bss is reserved although only one modal sheet can be on screen at a time. dashShowSystemInfo also keeps a static SysInfo copy of cached_console_info that it only reads.",
+      "fix": "Use one file-scope static Sheet for all four functions (each already resets s.n = 0 before filling it) and read cached_console_info directly instead of copying it into the static job.",
+      "justification": "",
+      "benefit": "19,020 B of .bss (MEASURED: wLaunchELF-unstripped-all-symbols-by-size.tsv lists dashShowTextLines.s, dashShowAbout.s, dashShowBuildInfo.s, dashShowSystemInfo.s at 6340 B each; 3 x 6340 saved) plus 92 B for dashShowSystemInfo.job.",
+      "benefit_rank": 3,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_info.c in full: Sheet typedef 22-34, statics at 129, 147, 220, 347 (+ job 348). Sizes MEASURED in evidence/Launchstation/raw/sizes/wLaunchELF-unstripped-all-symbols-by-size.tsv lines 129-132 (6340 each) and 3448 (job 92). No nesting: callers are top-level menu actions dash_main.c:479/483/487, dash_settings.c:3352, dash_files.c:566 and the exploit installer UI callback dash_exploit.c:119-125 (not a worker completion); sheetShow (54-124) only renders and polls input, it never opens another sheet."
+    },
+    {
+      "n": 3,
+      "title": "JPEG and PNG box downscale do a 64-bit division per source pixel (software __udivdi3 on the R5900)",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_jpeg.c", "start": 129, "end": 146},
+        {"path": "src/dash_png.c", "repo": "Launchstation", "start": 155, "end": 176},
+        {"path": "src/dash_png.c", "repo": "Launchstation", "start": 180, "end": 201}
+      ],
+      "problem": "The inner loops compute dx = (u64)x * dw / sw for every source pixel. The R5900 has no 64-bit divide, so each one is a call to compiler-rt __udivdi3, which is linked into the ELF. The viewer decodes on the UI thread (dash_image.c:108-119) and art and theme images decode on the worker (dash_art.c:343, 513), so a large image (up to 2048x2048 PNG, or a JPEG after the 1/8 prescale) costs millions of library divides.",
+      "fix": "Step dx with an accumulator instead of dividing (add dw per pixel, advance dx when it reaches sw; dw <= sw so at most one step), or at least drop the u64 casts in these per-pixel and per-row lines: the products stay below 2^23 (x < 8192, dw <= 640), so 32-bit hardware DIVU is exact.",
+      "justification": "",
+      "benefit": "INFERRED: about 4.2M __udivdi3 calls for a 2048x2048 PNG (roughly 50-100 cycles each, 0.7-1.4 s at 295 MHz); the accumulator removes them, which shortens the frozen viewer open and art/theme jobs. No source lines added with the cast variant.",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_jpeg.c:129-146 (dy per row line 130, dx per pixel line 140) and dash_png.c:155-201 (lines 156, 169, 181, 194). Bounds: DASH_PNG_MAX_DIM 2048 (dash_png.c:16); JPEG sw <= 1024 after the scale loop dash_jpeg.c:95-98 with max_w 640; callers pass DASH_VW/DASH_VH 640x448 (dash_image.c:111,115), ART_MAX_DIM 128 (dash_art.c:29,343). __udivdi3 (536 B) and __udivmoddi4 (1660 B) are in the shipped ELF (sizes tsv lines 416, 1266) and are pulled from libclang_rt.builtins-mips64el (experiment-fdata archive-members line 181), which shows the target lowers 64-bit division to a library call. The per-call cycle count is not measured and the disassembly of these objects was not inspected."
+    },
+    {
+      "n": 4,
+      "title": "dashApps always reserves 512 x 828 B (414 KB) of heap for the library, whatever its size",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_lib.c", "start": 492, "end": 499},
+        {"path": "src/dash_lib.c", "start": 583, "end": 601},
+        {"path": "src/dash_lib.c", "start": 909, "end": 934}
+      ],
+      "problem": "dashLibInit mallocs DASH_MAX_APPS (512) DashApp entries of 828 B each and keeps them for the whole session; dashLibApplyScan then memcpys the scan result (itself a full 512-entry buffer) into that array and frees the result. A typical library of a few dozen apps uses a small part of the 423,936 B block.",
+      "fix": "After dashLibLoadCache has parsed the cache, shrink dashApps with realloc to max(dashAppCount, 1). In dashLibApplyScan, free the old array and adopt j->sc.fresh (realloc'd to nfresh) instead of memcpy, then clear j->sc.fresh before scanFree.",
+      "justification": "",
+      "benefit": "INFERRED: (512 - n) x 828 B of heap returned, e.g. about 382 KB with 50 apps; the 414 KB memcpy on every applied scan goes away. Peak heap during a scan is unchanged (the scan still allocates its 512-entry buffer).",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "sizeof(DashApp) = 256+64+160+40+24+24+256+1+1+2 = 828 B (include/dash_internal.h:34-37, 690-702); DASH_MAX_APPS 512 (dash_internal.h:39). grep dashAppCount writes: only dash_lib.c cacheKv 555-579, LoadCache 591, ApplyScan 929 (and dashLibRemove shrinking); dash_main.c:1312-1318 appends only under the unbuilt DASH_AUTOTEST. dashLibLoadCache is called once (dash_main.c:1292). Screens re-resolve their pointers after a scan (dash_main.c:715-719 rebuilds Apps and Home), so swapping the array keeps the existing contract stated at dash_lib.c:762-765."
+    },
+    {
+      "n": 5,
+      "title": "iconSdf is 30 KB of -O2 code that runs only once at start-up",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_icons.c", "start": 274, "end": 752}
+      ],
+      "problem": "The rasterizer switch iconSdf makes up 30,060 of the 37,192 B .text of dash_icons.o; it has about 234 calls to small SDF helpers (sdSeg 104, sdBox 44, sdCircle 29, sdTriP 19, sdBoxOutline 17, sdRing 15), and the main target is compiled at -O2, so the helpers are expected to be inlined at each call site. The code runs only inside dashIconsInit, once per boot.",
+      "fix": "Mark iconSdf (and dashIconsInit) __attribute__((cold)), which both GCC and Clang compile for size, or mark sdTri/sdBox/sdSeg noinline. Keep it only if a build shows a real .text drop.",
+      "justification": "Adds one attribute; it targets a measured 30 KB start-up-only function, and optimizing it for size is the cheapest way to shrink it without rewriting the icon set. The cost is slightly slower rasterization at boot.",
+      "benefit": "iconSdf 30,060 B .text MEASURED (sizes tsv); the saving is INFERRED (estimated several KB of ELF and RAM) and was not built; the boot-time cost is also not measured.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Low",
+      "basis": "INFERRED",
+      "evidence": "evidence/Launchstation/BUILD-EVIDENCE.md:83 and sizes tsv: 30060 .text iconSdf; BUILD-EVIDENCE.md:88: dash_icons.o .text 37,192; BUILD-EVIDENCE.md:107: wLaunchELF objects compiled with -O2 (no opt in ps2.yaml:485-641). Call-site counts from sed over dash_icons.c:274-752. iconSdf callers: dash_icons.c:794 and 825 only, inside initClipboardIcons/dashIconsInit; dashIconsInit is called once from dash_main.c:1287 and returns early once icons_ready is set (dash_icons.c:807). Inlining was not confirmed by disassembly."
+    }
+  ]
+}

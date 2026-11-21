@@ -1,0 +1,14 @@
+category	file	member	section	kind	size_bytes
+first-party	build/obj/nfsman/imports.o		.reginfo	metadata	24
+first-party	build/obj/nfsman/imports.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/nfsman/imports.o		.data	data	0
+first-party	build/obj/nfsman/imports.o		.bss	bss	0
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.text.unfs4_init_context	code	220
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.rel.text.unfs4_init_context	non-alloc	56
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.reginfo	metadata	24
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.text.unfs4_mount	code	8
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.rel.text.unfs4_mount	non-alloc	8
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.text	code	0
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.data	data	0
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		.bss	bss	0

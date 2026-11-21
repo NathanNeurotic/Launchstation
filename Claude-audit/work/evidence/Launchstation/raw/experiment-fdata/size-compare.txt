@@ -1,0 +1,70 @@
+$ llvm-size -A build/obj/wLaunchELF/wLaunchELF.unstripped.elf build-fdata/obj/wLaunchELF/wLaunchELF.unstripped.elf
+build/obj/wLaunchELF/wLaunchELF.unstripped.elf  :
+section               size      addr
+.text              2188928   1048576
+.ctors                   0   3237504
+.init_array             16   3237504
+.reginfo                24   3237520
+.MIPS.abiflags          24   3237544
+.data              1669488   3237632
+.rodata            1440560   4907136
+.eh_frame_hdr            0   6347696
+.sdata                   4   6347776
+.got                   152   6347792
+.sbss                    0   6348032
+.bss               1613524   6348032
+.mdebug.abiN32           0         0
+.pdr                179232         0
+.comment               204         0
+.debug_loc          120154         0
+.debug_abbrev        57127         0
+.debug_info         282259         0
+.debug_str           22877         0
+.debug_frame         13500         0
+.debug_line         141430         0
+.debug_ranges         7456         0
+.debug_aranges          48         0
+Total              7737007
+
+
+build-fdata/obj/wLaunchELF/wLaunchELF.unstripped.elf  :
+section               size      addr
+.text              2188928   1048576
+.ctors                   0   3237504
+.init_array             16   3237504
+.reginfo                24   3237520
+.MIPS.abiflags          24   3237544
+.data              1668952   3237632
+.rodata            1440304   4906624
+.eh_frame_hdr            0   6346928
+.sdata                   4   6347008
+.got                   152   6347024
+.sbss                    0   6347264
+.bss               1612912   6347264
+.mdebug.abiN32           0         0
+.pdr                179232         0
+.comment               204         0
+.debug_loc          120154         0
+.debug_abbrev        57127         0
+.debug_info         282259         0
+.debug_str           22877         0
+.debug_frame         13500         0
+.debug_line         141430         0
+.debug_ranges         7456         0
+.debug_aranges          48         0
+Total              7735603
+
+
+
+$ llvm-size build/bin/wLaunchELF.elf build-fdata/bin/wLaunchELF.elf
+   text	   data	    bss	    dec	    hex	filename
+3629536	1669660	1613524	6912720	 697ad0	build/bin/wLaunchELF.elf
+3629280	1669124	1612912	6911316	 697554	build-fdata/bin/wLaunchELF.elf
+
+bin/wLaunchELF.elf	build=5365664	build-fdata=5364896	delta=-768
+bin/wLaunchELF-packed.elf	build=1837136	build-fdata=1835424	delta=-1712
+obj/wLaunchELF/wLaunchELF.unstripped.elf	build=6430712	build-fdata=6429740	delta=-972
+bin/wle_igr.elf	build=518432	build-fdata=518432	delta=0
+bin/loader.elf	build=16444	build-fdata=16444	delta=0
+build/build.ninja: -fdata-sections x68, -ffunction-sections x197, --gc-sections x8
+build-fdata/build.ninja: -fdata-sections x192, -ffunction-sections x197, --gc-sections x8

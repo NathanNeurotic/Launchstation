@@ -1,0 +1,53 @@
+# CANDIDATE LIST ONLY (mcman_physical link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/mcman_physical/exports.o	_dummy	FUNC	8	GLOBAL	.text	13	yes
+build/obj/mcman_physical/imports.o	GetLoadcoreInternalData	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mcman_physical/imports.o	printf	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_flushcacheentry	FUNC	2776	GLOBAL	.text	3	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_FNC8ca4	FUNC	1296	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_checkBackupBlocks	FUNC	904	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_cachePS1dirs	FUNC	816	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_fillbackupblock1	FUNC	536	GLOBAL	.text	3	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_fillPS1backuparea	FUNC	412	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_detectcard	FUNC	400	GLOBAL	.text	16	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_setdevspec	FUNC	336	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_getentspace	FUNC	320	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_findfree1	FUNC	256	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_correctdata	FUNC	252	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_initcache	FUNC	236	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_replaceBackupBlock	FUNC	216	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_clearsuperblock	FUNC	212	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_freecluster	FUNC	96	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_getcacheentry	FUNC	84	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	mcman_checkpath	FUNC	68	GLOBAL	.text	0	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	McEraseBlock	FUNC	48	GLOBAL	.text	0	yes
+build/obj/mcman_physical/iop/vmcman/src/main.o	_irx_id	OBJECT	8	GLOBAL	.data	2	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mcman_modloadcb	FUNC	340	GLOBAL	.text	2	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_chstat	FUNC	332	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_open	FUNC	192	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_dopen	FUNC	180	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_getstat	FUNC	176	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_mkdir	FUNC	164	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_remove	FUNC	164	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_rmdir	FUNC	164	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_format	FUNC	148	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_lseek	FUNC	108	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_read	FUNC	108	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_write	FUNC	108	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_dread	FUNC	92	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_close	FUNC	80	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_dclose	FUNC	80	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_ioctl	FUNC	56	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mcman_ioerrcode	FUNC	52	GLOBAL	.text	14	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_deinit	FUNC	48	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mcman_unit2card	FUNC	32	GLOBAL	.text	0	yes
+build/obj/mcman_physical/iop/vmcman/src/mcdev.o	mc_init	FUNC	8	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcsio2.o	sio2packet_add	FUNC	272	GLOBAL	.text	17	yes
+build/obj/mcman_physical/iop/vmcman/src/mcsio2.o	mcman_cardchanged	FUNC	248	GLOBAL	.text	3	yes
+build/obj/mcman_physical/iop/vmcman/src/mcsio2.o	mcman_resetauth	FUNC	208	GLOBAL	.text	1	yes
+build/obj/mcman_physical/iop/vmcman/src/mcsio2.o	mcsio2_transfer	FUNC	112	GLOBAL	.text	17	yes
+build/obj/mcman_physical/iop/vmcman/src/mcsio2.o	secrman_mc_command	FUNC	8	GLOBAL	.text	2	yes

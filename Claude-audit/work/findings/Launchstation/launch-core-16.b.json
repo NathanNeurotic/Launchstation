@@ -1,0 +1,99 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-16.b",
+  "coverage": [
+    {"path": "src/editor_file.c", "status": "read_full", "note": ""},
+    {"path": "src/editor_input.c", "status": "read_full", "note": ""},
+    {"path": "src/editor_menu.c", "status": "read_full", "note": ""},
+    {"path": "src/editor_rules.c", "status": "read_full", "note": ""},
+    {"path": "src/elf.c", "status": "read_full", "note": ""},
+    {"path": "src/embed_blobs.S", "status": "read_full", "note": ""},
+    {"path": "src/ember.c", "status": "read_full", "note": ""},
+    {"path": "src/ember_gameid.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "editor_file.c, editor_input.c, editor_menu.c and editor_rules.c are the classic uLE text editor (file open/save, virtual and USB keyboard editing, the START menu, row layout and cursor rules) behind TextEditor() in editor.c; the dashboard now uses dash_editor.c instead and the classic editor appears to be reachable only from classic browser flows the dashboard intercepts. elf.c holds checkELFheader (multi-path ELF/KELF probe), the launch-argument store and .arg sidecar parser, the embedded loader handoff (RunEmbeddedLoader, RunLoaderElf* variants that build the loader argv incl. HDD/DVR PFS paths) and the PSX MBR (xosdmain) payload preparation. embed_blobs.S .incbin's the exploit installer payloads, the memory-card folder icon, UDPFS/v1.0 network IRX and dashboard sound effects; every symbol is referenced. ember.c validates the Ember umbrella layout (games/<Game>/image, bios.bin, ember.elf, staging a configured ember.elf) and launches it through the keep-IOP loader; ember_gameid.c parses a CUE to find the data track and builds the PS1 game ID.",
+  "reusable_helpers": [
+    {"name": "launchArgsCopyPath", "path": "src/elf.c", "line": 70, "what": "bounded string copy with NUL termination (truncates to dst_size-1)"},
+    {"name": "readExecHeader", "path": "src/elf.c", "line": 268, "what": "opens a path and reads up to N bytes in a loop (short-read tolerant header probe)"},
+    {"name": "LaunchArgsLoadFromBuffer", "path": "src/elf.c", "line": 183, "what": "parses one-argument-per-line text (CR, LF, CRLF) into a bounded argv store"},
+    {"name": "appendFile", "path": "src/ember.c", "line": 59, "what": "joins dir + name with the dir's own separator, returns 0 on truncation"},
+    {"name": "copyElf", "path": "src/ember.c", "line": 209, "what": "copies a file in 32 KB chunks, removes the destination on failure"},
+    {"name": "segmentCaseEqual", "path": "src/ember.c", "line": 24, "what": "case-insensitive match of one path segment against a word"},
+    {"name": "cueToken", "path": "src/ember_gameid.c", "line": 5, "what": "reads one whitespace- or quote-delimited token from a CUE line into a bounded buffer"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "RunLoaderElfInternal: sprintf into the 256-byte stack bootpath overflows on long HDD/DVR PFS paths",
+      "category": 6,
+      "locations": [
+        {"path": "src/elf.c", "start": 730, "end": 730},
+        {"path": "src/elf.c", "start": 775, "end": 779},
+        {"path": "src/elf.c", "start": 797, "end": 801},
+        {"path": "src/main_actions.c", "start": 402, "end": 405}
+      ],
+      "problem": "bootpath is char[256] on the stack but sprintf writes party + \":pfs:\" + the PFS path into it with no bound (elf.c:776,778,798,800). For an HDD launch main_actions.c:402-404 builds party \"hddN:PART\" and filename \"pfs0:/rest\" from a path of up to MAX_PATH (1025), so bootpath receives strlen(path)+4 bytes: any hdd0:/ ELF path of 252 or more characters overflows the stack and can corrupt locals such as handoff_path, which is dereferenced right after (elf.c:782).",
+      "fix": "Declare bootpath as char[MAX_PATH] (exec_target and exec_arg0 already are) and use snprintf(bootpath, sizeof(bootpath), ...) at the four sites.",
+      "justification": "",
+      "benefit": "Closes a stack overflow on the ELF launch path; stack use +769 bytes (INFERRED: 1025-256), no code size change.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read elf.c:728-831: bootpath[256] at :730, sprintf at :776, :778, :798, :800, no length check before. Caller main_actions.c:854 RunLoaderElf(fullpath, party, path, t, x) with party/fullpath built at :402-404 by snprintf into MAX_PATH buffers from the selected path (dashboard launches reach it via dashLaunchApp -> ExecuteMainAction, dash_main.c:669). The same function serves popstarter.c:102, neutrino_iso.c:401 and ember.c:391. MAX_PATH = 1025 (include/launchelf.h:204)."
+    },
+    {
+      "n": 2,
+      "title": "PrepareMbrLaunchPayload reads xosdmain into fixed RAM at 0x01000000 that Launchstation's own heap and stack may occupy",
+      "category": 6,
+      "locations": [
+        {"path": "src/elf.c", "start": 12, "end": 12},
+        {"path": "src/elf.c", "start": 669, "end": 691},
+        {"path": "src/elf.c", "start": 698, "end": 711},
+        {"path": "src/main_actions.c", "start": 383, "end": 390}
+      ],
+      "problem": "The payload is read straight into RAM from 0x01000000 up to the end of EE RAM (elf.c:669-687) before the launch is committed. The app heap runs from _end (0x797bd4) to the stack with _heap_size=-1, so any heap block (live, or free with bin pointers) above 16 MB is overwritten; the failure paths after the read (secrman load/SecrInit/decrypt, elf.c:698-711; CleanUpForKeepIopExec cancel, main_actions.c:389) return to the dashboard with that memory corrupted. A payload larger than about 16 MB - 128 KB would also overwrite the main-thread stack at the top of RAM during the read loop.",
+      "fix": "Before reading, return -1 when the heap break (sbrk(0)) is above MBR_PAYLOAD_LOAD_ADDR, and cap payload_size64 so the read ends below the main-thread stack instead of at GetMemorySize().",
+      "justification": "The fixed address has to stay (loader.c preserves that window and the target ELF loads low), so the only way to avoid clobbering live heap and the stack is to refuse when the heap already reaches the window; two comparisons on an existing error path, no new code path.",
+      "benefit": "Prevents heap/stack corruption on PSX xosdmain launches that fail or are cancelled after the read (INFERRED: needs more than ~8.4 MB of heap in use). About +3 lines.",
+      "benefit_rank": 2,
+      "lines_removed": -3,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Low",
+      "basis": "INFERRED",
+      "evidence": "Read elf.c:648-716 and the only caller main_actions.c:378-394 (PSX only; isMbrLaunchPath main_actions.c:109-115 = xfrom:/BIEXEC-SYSTEM/xosdmain[.elf] or hdd0:__system:pfs:/BIEXEC-SYSTEM/xosdmain.elf). evidence/Launchstation/BUILD-EVIDENCE.md section 7: _heap_size = -1, _end = 0x797bd4, heap estimate subtracts a 128 KB main stack at the top of RAM. loader/loader.c:199-226 parses mem: and preserves that region. INFERRED part: heap usage at launch time was not measured, so whether blocks exist above 16 MB is not shown."
+    },
+    {
+      "n": 3,
+      "title": "Classic TextEditor: per-keystroke buffer leak, unbounded row table, mark-delete underflow and unchecked save writes (editor appears unreachable)",
+      "category": 6,
+      "locations": [
+        {"path": "src/editor_input.c", "start": 369, "end": 375},
+        {"path": "src/editor_input.c", "start": 644, "end": 650},
+        {"path": "src/editor_rules.c", "start": 26, "end": 27},
+        {"path": "src/editor.c", "start": 11, "end": 11},
+        {"path": "src/editor_input.c", "start": 217, "end": 226},
+        {"path": "src/editor_input.c", "start": 278, "end": 291},
+        {"path": "src/editor_input.c", "start": 482, "end": 491},
+        {"path": "src/editor_input.c", "start": 552, "end": 565},
+        {"path": "src/editor_input.c", "start": 585, "end": 594},
+        {"path": "src/editor_file.c", "start": 228, "end": 234},
+        {"path": "src/editor_file.c", "start": 294, "end": 300}
+      ],
+      "problem": "Each inserted char mallocs a new text buffer but the free of the old one sits inside a comment (editor_input.c:372,647), leaking TextSize+256 bytes per key until malloc returns NULL and strcpy crashes. editor_rules.c:26 writes Editor_nRowsWidth[Editor_nRowsNum] unbounded; the array has 2048 entries (editor.c:11) and 512 KB files are accepted. Deleting a mark made right-to-left uses del1=-MARK_SIZE from the cursor at the low end, writing before the buffer and strcat-overflowing it. Saves ignore genWrite after O_TRUNC and report success. INFERRED unreachable: the dashboard sends MISC/TextEditor to dash_editor.c.",
+      "fix": "Delete the classic editor together with the dead-code finding for it (dash_editor.c replaced it; dash_main.c:470-472). Only if it is kept: un-comment the free at editor_input.c:372 and :647, stop adding rows at MAX_ENTRY in editor_rules.c:26, compute mark deletes from Mark[MARK_IN] instead of Editor_Cur, and treat a short genWrite as a failed save.",
+      "justification": "Only for the keep-it fallback: each check closes one cited leak or overwrite with a one-line bound or comparison; deletion adds nothing.",
+      "benefit": "If deleted: lines counted by the dead-code finding, 0 here. If kept: removes a whole-buffer leak per keystroke, two heap/.bss overwrites and a silent truncation of the saved file (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "TextEditor callers: main_actions.c:231 (executeBrowserSelection), :771 (Misc_TextEditor), filer_browser.c:1554 (classic browser R1 menu, only when cnfmode is FALSE, filer_browser.c:1293). getFilePath(..,FALSE) only at main_actions.c:221,234,738,774,886; ExecuteBrowserFrom has no caller. dashRunMisc intercepts MISC/TextEditor and MISC/FileBrowser (dash_main.c:466-473) before runMiscCommand -> ExecuteMainAction; runLaunchKey and the PC command poll pass only ':' paths to dashLaunchApp (dash_main.c:965, 787). Remaining route: Execute(dashCfg.igr_after_path) main.c:240 with a hand-edited DASHBOARD.CNF. MAX_ENTRY = 2048 (include/launchelf.h:205); 512 KB limit editor_file.c:90."
+    }
+  ]
+}

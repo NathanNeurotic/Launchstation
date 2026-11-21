@@ -1,0 +1,521 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     1c70     4 .rel.text
+       0        0      250     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.rel.text)
+     250      250      2b8     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.rel.text)
+     508      508      b08     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.rel.text)
+    1010     1010      1f8     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.rel.text)
+    1208     1208      648     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.rel.text)
+    1850     1850      420     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.rel.text)
+       0        0       e0     4 .rel.data
+       0        0       e0     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.rel.data)
+       0        0       60     4 .rel.rodata
+       0        0       60     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.rel.rodata)
+       0        0     5fd8    16 .text
+       0        0      528    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.text)
+       0        0       18     1                 FtpControl_Stopping
+      18       18      158     1                 FtpControl_Operation
+     170      170      248     1                 FtpControl_Exchange
+     3b8      3b8       10     1                 FtpControl_Stopped
+     3c8      3c8       1c     1                 FtpControl_Error
+     3e4      3e4       cc     1                 FtpControl_Init
+     4b0      4b0       78     1                 control_thread
+     530      530      418    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.text)
+     530      530      1f0     1                 process_args
+     720      720       78     1                 server
+     798      798      1b0     1                 _start
+     950      950     2928    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.text)
+     950      950       10     1                 FileSystem_SetHddEnabled
+     960      960       40     1                 FileSystem_ResetMounts
+     9a0      9a0      104     1                 FileSystem_UnmountAll
+     aa4      aa4      12c     1                 FileSystem_ScanDevice
+     bd0      bd0       44     1                 FileSystem_Create
+     c14      c14        8     1                 FileSystem_Destroy
+     c1c      c1c      110     1                 FileSystem_Close
+     d2c      d2c      2a4     1                 FileSystem_OpenFile
+     fd0      fd0      264     1                 FileSystem_BuildPath
+    1234     1234      3c4     1                 FileSystem_ClassifyPath
+    15f8     15f8       f0     1                 FileSystem_OpenDir
+    16e8     16e8      23c     1                 FileSystem_ReadFile
+    1924     1924       64     1                 FileSystem_WriteFile
+    1988     1988      780     1                 FileSystem_ReadDir
+    2108     2108      12c     1                 getPs2Time
+    2234     2234      164     1                 FileSystem_DeviceName
+    2398     2398      298     1                 getDaysBetween
+    2630     2630       e4     1                 FileSystem_DeleteFile
+    2714     2714      10c     1                 FileSystem_CreateDir
+    2820     2820       e4     1                 FileSystem_DeleteDir
+    2904     2904      178     1                 FileSystem_PrepareRename
+    2a7c     2a7c      1c8     1                 FileSystem_Rename
+    2c44     2c44       e0     1                 FileSystem_ChangeDir
+    2d24     2d24      140     1                 FileSystem_GetFileSize
+    2e64     2e64      168     1                 partitionAllowed
+    2fcc     2fcc      230     1                 acquirePartition
+    31fc     31fc       7c     1                 renameMountChanged
+    3280     3280      8a4    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.text)
+    3280     3280       7c     1                 FtpServer_Create
+    32fc     32fc        8     1                 FtpServer_Destroy
+    3304     3304       6c     1                 FtpServer_Stop
+    3370     3370       fc     1                 FtpServer_Start
+    346c     346c       24     1                 FtpServer_OnClientDisconnect
+    3490     3490        8     1                 FtpServer_SetPort
+    3498     3498        8     1                 FtpServer_SetAnonymous
+    34a0     34a0       30     1                 FtpServer_SetUsername
+    34d0     34d0       30     1                 FtpServer_SetPassword
+    3500     3500       14     1                 FtpServer_IsRunning
+    3514     3514      53c     1                 FtpServer_HandleEvents
+    3a50     3a50       d4     1                 FtpServer_OnClientConnect
+    3b30     3b30     1654    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.text)
+    3b30     3b30       dc     1                 itoa
+    3c0c     3c0c       b8     1                 uitoa
+    3cc4     3cc4       b0     1                 FtpClient_Create
+    3d74     3d74       54     1                 FtpClient_Destroy
+    3dc8     3dc8       6c     1                 FtpClient_OnDataCleanup
+    3e34     3e34       74     1                 FtpClient_Send
+    3ea8     3ea8       a4     1                 FtpClient_SendAll
+    3f4c     3f4c       14     1                 FtpClient_OnConnect
+    3f60     3f60      a5c     1                 FtpClient_OnCommand
+    49bc     49bc      184     1                 FtpClient_OnDataConnect
+    4b40     4b40       20     1                 FtpClient_OnDataFailed
+    4b60     4b60       c8     1                 FtpClient_OnDataConnected
+    4c28     4c28      130     1                 FtpClient_OnDataRead
+    4d58     4d58       d4     1                 FtpClient_OnDataComplete
+    4e2c     4e2c      2e0     1                 FtpClient_OnDataWrite
+    510c     510c       78     1                 FtpClient_HandleDataConnect
+    5190     5190      bf8    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.text)
+    5190     5190       48     1                 FtpClient_OnCmdQuit
+    51d8     51d8       94     1                 FtpClient_OnCmdUser
+    526c     526c       d4     1                 FtpClient_OnCmdPass
+    5340     5340      234     1                 FtpClient_OnCmdPasv
+    5574     5574       64     1                 FtpClient_OnCmdPort
+    55d8     55d8       10     1                 FtpClient_OnCmdSyst
+    55e8     55e8       6c     1                 FtpClient_OnCmdList
+    5654     5654       90     1                 FtpClient_OnCmdType
+    56e4     56e4       60     1                 FtpClient_OnCmdMode
+    5744     5744       60     1                 FtpClient_OnCmdStru
+    57a4     57a4       78     1                 FtpClient_OnCmdRetr
+    581c     581c       78     1                 FtpClient_OnCmdStor
+    5894     5894       6c     1                 FtpClient_OnCmdAppe
+    5900     5900       5c     1                 FtpClient_OnCmdRest
+    595c     595c       7c     1                 FtpClient_OnCmdPwd
+    59d8     59d8       54     1                 FtpClient_OnCmdCwd
+    5a2c     5a2c       54     1                 FtpClient_OnCmdDele
+    5a80     5a80       54     1                 FtpClient_OnCmdMkd
+    5ad4     5ad4       54     1                 FtpClient_OnCmdRmd
+    5b28     5b28       78     1                 FtpClient_OnCmdRnfr
+    5ba0     5ba0       a8     1                 FtpClient_OnCmdRnto
+    5c48     5c48       78     1                 FtpClient_OnCmdSize
+    5cc0     5cc0       c8     1                 FtpClient_OnCmdSite
+    5d90     5d90        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.text)
+    5d90     5d90      248    16         obj/ps2ftpd/imports.o:(.text)
+    5da4     5da4        0     1                 sceCdReadClock
+    5dc8     5dc8        0     1                 iomanX_GetDeviceList
+    5dec     5dec        0     1                 printf
+    5e10     5e10        0     1                 memset
+    5e18     5e18        0     1                 memcmp
+    5e20     5e20        0     1                 memcpy
+    5e28     5e28        0     1                 memmove
+    5e30     5e30        0     1                 sprintf
+    5e38     5e38        0     1                 strlen
+    5e40     5e40        0     1                 strcmp
+    5e48     5e48        0     1                 strcpy
+    5e50     5e50        0     1                 strncpy
+    5e58     5e58        0     1                 strncmp
+    5e60     5e60        0     1                 strtok
+    5e68     5e68        0     1                 strchr
+    5e70     5e70        0     1                 _tolower
+    5e78     5e78        0     1                 strcat
+    5e80     5e80        0     1                 strrchr
+    5e88     5e88        0     1                 strtol
+    5e90     5e90        0     1                 index
+    5eb4     5eb4        0     1                 CreateThread
+    5ebc     5ebc        0     1                 StartThread
+    5ec4     5ec4        0     1                 DeleteThread
+    5ecc     5ecc        0     1                 SleepThread
+    5ed4     5ed4        0     1                 GetThreadId
+    5edc     5edc        0     1                 ExitDeleteThread
+    5ee4     5ee4        0     1                 DelayThread
+    5f08     5f08        0     1                 lwip_shutdown
+    5f10     5f10        0     1                 lwip_send
+    5f18     5f18        0     1                 lwip_socket
+    5f20     5f20        0     1                 lwip_listen
+    5f28     5f28        0     1                 lwip_recv
+    5f30     5f30        0     1                 lwip_close
+    5f38     5f38        0     1                 lwip_bind
+    5f40     5f40        0     1                 lwip_accept
+    5f48     5f48        0     1                 lwip_select
+    5f50     5f50        0     1                 lwip_getsockopt
+    5f58     5f58        0     1                 lwip_setsockopt
+    5f60     5f60        0     1                 lwip_connect
+    5f68     5f68        0     1                 lwip_getsockname
+    5f8c     5f8c        0     1                 sceSifSetRpcQueue
+    5f94     5f94        0     1                 sceSifRegisterRpc
+    5f9c     5f9c        0     1                 sceSifRpcLoop
+    5fc0     5fc0        0     1                 CpuSuspendIntr
+    5fc8     5fc8        0     1                 CpuResumeIntr
+       0        0      a34    16 .rodata
+       0        0       d0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.rodata)
+       0        0       a0     1                 uitoa.places
+      a0       a0       30     1                 FtpClient_OnDataWrite.months
+      d0       d0      964    16         <internal>:(.rodata.str1.1)
+  406a34   406a34    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       80    16 .data
+       0        0        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.data)
+       0        0        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.data)
+       0        0        4    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.data)
+       0        0        4     1                 hdd_enabled
+      10       10        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.data)
+      10       10        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.data)
+      10       10        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.data)
+      10       10       70    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.data)
+      10       10       70     1                 FtpMessage
+      80       80        0    16         obj/ps2ftpd/imports.o:(.data)
+  446ac0   446ac0        0     1 __bss_start = .
+       0        0     a2f0    16 .bss
+       0        0      380    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.bss)
+       0        0        4     1                 state
+       4        4       c0     1                 history
+     100      100      100     1                 reply
+     200      200        4     1                 last_error
+     204      204        4     1                 server
+     208      208        4     1                 registered
+     20c      20c       18     1                 queue
+     224      224       44     1                 rpc
+     280      280      100     1                 rpc_buffer
+     380      380     1a98    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.bss)
+     380      380     1a98     1                 srv
+    1e20     1e20      2c0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.bss)
+    1e20     1e20       b0     1                 mounts
+    1ed0     1ed0       10     1                 pfs_mount_generation
+    1ee0     1ee0      200     1                 buffer
+    20e0     20e0        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.bss)
+    20e0     20e0     8000    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.bss)
+    20e0     20e0     8000     1                 buffer
+    a0e0     a0e0      204    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.bss)
+    a0e0     a0e0      204     1                 buffer
+    a2f0     a2f0        0    16         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.bss)
+    a2f0     a2f0        0    16         obj/ps2ftpd/imports.o:(.bss)
+  450db0   450db0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ftpd/imports.o:(.mdebug.abi32)
+       0        0      b00     4 .pdr
+       0        0       e0     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.pdr)
+      e0       e0       60     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.pdr)
+     140      140      360     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.pdr)
+     4a0      4a0      180     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.pdr)
+     620      620      200     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.pdr)
+     820      820      2e0     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.pdr)
+       0        0      2c0     4 .rel.pdr
+       0        0       38     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.rel.pdr)
+      38       38       18     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.rel.pdr)
+      50       50       d8     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.rel.pdr)
+     128      128       60     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.rel.pdr)
+     188      188       80     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.rel.pdr)
+     208      208       b8     4         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.rel.pdr)
+       0        0       11     1 .llvm_addrsig
+       0        0        a     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o:(.llvm_addrsig)
+       a        a        2     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o:(.llvm_addrsig)
+       c        c        2     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o:(.llvm_addrsig)
+       e        e        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o:(.llvm_addrsig)
+       e        e        2     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o:(.llvm_addrsig)
+      10       10        1     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o:(.llvm_addrsig)
+      11       11        0     1         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o:(.llvm_addrsig)
+      11       11        0     1         obj/ps2ftpd/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0     10d0     4 .symtab
+       0        0     10d0     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      d15     1 .strtab
+       0        0      d15     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+FtpControl_Stopping                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpControl_Operation                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+memset                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+strncpy                                           obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+sceCdReadClock                                    obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+CpuSuspendIntr                                    obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+memmove                                           obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+memcpy                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+CpuResumeIntr                                     obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+FtpControl_Exchange                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+lwip_shutdown                                     obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+FtpControl_Stopped                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpControl_Error                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+FtpControl_Init                                   obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+CreateThread                                      obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+StartThread                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+DeleteThread                                      obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+DelayThread                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+GetThreadId                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+sceSifSetRpcQueue                                 obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+sceSifRegisterRpc                                 obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+sceSifRpcLoop                                     obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+process_args                                      obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+strcmp                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FtpServer_SetPassword                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+strtol                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpServer_SetPort                                 obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_SetAnonymous                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FileSystem_SetHddEnabled                          obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_SetUsername                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+printf                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+server                                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+srv                                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_IsRunning                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_HandleEvents                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_Destroy                                 obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FileSystem_UnmountAll                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+ExitDeleteThread                                  obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+_start                                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_Create                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FtpServer_Start                                   obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FileSystem_ResetMounts                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+FileSystem_ScanDevice                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+iomanX_GetDeviceList                              obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+FileSystem_Create                                 obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+strcpy                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_Destroy                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FileSystem_Close                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FileSystem_OpenFile                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_BuildPath                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+FileSystem_ClassifyPath                           obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+strlen                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+strchr                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+sprintf                                           obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FileSystem_OpenDir                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_ReadFile                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FileSystem_WriteFile                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FileSystem_ReadDir                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+getPs2Time                                        obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+strncmp                                           obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+itoa                                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+getDaysBetween                                    obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+FileSystem_DeleteFile                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_CreateDir                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_DeleteDir                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_PrepareRename                          obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_Rename                                 obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_ChangeDir                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+strcat                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FileSystem_GetFileSize                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FtpServer_Stop                                    obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpServer_OnClientDisconnect                      obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_close                                        obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_socket                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_bind                                         obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_listen                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FtpClient_Destroy                                 obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+lwip_select                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+lwip_accept                                       obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpServer_OnClientConnect                         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+lwip_recv                                         obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCommand                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpClient_Send                                    obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_getsockopt                                   obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnDataFailed                            obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpClient_OnDataConnected                         obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpClient_OnDataWrite                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpClient_OnDataRead                              obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+lwip_send                                         obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_Create                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+FtpClient_OnConnect                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+uitoa                                             obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FtpMessage                                        obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnDataCleanup                           obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+strtok                                            obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+_tolower                                          obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+FtpClient_OnCmdPass                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdUser                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdQuit                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdPort                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdMkd                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdSite                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdMode                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdPwd                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdStor                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdAppe                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdRnfr                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdType                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdCwd                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdRmd                                obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdPasv                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdRest                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdSyst                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdRnto                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdSize                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdDele                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdRetr                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdStru                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnCmdList                               obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnDataConnect                           obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+lwip_connect                                      obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_OnDataComplete                          obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+FtpClient_HandleDataConnect                       obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+lwip_getsockname                                  obj/ps2ftpd/imports.o
+                                                  obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+memcmp                                            obj/ps2ftpd/imports.o
+strrchr                                           obj/ps2ftpd/imports.o
+index                                             obj/ps2ftpd/imports.o
+SleepThread                                       obj/ps2ftpd/imports.o
+lwip_setsockopt                                   obj/ps2ftpd/imports.o

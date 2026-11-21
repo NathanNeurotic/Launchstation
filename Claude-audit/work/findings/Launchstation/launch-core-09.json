@@ -1,0 +1,153 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-09",
+  "coverage": [
+    {"path": "src/dash_font.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_ftp.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_gfx.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_hdd.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_gfx.c is the dashboard renderer on top of gsKit: theme palette globals, alpha/offset/scissor stacks, gradients, rounded panels built from procedural corner/ring/glow textures, texture-manager bind guards, vsync flip that yields to the file worker, and a sprite batcher used by text and icons. dash_font.c holds the dashboard text system: an EPX-upscaled atlas of the classic 8x16 font, three generated proportional faces (Roboto, Emotion Engine regular/bold), a Shift-JIS to ELISA glyph path for save titles, and measuring/drawing helpers (fit with ellipsis, timed/progress marquee, word wrap, monospace byte glyphs for editors). dash_ftp.c is the modal FTP server status screen. dash_hdd.c is the dashboard HDD Manager: worker jobs for partition scan, PFS usage, create/remove/rename/format/header injection, plus the size picker, partition menu and list/detail drawing.",
+  "reusable_helpers": [
+    {"name": "dashApproach", "path": "src/dash_gfx.c", "line": 73, "what": "frame-rate independent exponential smoothing toward a target"},
+    {"name": "dashColorLerp", "path": "src/dash_gfx.c", "line": 94, "what": "linear interpolation of two RGBA colours"},
+    {"name": "dashColorHue", "path": "src/dash_gfx.c", "line": 106, "what": "integer HSV to RGBA conversion"},
+    {"name": "dashTexBind", "path": "src/dash_gfx.c", "line": 306, "what": "gsKit texture-manager bind that rejects textures larger than free VRAM"},
+    {"name": "dashTextFit", "path": "src/dash_font.c", "line": 688, "what": "draws text truncated with an ellipsis to a pixel width, never splitting multi-byte glyph sequences"},
+    {"name": "dashTextWrap", "path": "src/dash_font.c", "line": 832, "what": "word-wraps text into a box with last-line ellipsis"},
+    {"name": "elisaGlyphIndex", "path": "src/dash_font.c", "line": 46, "what": "Shift-JIS code to packed ELISA font glyph index"},
+    {"name": "dashSjisTitle", "path": "src/dash_font.c", "line": 106, "what": "converts a Shift-JIS save title into the dashboard's internal glyph run encoding"},
+    {"name": "fmtMB", "path": "src/dash_hdd.c", "line": 1129, "what": "formats a size in MB as 'N MB' or 'N.N GB'"},
+    {"name": "uniqueName", "path": "src/dash_hdd.c", "line": 404, "what": "makes a name unique against a list by appending 1..99"},
+    {"name": "hdlTitleOffset", "path": "src/dash_hdd.c", "line": 1091, "what": "finds the title part of an HDL partition name (PP.<id>..<TITLE> or PP.HDL.<TITLE>)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dashTextWrapScrollTimed is never called; the textWrap draw flag exists only for it",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_font.c", "start": 837, "end": 860},
+        {"path": "src/dash_font.c", "start": 785, "end": 785},
+        {"path": "src/dash_font.c", "start": 811, "end": 813},
+        {"path": "src/dash_font.c", "start": 832, "end": 835},
+        {"path": "include/dash_internal.h", "start": 421, "end": 422}
+      ],
+      "problem": "dashTextWrapScrollTimed appears only at its definition and its prototype; the linker discards it. Its measurement pass is the only caller of textWrap with draw=0, so once it is gone the draw parameter and the empty if(!draw) branch are dead and textWrap is a private copy of dashTextWrap.",
+      "fix": "Delete dashTextWrapScrollTimed and its prototype, drop the draw parameter and the if(!draw) branch, and rename textWrap to dashTextWrap (removing the one-line forwarder).",
+      "justification": "",
+      "benefit": "~31 lines removed; no ELF change because --gc-sections already drops the 804-byte .text.dashTextWrapScrollTimed (MEASURED: evidence/Launchstation/raw/link/wLaunchELF-gc-discarded-first-party.tsv)",
+      "benefit_rank": 2,
+      "lines_removed": 31,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -w dashTextWrapScrollTimed over src/Launchstation (src, include, tests, scripts, ps2.yaml; docs excluded): dash_font.c:838 (definition) and dash_internal.h:421 (prototype) only. gc-discarded-first-party.tsv lists .text.dashTextWrapScrollTimed 804 bytes from dash_font.o. textWrap callers read: dash_font.c:834 (draw=1), 849 (draw=0), 858 (draw=1)."
+    },
+    {
+      "n": 2,
+      "title": "dashGfxShutdown and dashFontShutdown have no callers",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_gfx.c", "start": 362, "end": 371},
+        {"path": "src/dash_font.c", "start": 307, "end": 314},
+        {"path": "include/dash_internal.h", "start": 334, "end": 334},
+        {"path": "include/dash_internal.h", "start": 404, "end": 404}
+      ],
+      "problem": "Both functions appear only at their definitions and prototypes; the dashboard never shuts down (DashRun does not return) and the linker discards both. The forward declaration of facesShutdown at dash_font.c:307 exists only so dashFontShutdown can call it; facesInit, its other user, is defined after facesShutdown.",
+      "fix": "Delete dashGfxShutdown, dashFontShutdown, their two prototypes and the facesShutdown forward declaration.",
+      "justification": "",
+      "benefit": "~21 lines removed; no ELF change because --gc-sections already drops .text.dashGfxShutdown (180 B) and .text.dashFontShutdown (120 B) (MEASURED: raw/link/wLaunchELF-gc-discarded-first-party.tsv, raw/link-raw/wLaunchELF.gc-sections.log)",
+      "benefit_rank": 2,
+      "lines_removed": 21,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -w dashGfxShutdown|dashFontShutdown over src/Launchstation excluding docs: dash_gfx.c:362, dash_font.c:309, dash_internal.h:334, dash_internal.h:404 only; no tests mention them. gc-sections log: 'removing unused section ...dash_gfx.o:(.text.dashGfxShutdown)' and '...dash_font.o:(.text.dashFontShutdown)'. facesShutdown is defined at dash_font.c:386 and used at 311 and 407."
+    },
+    {
+      "n": 3,
+      "title": "Shift-JIS to ELISA index mapping duplicated between dash_font.c and draw_text.c printXY_sjis",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_font.c", "start": 46, "end": 68},
+        {"path": "src/draw_text.c", "start": 266, "end": 294}
+      ],
+      "problem": "elisaGlyphIndex (comment: 'Same Shift-JIS -> packed ELISA index mapping as the classic renderer') repeats the SJIS->EUC conversion, the font404 gap-table walk and the 6877-glyph bound that printXY_sjis does inline (0x2121+0x8080 == 0xA1A1, 0xFF-0xA1 == 94, n<=55008 bytes == index<ELISA_GLYPHS). About 20 lines are the same logic.",
+      "fix": "Make elisaGlyphIndex non-static (declare it next to font404) and have printXY_sjis call it, using n = index * 8 and keeping its own '_' fallback for -1.",
+      "justification": "",
+      "benefit": "~18 lines removed and one copy of the conversion code (INFERRED: a few hundred bytes of .text)",
+      "benefit_rank": 2,
+      "lines_removed": 18,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read dash_font.c:46-68 and draw_text.c:261-302; both compiled (ps2.yaml:524 draw_text.c, :581 dash_font.c). Grep 0xA1A1|font404[ over src: only these two sites plus the table at draw_text.c:9. Only difference: elisaGlyphIndex first rejects invalid lead/trail bytes, for which the classic path also ends in '_' or a garbage glyph (INFERRED harmless)."
+    },
+    {
+      "n": 4,
+      "title": "Unreachable and duplicate branches in dash_font.c glyph handling",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_font.c", "start": 316, "end": 316},
+        {"path": "src/dash_font.c", "start": 492, "end": 495},
+        {"path": "src/dash_font.c", "start": 497, "end": 498},
+        {"path": "src/dash_font.c", "start": 622, "end": 623}
+      ],
+      "problem": "glyphAdv returns the same value for c >= ELISA_CODE and c >= 0x100 in two separate branches. Its c < FONT_FIRST remap and the same remap in drawRun can never fire: both get codes only from nextGlyphs, which already maps c < 0x20 to ' ' (line 361) and otherwise yields '?', 0x100+ pad codes or ELISA codes. The forward declaration of facesInit at line 316 is unused because facesInit is defined at 398 before its first use at 562.",
+      "fix": "Merge the two glyphAdv branches into one 'c >= 0x100' test, delete the two c < FONT_FIRST remaps and the facesInit forward declaration.",
+      "justification": "",
+      "benefit": "~7 lines removed; negligible ELF change (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 7,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read nextGlyphs dash_font.c:328-365 (all outputs), glyphAdv callers 523 and 652 (both fed from nextGlyphs via g[k]), drawRun 574-577. ELISA_CODE is 0x10000 (line 40) so the first glyphAdv branch is a subset of the second. facesInit uses: 316 (decl), 398 (definition), 562, 901."
+    },
+    {
+      "n": 5,
+      "title": "dashSinf/dashCosf are out-of-line forwarders to sinf/cosf",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_gfx.c", "start": 63, "end": 71},
+        {"path": "include/dash_internal.h", "start": 322, "end": 323}
+      ],
+      "problem": "dashSinf and dashCosf only return sinf(x) and cosf(x). Because they are defined in dash_gfx.c, the ~90 call sites in the background, art and UI files pay an extra cross-file call per evaluation in per-frame animation code.",
+      "fix": "Replace the two prototypes with static inline definitions (or #define to sinf/cosf) in dash_internal.h and delete the two functions from dash_gfx.c; callers stay unchanged.",
+      "justification": "",
+      "benefit": "~7 net lines removed; removes one call frame per sin/cos in per-frame background code (INFERRED, not measured)",
+      "benefit_rank": 1,
+      "lines_removed": 7,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -w dashSinf|dashCosf over src/Launchstation: definitions dash_gfx.c:63,68; prototypes dash_internal.h:322-323; callers in dash_bg_ps2.c, dash_bg_geo.c, dash_bg.c, dash_art.c, dash_ui.c. tests/test_orb_seamless.py:38-39 defines its own static stubs, so a header inline needs that test checked."
+    },
+    {
+      "n": 6,
+      "title": "dash_hdd.c: unused hm.scanning field and redundant hm.changed write",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_hdd.c", "start": 101, "end": 101},
+        {"path": "src/dash_hdd.c", "start": 902, "end": 902}
+      ],
+      "problem": "The scanning member of the hm state struct is never read or written. In injectMatching, hm.changed = 1 after a successful create is redundant: created is incremented on the line before, and afterChange() at line 927 (run whenever created > 0) sets hm.changed = 1 itself.",
+      "fix": "Delete the scanning member and the hm.changed = 1 line at 902.",
+      "justification": "",
+      "benefit": "~1 line removed, 4 bytes of .bss (INFERRED); cosmetic",
+      "benefit_rank": 1,
+      "lines_removed": 1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep -w scanning over src/Launchstation: only dash_hdd.c:101 in code (other hits are docs prose). Read injectMatching dash_hdd.c:822-928 and afterChange 596-601."
+    }
+  ]
+}

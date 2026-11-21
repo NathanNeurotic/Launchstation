@@ -1,0 +1,72 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-13.b",
+  "coverage": [
+    {"path": "src/dash_smbd.c", "status": "read_full", "note": ""},
+    {"path": "include/dash_sound.h", "status": "read_full", "note": ""},
+    {"path": "src/dash_sound.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_store.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_theme.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_themes.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_smbd.c is the dashboard screen for the memory-card SMB server (start through init.c, poll its status every 6th frame, stop on OK). dash_sound.c loads libsd and audsrv from embedded IRX, uploads the eight embedded ADPCM effects (or user CURSOR.ADP etc. beside the ELF), plays them on fixed and rotating SPU2 voices, and loops an optional BGM.ADP on voice 23; it re-inits after IOP resets via the IOP generation counter. dash_store.c owns DashSettings/DashUserLists, parses DASHBOARD.CNF and DASHAPPS.CNF with a generic key=value parser, and saves dirty files through worker jobs after 700 ms of pad idle with a read-back verify. dash_themes.c is the theme model: 18 presets, validation/contrast guard, a key table used for both DASHBOARD.CNF Theme_* keys and THEMES/<name>/theme.cfg, and theme-folder list/read/write. dash_theme.c routes the classic screens' background, frame, popup and text primitives through the active theme.",
+  "reusable_helpers": [
+    {"name": "dashStrCopy", "path": "src/dash_store.c", "line": 38, "what": "bounded string copy that always terminates and tolerates NULL src"},
+    {"name": "dashTrim", "path": "src/dash_store.c", "line": 53, "what": "in-place trim of spaces, tabs and CR/LF"},
+    {"name": "dashKvParse", "path": "src/dash_store.c", "line": 65, "what": "key = value text parser with BOM skip and #, ;, //, [ comment lines, callback per pair"},
+    {"name": "dashLoadTextFile", "path": "src/dash_store.c", "line": 105, "what": "reads a whole file into a NUL-terminated malloc buffer with a size cap"},
+    {"name": "dashWriteFile", "path": "src/dash_store.c", "line": 148, "what": "creates/truncates and writes a file, then reads it back in 1 KB blocks to verify"},
+    {"name": "isWritableDevice", "path": "src/dash_store.c", "line": 180, "what": "device-prefix test for writable storage (same list as isWritablePath in dash_themes.c:949)"},
+    {"name": "readAdpSidecar", "path": "src/dash_sound.c", "line": 407, "what": "reads and validates a mono APCM file beside the boot ELF into a 64-byte aligned padded buffer"},
+    {"name": "parseColor", "path": "src/dash_themes.c", "line": 658, "what": "parses #RRGGBB, RRGGBBAA or r,g,b[,a] into a colour"},
+    {"name": "dashColorScale", "path": "src/dash_themes.c", "line": 62, "what": "scales an RGB colour by a factor with 255 clamp (also dashColorMix/Lighten at 49-60)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dash_sound.c keeps full EE copies of BGM.ADP and custom effects for the whole run only as audsrv sample IDs",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_sound.c", "start": 40, "end": 40},
+        {"path": "src/dash_sound.c", "start": 465, "end": 472},
+        {"path": "src/dash_sound.c", "start": 54, "end": 54},
+        {"path": "src/dash_sound.c", "start": 146, "end": 149},
+        {"path": "src/dash_sound.c", "start": 296, "end": 301}
+      ],
+      "problem": "After audsrv_load_adpcm has sent the sample to the IOP/SPU2, bgm_data (size+64 bytes) and each accepted custom_data[i] stay allocated until shutdown; the file's own comments (lines 40, 54) say audsrv only uses the buffer address as the sample ID. The copy is never reused either: dashSoundShutdown (296-301), run before every IOP reset (init.c:2193), frees it and dashBgmStart reads the file again. The shipped kit always installs BGM.ADP (scripts/package_apps.py:37,44), so every boot with music on holds it.",
+      "fix": "After a successful audsrv_load_adpcm, shrink the buffer in place to a few bytes (realloc to 16 bytes; newlib shrinks without moving) so the address stays allocated and unique as the ID and the rest returns to the heap. Do the same for each accepted custom effect in uploadSamples. Do not free the buffers outright: a reused address would collide with a live sample ID.",
+      "justification": "Two realloc calls (about 4 lines) release memory that has no use after upload: 284,720 bytes for the shipped music on every boot, and up to 1 MB + 2 MB with user files. Nothing else holds or reads these buffers.",
+      "benefit": "284,720 B EE heap for the shipped BGM.ADP (MEASURED: res/music.sad 284,656 B in inventory, +64 pad from line 429); up to 1 MB + 8 x 256 KB with user sidecars (INFERRED from BGM_MAX_BYTES and SFX_MAX_BYTES). Rank 4, not 5, because the fix relies on INFERRED audsrv/newlib behaviour.",
+      "benefit_rank": 4,
+      "lines_removed": -4,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_sound.c fully: bgm_data set at 471 and freed only at 247-248 (reload) and 299-300 (shutdown); custom_data kept at 148-149, freed at 110-118. init.c:2189-2193 calls dashSoundShutdown before every IOP reset, then dashSoundMaintain (dash_main.c:1484) re-inits and dashBgmStart re-reads (bgm_loaded=0). inventory/Launchstation.tsv:608 res/music.sad 284656 bytes; package_apps.py:37,44 ships it as BGM.ADP. INFERRED, not verifiable in the clone: audsrv_load_adpcm DMA-copies the buffer once and later calls pass only adpcm->buffer as an ID (as the file's comments at 40 and 54 state); newlib realloc shrinks in place."
+    },
+    {
+      "n": 2,
+      "title": "BGM.ADP and custom effect files are read on the UI thread at boot and after every IOP reset",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_sound.c", "start": 407, "end": 450},
+        {"path": "src/dash_sound.c", "start": 143, "end": 149},
+        {"path": "src/dash_sound.c", "start": 507, "end": 516},
+        {"path": "src/dash_main.c", "start": 1482, "end": 1484},
+        {"path": "src/dash_main.c", "start": 1517, "end": 1521}
+      ],
+      "problem": "readAdpSidecar opens and reads the whole file synchronously (up to 1 MB music, plus eight effect files when Custom sounds is on). Its callers run in the dashboard main loop: the boot init (dash_main.c:1520-1521), dashSoundMaintain every frame after an IOP reset (1484), and after misc commands and failed launches (356-358, 676-678). The shipped BGM.ADP is 284,656 B and sits beside the ELF, often on a memory card, so no frame is drawn while it is read. The worker exists so the cursor never waits for IO (dash_worker.c:3-4).",
+      "fix": "Read the sidecar files in a dashWorkerSubmit job and do the audsrv uploads in its completion callback, which already runs on the UI thread. The boot-time call can stay where it is; the gain is mainly the re-reads after IOP resets and with Custom sounds on.",
+      "justification": "The stall is real: a file read of about 278 KB per IOP reset runs on the render thread. Using the existing worker queue (one submit, one run function, one done callback, about 20 lines) is the smallest change that keeps rendering going. No new mechanism is added.",
+      "benefit": "Removes a frame stall of roughly 0.3-1 s per sound re-init when BGM.ADP is on a memory card or USB 1.1 (INFERRED from 284,656 B at a few hundred KB/s; not measured).",
+      "benefit_rank": 2,
+      "lines_removed": -20,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Call paths read: dash_main.c:1517-1521 (boot init on the UI loop; the comment at 1512-1516 accepts the freeze during Init_Delay), dash_main.c:1484 dashSoundMaintain each frame -> dash_sound.c:275-276 dashSoundInit + dashBgmStart -> loadBgmSidecar 452-474 -> readAdpSidecar 407-450 (genOpen/genLseek/genRead). uploadSamples 143-149 reads 8 files when dashCfg.custom_sounds. dashSoundShutdown frees bgm_data before each IOP reset (init.c:2193), so bgm_loaded=0 forces a re-read. Size from inventory/Launchstation.tsv:608. Throughput is not measured (INFERRED)."
+    }
+  ]
+}

@@ -1,0 +1,474 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     13a8     4 .rel.text
+       0        0      150     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_build_request)
+     150      150       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_sessionsetup)
+     178      178       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_treeconnect)
+     190      190       20     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_create)
+     1b0      1b0       10     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_prw)
+     1c0      1c0       10     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_close)
+     1d0      1d0       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_stat)
+     1f8      1f8       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.free)
+     210      210       20     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_mkdir)
+     230      230       20     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_delete)
+     250      250       38     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_rename)
+     288      288        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_pread)
+     290      290        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.usmb2_pwrite)
+     298      298       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.calloc)
+     2b0      2b0       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.malloc)
+     2c8      2c8       30     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text._start)
+     2f8      2f8       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.write_to_socket)
+     320      320       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.read_from_socket)
+     348      348        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.socket_failed)
+     350      350       30     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_verify_begin)
+     380      380       38     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_verify_end)
+     3b8      3b8        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_wait)
+     3c0      3c0       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_init)
+     3e8      3e8       28     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_deinit)
+     410      410       90     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_open)
+     4a0      4a0       50     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_close)
+     4f0      4f0       80     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_read)
+     570      570       a8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_write)
+     618      618        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_lseek)
+     620      620        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_remove)
+     628      628       60     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_mkdir)
+     688      688        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_rmdir)
+     690      690       d0     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_dopen)
+     760      760       60     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_dclose)
+     7c0      7c0       e8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_dread)
+     8a8      8a8       88     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_getstat)
+     930      930       90     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_rename)
+     9c0      9c0       78     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_lseek64)
+     a38      a38      170     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_devctl)
+     ba8      ba8       e8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_lock_path)
+     c90      c90       38     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_fixpath)
+     cc8      cc8       10     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_errno)
+     cd8      cd8       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_check_session)
+     cf0      cf0       30     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_free_session)
+     d20      d20       10     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_seconds)
+     d30      d30      108     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_connect)
+     e38      e38       38     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_tcp_connect)
+     e70      e70       20     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_negotiate)
+     e90      e90       40     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_lock_file)
+     ed0      ed0       90     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_delete)
+     f60      f60        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_is_root)
+     f68      f68       20     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_fill_stat)
+     f88      f88        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_pack_time)
+     f90      f90       10     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_latin1)
+     fa0      fa0       58     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.text.smb2man_parse_url)
+     ff8      ff8       70     4         obj/smb2man/iop/smb2man/usmb2/ntlm.o:(.rel.text.ntlm_generate_auth)
+    1068     1068       18     4         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.rel.text.MD4Update)
+    1080     1080       30     4         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.rel.text.MD4Final)
+    10b0     10b0       90     4         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.rel.text.hmac_md5)
+    1140     1140       20     4         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.rel.text.init_pad)
+    1160     1160        8     4         obj/smb2man/iop/smb2man/usmb2/md5.o:(.rel.text.md5Update)
+    1168     1168       38     4         obj/smb2man/iop/smb2man/usmb2/md5.o:(.rel.text.md5Step)
+    11a0     11a0       10     4         obj/smb2man/iop/smb2man/usmb2/md5.o:(.rel.text.md5Finalize)
+    11b0     11b0       20     4         obj/smb2man/iop/smb2man/usmb2/unicode.o:(.rel.text.utf8_to_utf16)
+    11d0     11d0       10     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.smb2auth_update)
+    11e0     11e0       d8     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.hash_block)
+    12b8     12b8       38     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.smb2auth_final)
+    12f0     12f0       48     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.smb2auth_hmac_init)
+    1338     1338        8     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.smb2auth_hmac_update)
+    1340     1340       50     4         obj/smb2man/iop/smb2man/smb2auth.o:(.rel.text.smb2auth_hmac_final)
+    1390     1390       18     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.rel.text)
+       0        0       f8     4 .rel.data
+       0        0        8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.data._irx_id)
+       8        8       18     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.data.smb2man_dev)
+      20       20       d8     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.data.smb2man_ops)
+       0        0       40     4 .rel.rodata
+       0        0       40     4         obj/smb2man/iop/smb2man/smb2man.o:(.rel.rodata.smb2man_errno)
+       0        0     65d0    16 .text
+       0        0      6c4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_build_request)
+       0        0      6c4     1                 usmb2_build_request
+     6d0      6d0      134    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_sessionsetup)
+     6d0      6d0      134     1                 usmb2_sessionsetup
+     810      810       b8    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_treeconnect)
+     810      810       b8     1                 usmb2_treeconnect
+     8d0      8d0      160    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_create)
+     8d0      8d0      160     1                 usmb2_create
+     a30      a30      178    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_prw)
+     a30      a30      178     1                 usmb2_prw
+     bb0      bb0       a4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_close)
+     bb0      bb0       a4     1                 usmb2_close
+     c60      c60       98    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_stat)
+     c60      c60       98     1                 usmb2_stat
+     d00      d00       48    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.free)
+     d00      d00       48     1                 free
+     d50      d50       80    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_mkdir)
+     d50      d50       80     1                 usmb2_mkdir
+     dd0      dd0       78    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_delete)
+     dd0      dd0       78     1                 usmb2_delete
+     e50      e50      120    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_rename)
+     e50      e50      120     1                 usmb2_rename
+     f70      f70       44    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_pread)
+     f70      f70       44     1                 usmb2_pread
+     fc0      fc0       44    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.usmb2_pwrite)
+     fc0      fc0       44     1                 usmb2_pwrite
+    1010     1010       74    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.calloc)
+    1010     1010       74     1                 calloc
+    1090     1090       48    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.malloc)
+    1090     1090       48     1                 malloc
+    10e0     10e0       3c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text._start)
+    10e0     10e0       3c     1                 _start
+    1120     1120       d0    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.write_to_socket)
+    1120     1120       d0     1                 write_to_socket
+    11f0     11f0       d4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.read_from_socket)
+    11f0     11f0       d4     1                 read_from_socket
+    12d0     12d0       40    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.socket_failed)
+    12d0     12d0       40     1                 socket_failed
+    1310     1310       e0    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_verify_begin)
+    1310     1310       e0     1                 smb2man_verify_begin
+    13f0     13f0       68    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_verify_end)
+    13f0     13f0       68     1                 smb2man_verify_end
+    1460     1460      100    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_wait)
+    1460     1460      100     1                 smb2man_wait
+    1560     1560       60    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_init)
+    1560     1560       60     1                 smb2man_init
+    15c0     15c0       40    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_deinit)
+    15c0     15c0       40     1                 smb2man_deinit
+    1600     1600        8    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_nulldev)
+    1600     1600        8     1                 smb2man_nulldev
+    1610     1610      248    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_open)
+    1610     1610      248     1                 smb2man_open
+    1860     1860       a8    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_close)
+    1860     1860       a8     1                 smb2man_close
+    1910     1910      1a4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_read)
+    1910     1910      1a4     1                 smb2man_read
+    1ac0     1ac0      204    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_write)
+    1ac0     1ac0      204     1                 smb2man_write
+    1cd0     1cd0       48    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_lseek)
+    1cd0     1cd0       48     1                 smb2man_lseek
+    1d20     1d20        c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_remove)
+    1d20     1d20        c     1                 smb2man_remove
+    1d30     1d30      108    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_mkdir)
+    1d30     1d30      108     1                 smb2man_mkdir
+    1e40     1e40        c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_rmdir)
+    1e40     1e40        c     1                 smb2man_rmdir
+    1e50     1e50      1fc    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_dopen)
+    1e50     1e50      1fc     1                 smb2man_dopen
+    2050     2050       d0    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_dclose)
+    2050     2050       d0     1                 smb2man_dclose
+    2120     2120      538    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_dread)
+    2120     2120      538     1                 smb2man_dread
+    2660     2660      164    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_getstat)
+    2660     2660      164     1                 smb2man_getstat
+    27d0     27d0      1b8    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_rename)
+    27d0     27d0      1b8     1                 smb2man_rename
+    2990     2990      1bc    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_lseek64)
+    2990     2990      1bc     1                 smb2man_lseek64
+    2b50     2b50      368    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_devctl)
+    2b50     2b50      368     1                 smb2man_devctl
+    2ec0     2ec0        c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_nulldev64)
+    2ec0     2ec0        c     1                 smb2man_nulldev64
+    2ed0     2ed0      260    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_lock_path)
+    2ed0     2ed0      260     1                 smb2man_lock_path
+    3130     3130       f8    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_fixpath)
+    3130     3130       f8     1                 smb2man_fixpath
+    3230     3230      114    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_errno)
+    3230     3230      114     1                 smb2man_errno
+    3350     3350       7c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_check_session)
+    3350     3350       7c     1                 smb2man_check_session
+    33d0     33d0       a4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_free_session)
+    33d0     33d0       a4     1                 smb2man_free_session
+    3480     3480       3c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_seconds)
+    3480     3480       3c     1                 smb2man_seconds
+    34c0     34c0      228    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_connect)
+    34c0     34c0      228     1                 smb2man_connect
+    36f0     36f0      128    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_tcp_connect)
+    36f0     36f0      128     1                 smb2man_tcp_connect
+    3820     3820      17c    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_negotiate)
+    3820     3820      17c     1                 smb2man_negotiate
+    39a0     39a0       94    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_lock_file)
+    39a0     39a0       94     1                 smb2man_lock_file
+    3a40     3a40      118    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_delete)
+    3a40     3a40      118     1                 smb2man_delete
+    3b60     3b60       30    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_is_root)
+    3b60     3b60       30     1                 smb2man_is_root
+    3b90     3b90       f0    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_fill_stat)
+    3b90     3b90       f0     1                 smb2man_fill_stat
+    3c80     3c80      3d4    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_pack_time)
+    3c80     3c80      3d4     1                 smb2man_pack_time
+    4060     4060       bc    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_latin1)
+    4060     4060       bc     1                 smb2man_latin1
+    4120     4120      264    16         obj/smb2man/iop/smb2man/smb2man.o:(.text.smb2man_parse_url)
+    4120     4120      264     1                 smb2man_parse_url
+    4390     4390      55c    16         obj/smb2man/iop/smb2man/usmb2/ntlm.o:(.text.ntlm_generate_auth)
+    4390     4390      55c     1                 ntlm_generate_auth
+    48f0     48f0       3c    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.text.MD4Init)
+    48f0     48f0       3c     1                 MD4Init
+    4930     4930      128    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.text.MD4Update)
+    4930     4930      128     1                 MD4Update
+    4a60     4a60      2b0    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.text.MD4Transform)
+    4a60     4a60      2b0     1                 MD4Transform
+    4d10     4d10       98    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.text.MD4Final)
+    4d10     4d10       98     1                 MD4Final
+    4db0     4db0       60    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.text.Encode)
+    4db0     4db0       60     1                 Encode
+    4e10     4e10      228    16         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.text.hmac_md5)
+    4e10     4e10      228     1                 hmac_md5
+    5040     5040       88    16         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.text.init_pad)
+    5040     5040       88     1                 init_pad
+    50d0     50d0       38    16         obj/smb2man/iop/smb2man/usmb2/md5.o:(.text.md5Init)
+    50d0     50d0       38     1                 md5Init
+    5110     5110       dc    16         obj/smb2man/iop/smb2man/usmb2/md5.o:(.text.md5Update)
+    5110     5110       dc     1                 md5Update
+    51f0     51f0      190    16         obj/smb2man/iop/smb2man/usmb2/md5.o:(.text.md5Step)
+    51f0     51f0      190     1                 md5Step
+    5380     5380       f0    16         obj/smb2man/iop/smb2man/usmb2/md5.o:(.text.md5Finalize)
+    5380     5380       f0     1                 md5Finalize
+    5470     5470      188    16         obj/smb2man/iop/smb2man/usmb2/unicode.o:(.text.utf8_to_utf16)
+    5470     5470      188     1                 utf8_to_utf16
+    5600     5600       c8    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.smb2auth_update)
+    5600     5600       c8     1                 smb2auth_update
+    56d0     56d0      5f8    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.hash_block)
+    56d0     56d0      5f8     1                 hash_block
+    5cd0     5cd0      1b0    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.smb2auth_final)
+    5cd0     5cd0      1b0     1                 smb2auth_final
+    5e80     5e80      110    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.smb2auth_hmac_init)
+    5e80     5e80      110     1                 smb2auth_hmac_init
+    5f90     5f90        8    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.smb2auth_hmac_update)
+    5f90     5f90        8     1                 smb2auth_hmac_update
+    5fa0     5fa0       cc    16         obj/smb2man/iop/smb2man/smb2auth.o:(.text.smb2auth_hmac_final)
+    5fa0     5fa0       cc     1                 smb2auth_hmac_final
+    6070     6070      200    16         obj/smb2man/imports.o:(.text)
+    6084     6084        0     1                 AddDrv
+    608c     608c        0     1                 DelDrv
+    60b0     60b0        0     1                 lwip_recv
+    60b8     60b8        0     1                 lwip_send
+    60c0     60c0        0     1                 lwip_close
+    60c8     60c8        0     1                 lwip_socket
+    60d0     60d0        0     1                 lwip_connect
+    60d8     60d8        0     1                 lwip_select
+    60e0     60e0        0     1                 lwip_ioctl
+    60e8     60e8        0     1                 lwip_getsockopt
+    60f0     60f0        0     1                 ipaddr_addr
+    6114     6114        0     1                 CpuSuspendIntr
+    611c     611c        0     1                 CpuResumeIntr
+    6140     6140        0     1                 GetSystemTime
+    6148     6148        0     1                 SysClock2USec
+    616c     616c        0     1                 AllocSysMemory
+    6174     6174        0     1                 FreeSysMemory
+    6198     6198        0     1                 CreateSema
+    61a0     61a0        0     1                 WaitSema
+    61a8     61a8        0     1                 SignalSema
+    61b0     61b0        0     1                 DeleteSema
+    61d4     61d4        0     1                 memset
+    61dc     61dc        0     1                 memcpy
+    61e4     61e4        0     1                 memchr
+    61ec     61ec        0     1                 memcmp
+    61f4     61f4        0     1                 memmove
+    61fc     61fc        0     1                 strcpy
+    6204     6204        0     1                 strcat
+    620c     620c        0     1                 strchr
+    6214     6214        0     1                 strncmp
+    621c     621c        0     1                 strncpy
+    6224     6224        0     1                 strcmp
+    622c     622c        0     1                 strlen
+    6234     6234        0     1                 sprintf
+    623c     623c        0     1                 _toupper
+    6260     6260        0     1                 printf
+    6270     6270      360    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.text)
+    6270     6270      360     1                 __udivdi3
+       0        0      41c    16 .rodata
+       0        0       20    16         obj/smb2man/iop/smb2man/smb2man.o:(.rodata.smb2man_errno)
+      20       20       8b    16         <internal>:(.rodata.str1.1)
+      b0       b0      100    16         obj/smb2man/iop/smb2man/usmb2/md5.o:(.rodata.K)
+      b0       b0      100     1                 K
+     1b0      1b0       40    16         <internal>:(.rodata.cst16)
+     1f0      1f0       20    16         <internal>:(.rodata.cst32)
+     210      210      100    16         obj/smb2man/iop/smb2man/smb2auth.o:(.rodata.sha256_k)
+     210      210      100     1                 sha256_k
+     310      310      100    16         obj/smb2man/iop/smb2man/smb2auth.o:(.rodata.md5_t)
+     310      310      100     1                 md5_t
+     410      410        c    16         obj/smb2man/iop/smb2man/smb2auth.o:(.rodata.md4_block.sh)
+     410      410        c     1                 md4_block.sh
+  406a0c   406a0c    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       f0    16 .data
+       0        0        8    16         obj/smb2man/iop/smb2man/smb2man.o:(.data._irx_id)
+       0        0        8     1                 _irx_id
+      10       10       14    16         obj/smb2man/iop/smb2man/smb2man.o:(.data.smb2man_dev)
+      10       10       14     1                 smb2man_dev
+      30       30       6c    16         obj/smb2man/iop/smb2man/smb2man.o:(.data.smb2man_ops)
+      30       30       6c     1                 smb2man_ops
+      a0       a0        4    16         obj/smb2man/iop/smb2man/smb2man.o:(.data.smb2_sema)
+      a0       a0        4     1                 smb2_sema
+      b0       b0       40    16         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.data.PADDING)
+      b0       b0       40     1                 PADDING
+  446b00   446b00        0     1 __bss_start = .
+       0        0      f20    16 .bss
+       0        0       a8    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.smb2man_mac)
+       0        0       a8     1                 smb2man_mac
+      b0       b0       20    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.smb2man_digest)
+      b0       b0       20     1                 smb2man_digest
+      d0       d0       10    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.smb2man_reply_sig)
+      d0       d0       10     1                 smb2man_reply_sig
+      e0       e0      180    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.file_table)
+      e0       e0      180     1                 file_table
+     260      260      7e0    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.shares)
+     260      260      7e0     1                 shares
+     a40      a40        4    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.session_gen)
+     a40      a40        4     1                 session_gen
+     a50      a50      374    16         obj/smb2man/iop/smb2man/smb2man.o:(.bss.smb2man_utf16)
+     a50      a50      374     1                 smb2man_utf16
+     dd0      dd0       41    16         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.bss.k_pad)
+     dd0      dd0       41     1                 k_pad
+     e20      e20      100    16         obj/smb2man/iop/smb2man/smb2auth.o:(.bss.sha256_block.w)
+     e20      e20      100     1                 sha256_block.w
+  447a20   447a20        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/smb2man/iop/smb2man/smb2man.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/usmb2/ntlm.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/usmb2/md5.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/usmb2/unicode.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/iop/smb2man/smb2auth.o:(.mdebug.abi32)
+       0        0        0     1         obj/smb2man/imports.o:(.mdebug.abi32)
+       0        0        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.mdebug.abi32)
+       0        0       1c     1 .llvm_addrsig
+       0        0       1a     1         obj/smb2man/iop/smb2man/smb2man.o:(.llvm_addrsig)
+      1a       1a        0     1         obj/smb2man/iop/smb2man/usmb2/ntlm.o:(.llvm_addrsig)
+      1a       1a        1     1         obj/smb2man/iop/smb2man/usmb2/md4c.o:(.llvm_addrsig)
+      1b       1b        1     1         obj/smb2man/iop/smb2man/usmb2/hmac-md5.o:(.llvm_addrsig)
+      1c       1c        0     1         obj/smb2man/iop/smb2man/usmb2/md5.o:(.llvm_addrsig)
+      1c       1c        0     1         obj/smb2man/iop/smb2man/usmb2/unicode.o:(.llvm_addrsig)
+      1c       1c        0     1         obj/smb2man/iop/smb2man/smb2auth.o:(.llvm_addrsig)
+      1c       1c        0     1         obj/smb2man/imports.o:(.llvm_addrsig)
+      1c       1c        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      a30     4 .symtab
+       0        0      a30     4         <internal>:(.symtab)
+       0        0       92     1 .shstrtab
+       0        0       92     1         <internal>:(.shstrtab)
+       0        0      770     1 .strtab
+       0        0      770     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+memset                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+                                                  obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+                                                  obj/smb2man/iop/smb2man/smb2auth.o
+smb2auth_hmac_init                                obj/smb2man/iop/smb2man/smb2auth.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+smb2auth_hmac_update                              obj/smb2man/iop/smb2man/smb2auth.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+smb2auth_hmac_final                               obj/smb2man/iop/smb2man/smb2auth.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+usmb2_sessionsetup                                obj/smb2man/iop/smb2man/smb2man.o
+ntlm_generate_auth                                obj/smb2man/iop/smb2man/usmb2/ntlm.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+usmb2_treeconnect                                 obj/smb2man/iop/smb2man/smb2man.o
+strlen                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+utf8_to_utf16                                     obj/smb2man/iop/smb2man/usmb2/unicode.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+calloc                                            obj/smb2man/iop/smb2man/smb2man.o
+usmb2_prw                                         obj/smb2man/iop/smb2man/smb2man.o
+usmb2_close                                       obj/smb2man/iop/smb2man/smb2man.o
+usmb2_stat                                        obj/smb2man/iop/smb2man/smb2man.o
+memcpy                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+                                                  obj/smb2man/iop/smb2man/smb2auth.o
+free                                              obj/smb2man/iop/smb2man/smb2man.o
+CpuSuspendIntr                                    obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+FreeSysMemory                                     obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+CpuResumeIntr                                     obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+usmb2_mkdir                                       obj/smb2man/iop/smb2man/smb2man.o
+usmb2_delete                                      obj/smb2man/iop/smb2man/smb2man.o
+usmb2_rename                                      obj/smb2man/iop/smb2man/smb2man.o
+usmb2_pread                                       obj/smb2man/iop/smb2man/smb2man.o
+usmb2_pwrite                                      obj/smb2man/iop/smb2man/smb2man.o
+lwip_socket                                       obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_connect                                      obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+strcpy                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_close                                        obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+malloc                                            obj/smb2man/iop/smb2man/smb2man.o
+AllocSysMemory                                    obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+_start                                            obj/smb2man/iop/smb2man/smb2man.o
+DelDrv                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+AddDrv                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_send                                         obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_recv                                         obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_select                                       obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+CreateSema                                        obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+DeleteSema                                        obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+SignalSema                                        obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+WaitSema                                          obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+strncmp                                           obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+memchr                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+strchr                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+strcmp                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+GetSystemTime                                     obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+SysClock2USec                                     obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+sprintf                                           obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+printf                                            obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_ioctl                                        obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+lwip_getsockopt                                   obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+__udivdi3                                         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj)
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+ipaddr_addr                                       obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/smb2man.o
+_irx_id                                           obj/smb2man/iop/smb2man/smb2man.o
+memmove                                           obj/smb2man/imports.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+                                                  obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+MD4Init                                           obj/smb2man/iop/smb2man/usmb2/md4c.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+MD4Update                                         obj/smb2man/iop/smb2man/usmb2/md4c.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+MD4Final                                          obj/smb2man/iop/smb2man/usmb2/md4c.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+hmac_md5                                          obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+                                                  obj/smb2man/iop/smb2man/usmb2/ntlm.o
+md5Init                                           obj/smb2man/iop/smb2man/usmb2/md5.o
+                                                  obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+k_pad                                             obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+md5Update                                         obj/smb2man/iop/smb2man/usmb2/md5.o
+                                                  obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+md5Finalize                                       obj/smb2man/iop/smb2man/usmb2/md5.o
+                                                  obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+md5Step                                           obj/smb2man/iop/smb2man/usmb2/md5.o
+smb2auth_update                                   obj/smb2man/iop/smb2man/smb2auth.o
+smb2auth_final                                    obj/smb2man/iop/smb2man/smb2auth.o
+memcmp                                            obj/smb2man/imports.o
+strcat                                            obj/smb2man/imports.o
+strncpy                                           obj/smb2man/imports.o
+_toupper                                          obj/smb2man/imports.o

@@ -1,0 +1,207 @@
+# source: wLaunchELF-contrib-by-object.tsv (bytes of input sections placed in each output section, from the ld.lld map)
+category	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	1167580	1067068	8758	0	1511912	0	0	3755318
+embed-blob	0	0	1653719	0	0	0	0	1653719
+third-party-dep	627632	56879	24	0	10439	0	0	694974
+sdk	384516	19962	6289	4	89607	0	16	500394
+linker-internal	368	296533	0	0	0	0	152	297053
+ALL	2180096	1440442	1668790	4	1611958	0	168	6901458
+
+archive	members_in_link	.text	.rodata	.data	.bss	total
+.cloud-deps/lib/libmbedcrypto.a	63	219720	46353	24	9750	275847
+.jpeg-deps/lib/libjpegturbo.a	54	216332	4740	0	0	221072
+.cloud-deps/lib/libmbedtls.a	12	168124	5444	0	689	174257
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	174	134404	5256	1808	1545	143017
+$SDK/packages-llvm/world/png/lib/libpng.a	14	82588	3886	0	0	86474
+$SDK/packages-llvm/core/kernel/lib/libkernel.a	28	29576	288	4268	20994	55126
+$SDK/packages-llvm/core/filexio/lib/libfilexio.a	2	10520	0	0	32056	42580
+$SDK/packages-llvm/world/z/lib/libz.a	8	17632	7902	0	0	25534
+.cloud-deps/lib/libmbedx509.a	2	23456	342	0	0	23798
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	32	19248	1032	0	0	20280
+$SDK/packages-llvm/world/gskit/lib/libgskit.a	6	18048	604	4	8	18664
+$SDK/packages-llvm/core/cdvd/lib/libcdvd.a	3	10132	0	0	6944	17076
+$SDK/packages-llvm/core/cglue/lib/libcglue.a	9	13936	0	28	1984	15960
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	26	14696	0	0	0	14696
+$SDK/packages-llvm/core/mc/lib/libmc.a	1	4048	136	0	8580	12764
+$SDK/packages-llvm/core/poweroff/lib/libpoweroff.a	1	816	0	0	8448	9264
+$SDK/packages-llvm/world/audio/lib/libaudio.a	4	7440	0	0	8	7448
+$SDK/packages-llvm/core/secr/lib/libsecr.a	1	2408	0	0	4420	6828
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	25	5380	16	33	52	5481
+$SDK/packages-llvm/core/pad/lib/libpad.a	1	4220	60	0	836	5116
+$SDK/packages-llvm/core/pthreadglue/lib/libpthreadglue.a	2	2556	0	0	2080	4636
+$SDK/packages-llvm/core/patches/lib/libpatches.a	5	2528	128	0	1296	3952
+build/lib/libiopreboot.a	2	1260	192	0	1088	2540
+build/lib/libhdd_ee.a	1	1852	76	0	16	1944
+$SDK/packages-llvm/world/dmakit/lib/libdmakit.a	2	992	572	0	0	1564
+$SDK/packages-llvm/core/ps2ips/lib/libps2ips.a	1	1228	0	148	4	1380
+$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	1	920	0	0	328	1248
+$SDK/packages-llvm/world/audsrv-compat/lib/libaudsrv-compat.a	1	920	82	0	12	1014
+$SDK/packages-llvm/core/kbd/lib/libkbd.a	1	280	0	0	12	292
+
+Top 40 first-party / embed-blob / linker-internal contributors to .text
+55136	build/obj/wLaunchELF/src/dash_browser.o
+45360	build/obj/wLaunchELF/src/dash_settings.o
+45348	build/obj/wLaunchELF/src/dash_card_tool.o
+37192	build/obj/wLaunchELF/src/dash_icons.o
+34328	build/obj/wLaunchELF/src/filer_actions.o
+30848	build/obj/wLaunchELF/src/filer_browser.o
+29760	build/obj/wLaunchELF/src/dash_editor.o
+28504	build/obj/wLaunchELF/src/filer.o
+26756	build/obj/wLaunchELF/src/init.o
+26064	build/obj/wLaunchELF/src/dash_ui.o
+23736	build/obj/wLaunchELF/src/cloud_google.o
+23592	build/obj/wLaunchELF/src/main_exploit_installer.o
+22432	build/obj/wLaunchELF/src/config.o
+21840	build/obj/wLaunchELF/src/dash_tools.o
+20820	build/obj/wLaunchELF/src/dash_widgets.o
+19492	build/obj/wLaunchELF/src/qrcodegen.o
+19232	build/obj/wLaunchELF/src/dash_hdd.o
+18948	build/obj/wLaunchELF/src/dash_gfx.o
+17524	build/obj/wLaunchELF/src/mc_card_write.o
+17328	build/obj/wLaunchELF/src/filer_copy.o
+17188	build/obj/wLaunchELF/src/dash_main.o
+16620	build/obj/wLaunchELF/src/dash_font.o
+16312	build/obj/wLaunchELF/src/cloud_http.o
+15716	build/obj/wLaunchELF/src/dash_bg_ps2.o
+15500	build/obj/wLaunchELF/src/dash_themes.o
+14912	build/obj/wLaunchELF/src/dash_store.o
+14872	build/obj/wLaunchELF/src/dash_lib.o
+14144	build/obj/wLaunchELF/src/dash_devices.o
+14088	build/obj/wLaunchELF/src/mc_ps1_card.o
+13484	build/obj/wLaunchELF/src/dash_apps.o
+13188	build/obj/wLaunchELF/src/dash_files.o
+13068	build/obj/wLaunchELF/src/makeicon.o
+12616	build/obj/wLaunchELF/src/mmce_backup.o
+12076	build/obj/wLaunchELF/src/kelf_signer.o
+11808	build/obj/wLaunchELF/src/mc_save_formats.o
+11776	build/obj/wLaunchELF/src/smb_cnf.o
+11724	build/obj/wLaunchELF/src/editor_input.o
+11516	build/obj/wLaunchELF/src/dash_art.o
+10948	build/obj/wLaunchELF/src/main_actions.o
+10276	build/obj/wLaunchELF/src/dash_bg.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .rodata
+395188	build/obj/wLaunchELF/src/embed_blobs.o
+296533	<internal>
+221952	build/obj/wLaunchELF/src/dash_font_data.o
+201472	build/obj/wLaunchELF/src/dash_font_emotion_engine_bold.o
+183040	build/obj/wLaunchELF/src/dash_font_emotion_engine.o
+28840	build/obj/wLaunchELF/src/lang.o
+11576	build/obj/wLaunchELF/src/dash_settings.o
+5420	build/obj/wLaunchELF/src/cloud_http.o
+1768	build/obj/wLaunchELF/src/dash_themes.o
+1502	build/obj/wLaunchELF/src/dash_icons.o
+1300	build/obj/wLaunchELF/src/dash_tools.o
+1176	build/obj/wLaunchELF/src/kelf_signer.o
+1164	build/obj/wLaunchELF/src/pad.o
+996	build/obj/wLaunchELF/src/main_gameid_table.o
+812	build/obj/wLaunchELF/src/editor_input.o
+736	build/obj/wLaunchELF/src/draw_text.o
+600	build/obj/wLaunchELF/src/dash_card_tool.o
+472	build/obj/wLaunchELF/src/qrcodegen.o
+464	build/obj/wLaunchELF/src/dash_hdd.o
+384	build/obj/wLaunchELF/src/dash_browser.o
+376	build/obj/wLaunchELF/src/dash_main.o
+368	build/obj/wLaunchELF/src/mc_save_formats.o
+342	build/obj/wLaunchELF/src/makeicon.o
+340	build/obj/wLaunchELF/src/main_exploit_installer.o
+314	build/obj/wLaunchELF/src/mc_card_export.o
+300	build/obj/wLaunchELF/src/filer_actions.o
+296	build/obj/wLaunchELF/src/dash_lib.o
+292	build/obj/wLaunchELF/src/dash_editor.o
+288	build/obj/wLaunchELF/src/virtual_keyboard.o
+278	build/obj/wLaunchELF/src/config.o
+256	build/obj/wLaunchELF/src/mc_card_write.o
+256	build/obj/wLaunchELF/src/mc_sha256.o
+240	build/obj/wLaunchELF/src/smb_cnf.o
+210	build/obj/wLaunchELF/src/main_startup.o
+200	build/obj/wLaunchELF/src/dash_art.o
+200	build/obj/wLaunchELF/src/mc_save_export.o
+192	build/lib/libiopreboot.a(SifIopRebootBuffer.o)
+176	build/obj/wLaunchELF/src/hdd_header_injector.o
+166	build/obj/wLaunchELF/src/filer_browser.o
+160	build/obj/wLaunchELF/src/dash_apps.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .data
+518448	build/obj/_embed/wle_igr_elf_irx.o
+164583	build/obj/_embed/smbd_irx.o
+105911	build/obj/_embed/ps2ip_irx.o
+71548	build/obj/_embed/mcman_physical_irx.o
+67968	build/obj/_embed/vmcman_irx.o
+61143	build/obj/_embed/xfromman_irx.o
+43632	build/obj/_embed/ps2fs_irx.o
+39105	build/obj/_embed/bdmfs_fatfs_irx.o
+37794	build/obj/_embed/padman_irx.o
+37176	build/obj/_embed/smbman_irx.o
+31198	build/obj/_embed/ps2ftpd_irx.o
+30289	build/obj/_embed/smb2man_irx.o
+27565	build/obj/_embed/ps2hdd_irx.o
+23791	build/obj/_embed/usbd_irx.o
+23492	build/obj/_embed/pccf_irx.o
+21362	build/obj/_embed/nfsman_irx.o
+20674	build/obj/_embed/mmceman_irx.o
+16462	build/obj/_embed/libsd_irx.o
+16460	build/obj/_embed/loader_elf_irx.o
+16113	build/obj/_embed/smap_netman_irx.o
+15313	build/obj/_embed/ps2smap_irx.o
+15131	build/obj/_embed/audsrv_irx.o
+15044	build/obj/_embed/dvrfile_irx.o
+14602	build/obj/_embed/ps2kbd_irx.o
+13247	build/obj/_embed/iLinkman_irx.o
+13055	build/obj/_embed/netman_irx.o
+12869	build/obj/_embed/mx4sio_bd_irx.o
+12449	build/obj/_embed/usbmass_bd_irx.o
+12290	build/obj/_embed/ata_bd_irx.o
+11953	build/obj/_embed/dvrdrv_irx.o
+11414	build/obj/_embed/ps2dev9_irx.o
+11082	build/obj/_embed/iomanx_irx.o
+11080	build/obj/_embed/bdm_irx.o
+11034	build/obj/_embed/cdvd_irx.o
+10736	build/obj/_embed/ps2host_irx.o
+10358	build/obj/_embed/ps2netfs_irx.o
+8965	build/obj/_embed/mcserv_irx.o
+8965	build/obj/_embed/xfromserv_irx.o
+8201	build/obj/_embed/udpfs_smap_irx.o
+6942	build/obj/_embed/IEEE1394_bd_irx.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .bss
+275492	build/obj/wLaunchELF/src/filer.o
+200704	build/obj/wLaunchELF/src/mc_card_export.o
+149696	build/obj/wLaunchELF/src/mmce_backup.o
+133620	build/obj/wLaunchELF/src/dash_worker.o
+109504	build/obj/wLaunchELF/src/dash_card_tool.o
+106560	build/obj/wLaunchELF/src/dash_browser.o
+67776	build/obj/wLaunchELF/src/mmce_save_versions.o
+65600	build/obj/wLaunchELF/src/mmce_igr.o
+39416	build/obj/wLaunchELF/src/dash_settings.o
+39288	build/obj/wLaunchELF/src/dash_store.o
+33920	build/obj/wLaunchELF/src/hdd_header_injector.o
+30760	build/obj/wLaunchELF/src/config.o
+30520	build/obj/wLaunchELF/src/dash_files.o
+25548	build/obj/wLaunchELF/src/dash_info.o
+23784	build/obj/wLaunchELF/src/dash_home.o
+18868	build/obj/wLaunchELF/src/editor.o
+17673	build/obj/wLaunchELF/src/pc_game_receiver.o
+15024	build/obj/wLaunchELF/src/dash_art.o
+13312	build/obj/wLaunchELF/src/neutrino_iso.o
+12800	build/obj/wLaunchELF/src/dash_gfx.o
+8832	build/obj/wLaunchELF/src/filer_actions.o
+8812	build/obj/wLaunchELF/src/main.o
+8740	build/obj/wLaunchELF/src/dash_editor.o
+8092	build/obj/wLaunchELF/src/dash_ps1_card.o
+6288	build/obj/wLaunchELF/src/smb_shares.o
+6175	build/obj/wLaunchELF/src/elf.o
+5740	build/obj/wLaunchELF/src/lang.o
+5612	build/obj/wLaunchELF/src/dash_widgets.o
+5196	build/obj/wLaunchELF/src/filer_copy.o
+5120	build/obj/wLaunchELF/src/dash_font.o
+4224	build/obj/wLaunchELF/src/hdl_rpc.o
+4200	build/obj/wLaunchELF/src/dash_bg_ps2.o
+4096	build/obj/wLaunchELF/src/font_uLE.o
+3092	build/obj/wLaunchELF/src/main_actions.o
+2756	build/obj/wLaunchELF/src/dash_bg.o
+2076	build/obj/wLaunchELF/src/filer_browser.o
+2068	build/obj/wLaunchELF/src/dash_apps.o
+1196	build/obj/wLaunchELF/src/dash_themes.o
+1128	build/obj/wLaunchELF/src/dash_icons.o
+1116	build/obj/wLaunchELF/src/init.o

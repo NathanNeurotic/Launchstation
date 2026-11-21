@@ -1,0 +1,31 @@
+Link: wle_igr
+Source: wle_igr.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 1243
+Discarded code/data sections (ABI metadata excluded): 791, of which non-empty: 344, 60795 bytes
+  first-party: 0 non-empty sections, 0 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 344 non-empty sections, 60795 bytes
+  third-party-dep: 0 non-empty sections, 0 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+embed-blob	bss (empty)	17	0
+embed-blob	code (empty)	17	0
+embed-blob	metadata	34	816
+first-party	bss (empty)	1	0
+first-party	code (empty)	1	0
+first-party	data (empty)	1	0
+first-party	metadata	2	48
+sdk	bss	3	1112
+sdk	bss (empty)	166	0
+sdk	code	328	58720
+sdk	code (empty)	54	0
+sdk	data	2	8
+sdk	data (empty)	190	0
+sdk	metadata	416	9984
+sdk	rodata	11	955
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file

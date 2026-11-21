@@ -1,0 +1,3 @@
+category	archive	member	total_alloc_bytes	first_reference_from	symbol
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	888	build/obj/smbd/.smbd-deps/libsmb2/lib/timestamps.o	__udivdi3
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	umoddi3.c.obj	872	build/obj/smbd/.smbd-deps/libsmb2/lib/timestamps.o	__umoddi3

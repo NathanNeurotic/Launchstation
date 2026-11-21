@@ -1,0 +1,219 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     1048     4 .rel.text
+       0        0      338     4         obj/pccf/iop/pccf/main.o:(.rel.text)
+     338      338      6b0     4         obj/pccf/iop/pccf/pccf_hw.o:(.rel.text)
+     9e8      9e8      348     4         obj/pccf/iop/pccf/pccf_ata.o:(.rel.text)
+     d30      d30      248     4         obj/pccf/iop/pccf/pcdiag_cis.o:(.rel.text)
+     f78      f78       d0     4         obj/pccf/iop/pccf/pcdiag_cf.o:(.rel.text)
+       0        0       f8     4 .rel.data
+       0        0       f8     4         obj/pccf/iop/pccf/main.o:(.rel.data)
+       0        0      140     4 .rel.rodata
+       0        0       30     4         obj/pccf/iop/pccf/pccf_hw.o:(.rel.rodata)
+      30       30      110     4         obj/pccf/iop/pccf/pcdiag_cis.o:(.rel.rodata)
+       0        0     3568    16 .text
+       0        0      644    16         obj/pccf/iop/pccf/main.o:(.text)
+       0        0       10     1                 pccardTrace
+      10       10      1a4     1                 _start
+     1b4      1b4      168     1                 cf_read
+     31c      31c      168     1                 cf_write
+     484      484        8     1                 cf_flush
+     48c      48c       58     1                 cf_stop
+     4e4      4e4        8     1                 control_init
+     4ec      4ec        8     1                 control_deinit
+     4f4      4f4        8     1                 my_iomanx_retval_EPERM_int
+     4fc      4fc        c     1                 my_iomanx_retval_EPERM_s64
+     508      508      13c     1                 control_devctl
+     650      650      fdc    16         obj/pccf/iop/pccf/pccf_hw.o:(.text)
+     650      650       40     1                 pccf_hw_present
+     690      690       c4     1                 pccf_hw_stop
+     754      754      3e4     1                 pccf_hw_start
+     b38      b38       14     1                 card_read8
+     b4c      b4c       14     1                 card_read16
+     b60      b60       5c     1                 access_window
+     bbc      bbc       18     1                 wait_ms
+     bd4      bd4       14     1                 issue_read
+     be8      be8      13c     1                 read_cf_profile
+     d24      d24       10     1                 quiet_trace
+     d34      d34        8     1                 issue_sectors
+     d3c      d3c      258     1                 issue_rw
+     f94      f94       5c     1                 pio_write_sector
+     ff0      ff0       54     1                 time_us
+    1044     1044      204     1                 pio_profile
+    1248     1248      264     1                 issue_read_count
+    14ac     14ac      180     1                 pio_read_sector
+    1630     1630     10d4    16         obj/pccf/iop/pccf/pccf_ata.o:(.text)
+    1630     1630      630     1                 pccf_ata_attach
+    1c60     1c60      3a4     1                 transfer
+    2004     2004       88     1                 ata_string
+    208c     208c      16c     1                 pccf_ata_read
+    21f8     21f8      35c     1                 pccf_ata_write
+    2554     2554      1b0     1                 wait_status
+    2710     2710      9ac    16         obj/pccf/iop/pccf/pcdiag_cis.o:(.text)
+    2710     2710      8f4     1                 pcdiag_cis_dump_info
+    3004     3004       20     1                 pcdiag_cis_dump
+    3024     3024       98     1                 pcdiag_cis_cf_candidate
+    30c0     30c0      388    16         obj/pccf/iop/pccf/pcdiag_cf.o:(.text)
+    30c0     30c0      388     1                 pcdiag_cf_probe
+    3450     3450      118    16         obj/pccf/imports.o:(.text)
+    3464     3464        0     1                 GetLoadcoreInternalData
+    3488     3488        0     1                 bdm_connect_bd
+    34ac     34ac        0     1                 iomanX_AddDrv
+    34d0     34d0        0     1                 memcpy
+    34d8     34d8        0     1                 memset
+    34e0     34e0        0     1                 memcmp
+    34e8     34e8        0     1                 strcmp
+    350c     350c        0     1                 DelayThread
+    3514     3514        0     1                 GetSystemTime
+    351c     351c        0     1                 SysClock2USec
+    3540     3540        0     1                 CreateSema
+    3548     3548        0     1                 DeleteSema
+    3550     3550        0     1                 WaitSema
+    3558     3558        0     1                 SignalSema
+       0        0     14d8    16 .rodata
+       0        0        9    16         obj/pccf/iop/pccf/main.o:(.rodata)
+      10       10       40    16         obj/pccf/iop/pccf/pccf_hw.o:(.rodata)
+      10       10       1c     1                 save16_addr
+      2c       2c        c     1                 save32_addr
+      38       38       10     1                 pccf_hw_start.memory
+      48       48        8     1                 pccf_hw_start.ops
+      50       50       88    16         obj/pccf/iop/pccf/pcdiag_cis.o:(.rodata)
+      e0       e0       3c    16         obj/pccf/iop/pccf/pcdiag_cf.o:(.rodata)
+      e0       e0       28     1                 pcdiag_cf_probe.offsets8
+     108      108       14     1                 pcdiag_cf_probe.offsets16
+     120      120     13a7    16         <internal>:(.rodata.str1.1)
+    14d0     14d0        8    16         <internal>:(.rodata.cst8)
+  404a68   404a68    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       a0    16 .data
+       0        0       8c    16         obj/pccf/iop/pccf/main.o:(.data)
+       0        0        8     1                 _irx_id
+       8        8        4     1                 io_lock
+       c        c       14     1                 control_device
+      20       20       6c     1                 control_ops
+      90       90        4    16         obj/pccf/iop/pccf/pccf_hw.o:(.data)
+      90       90        4     1                 pio_data_timing
+      a0       a0        0    16         obj/pccf/iop/pccf/pccf_ata.o:(.data)
+      a0       a0        0    16         obj/pccf/iop/pccf/pcdiag_cis.o:(.data)
+      a0       a0        0    16         obj/pccf/iop/pccf/pcdiag_cf.o:(.data)
+      a0       a0        0    16         obj/pccf/imports.o:(.data)
+  444b10   444b10        0     1 __bss_start = .
+       0        0     2510    16 .bss
+       0        0       d0    16         obj/pccf/iop/pccf/main.o:(.bss)
+       0        0       90     1                 ata
+      90       90       40     1                 device
+      d0       d0     2034    16         obj/pccf/iop/pccf/pccf_hw.o:(.bss)
+      d0       d0        1     1                 started
+      d4       d4        e     1                 saved16
+      e4       e4        c     1                 saved32
+      f0       f0        1     1                 pio_cpu32
+      f4       f4        1     1                 pio_settle_us
+      f8       f8        4     1                 read_command_logs
+      fc       fc        2     1                 selector
+     100      100        1     1                 pio_fallback_restart
+     104      104     1000     1                 profile_ref
+    1104     1104     1000     1                 profile_check
+    2110     2110      400    16         obj/pccf/iop/pccf/pccf_ata.o:(.bss)
+    2110     2110      200     1                 identify
+    2310     2310      200     1                 pccf_ata_write.verify
+    2510     2510        0    16         obj/pccf/iop/pccf/pcdiag_cis.o:(.bss)
+    2510     2510        0    16         obj/pccf/iop/pccf/pcdiag_cf.o:(.bss)
+    2510     2510        0    16         obj/pccf/imports.o:(.bss)
+  447020   447020        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/pccf/iop/pccf/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/pccf/iop/pccf/pccf_hw.o:(.mdebug.abi32)
+       0        0        0     1         obj/pccf/iop/pccf/pccf_ata.o:(.mdebug.abi32)
+       0        0        0     1         obj/pccf/iop/pccf/pcdiag_cis.o:(.mdebug.abi32)
+       0        0        0     1         obj/pccf/iop/pccf/pcdiag_cf.o:(.mdebug.abi32)
+       0        0        0     1         obj/pccf/imports.o:(.mdebug.abi32)
+       0        0      4c0     4 .pdr
+       0        0      160     4         obj/pccf/iop/pccf/main.o:(.pdr)
+     160      160      220     4         obj/pccf/iop/pccf/pccf_hw.o:(.pdr)
+     380      380       c0     4         obj/pccf/iop/pccf/pccf_ata.o:(.pdr)
+     440      440       60     4         obj/pccf/iop/pccf/pcdiag_cis.o:(.pdr)
+     4a0      4a0       20     4         obj/pccf/iop/pccf/pcdiag_cf.o:(.pdr)
+       0        0      130     4 .rel.pdr
+       0        0       58     4         obj/pccf/iop/pccf/main.o:(.rel.pdr)
+      58       58       88     4         obj/pccf/iop/pccf/pccf_hw.o:(.rel.pdr)
+      e0       e0       30     4         obj/pccf/iop/pccf/pccf_ata.o:(.rel.pdr)
+     110      110       18     4         obj/pccf/iop/pccf/pcdiag_cis.o:(.rel.pdr)
+     128      128        8     4         obj/pccf/iop/pccf/pcdiag_cf.o:(.rel.pdr)
+       0        0       1f     1 .llvm_addrsig
+       0        0        d     1         obj/pccf/iop/pccf/main.o:(.llvm_addrsig)
+       d        d       10     1         obj/pccf/iop/pccf/pccf_hw.o:(.llvm_addrsig)
+      1d       1d        2     1         obj/pccf/iop/pccf/pccf_ata.o:(.llvm_addrsig)
+      1f       1f        0     1         obj/pccf/iop/pccf/pcdiag_cis.o:(.llvm_addrsig)
+      1f       1f        0     1         obj/pccf/iop/pccf/pcdiag_cf.o:(.llvm_addrsig)
+      1f       1f        0     1         obj/pccf/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      bd0     4 .symtab
+       0        0      bd0     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      7a1     1 .strtab
+       0        0      7a1     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+pccardTrace                                       obj/pccf/iop/pccf/main.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+_start                                            obj/pccf/iop/pccf/main.o
+GetLoadcoreInternalData                           obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+memcmp                                            obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+                                                  obj/pccf/iop/pccf/pccf_ata.o
+CreateSema                                        obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+pccf_hw_start                                     obj/pccf/iop/pccf/pccf_hw.o
+                                                  obj/pccf/iop/pccf/main.o
+DeleteSema                                        obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+memset                                            obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+                                                  obj/pccf/iop/pccf/pccf_ata.o
+                                                  obj/pccf/iop/pccf/pcdiag_cis.o
+iomanX_AddDrv                                     obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+bdm_connect_bd                                    obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+pccf_hw_stop                                      obj/pccf/iop/pccf/pccf_hw.o
+                                                  obj/pccf/iop/pccf/main.o
+WaitSema                                          obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+pccf_hw_present                                   obj/pccf/iop/pccf/pccf_hw.o
+                                                  obj/pccf/iop/pccf/main.o
+pccf_ata_read                                     obj/pccf/iop/pccf/pccf_ata.o
+                                                  obj/pccf/iop/pccf/main.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+SignalSema                                        obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/main.o
+pccf_ata_write                                    obj/pccf/iop/pccf/pccf_ata.o
+                                                  obj/pccf/iop/pccf/main.o
+_irx_id                                           obj/pccf/iop/pccf/main.o
+DelayThread                                       obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+pcdiag_cf_probe                                   obj/pccf/iop/pccf/pcdiag_cf.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+pccf_ata_attach                                   obj/pccf/iop/pccf/pccf_ata.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+pcdiag_cis_dump_info                              obj/pccf/iop/pccf/pcdiag_cis.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+pcdiag_cis_cf_candidate                           obj/pccf/iop/pccf/pcdiag_cis.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+                                                  obj/pccf/iop/pccf/pcdiag_cf.o
+GetSystemTime                                     obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+SysClock2USec                                     obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+strcmp                                            obj/pccf/imports.o
+                                                  obj/pccf/iop/pccf/pccf_hw.o
+pcdiag_cis_dump                                   obj/pccf/iop/pccf/pcdiag_cis.o
+memcpy                                            obj/pccf/imports.o

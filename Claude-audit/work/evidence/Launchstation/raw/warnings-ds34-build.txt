@@ -1,0 +1,56 @@
+Source log: build-ds34.log
+Unique diagnostics (same file:line:col:message counted once): 25
+
+count	flag
+11	-Wpointer-sign
+4	-Wunused-but-set-variable
+3	-Wunused-but-set-global
+3	-Wincompatible-pointer-types-discards-qualifiers
+1	-Wunused-function
+1	-Wmisleading-indentation
+1	-Wunused-variable
+1	-Wself-assign
+
+Per flag, per source area:
+
+-Wpointer-sign (11)
+      11  iop/mmceman
+
+-Wunused-but-set-variable (4)
+       2  iop/hdl_info
+       2  src
+
+-Wunused-but-set-global (3)
+       2  src
+       1  iop/ps2host
+
+-Wincompatible-pointer-types-discards-qualifiers (3)
+       3  src
+
+-Wunused-function (1)
+       1  iop/smbman
+
+-Wmisleading-indentation (1)
+       1  src
+
+-Wunused-variable (1)
+       1  src
+
+-Wself-assign (1)
+       1  src
+
+Per file (top 60):
+       9  iop/mmceman/src/mmce_fs.c
+       2  iop/hdl_info/hdd.c
+       2  iop/mmceman/src/mmce_cmds.c
+       2  src/init.c
+       1  iop/ps2host/net_fsys.c
+       1  src/ember.c
+       1  src/config.c
+       1  iop/smbman/smb_fio.c
+       1  src/dash_main.c
+       1  src/filer_browser.c
+       1  src/filer_actions.c
+       1  src/main_actions.c
+       1  src/main_startup.c
+       1  src/dash_themes.c

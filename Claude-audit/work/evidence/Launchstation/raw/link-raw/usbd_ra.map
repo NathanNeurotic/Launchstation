@@ -1,0 +1,506 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     17a8     4 .rel.text
+       0        0       88     4         obj/usbd_ra/exports.o:(.rel.text)
+      88       88      2c8     4         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.rel.text)
+     350      350      468     4         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.rel.text)
+     7b8      7b8      6e8     4         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.rel.text)
+     ea0      ea0      238     4         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.rel.text)
+    10d8     10d8      2d0     4         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.rel.text)
+    13a8     13a8      1f0     4         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.rel.text)
+    1598     1598      210     4         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.rel.text)
+       0        0       28     4 .rel.data
+       0        0       20     4         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.rel.data)
+      20       20        8     4         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.rel.data)
+       0        0       b8     4 .rel.rodata
+       0        0       20     4         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.rel.rodata)
+      20       20       98     4         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.rel.rodata)
+       0        0     4930    16 .text
+       0        0       64    16         obj/usbd_ra/exports.o:(.text)
+       0        0        0     1                 _exp_usbd
+      5c       5c        8     1                 _retonly
+      70       70      690    16         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.text)
+      70       70       5c     1                 callUsbDriverFunc
+      cc       cc       c4     1                 probeDeviceTree
+     190      190       dc     1                 doRegisterDriver
+     26c      26c       b8     1                 doRegisterAutoLoader
+     324      324       a4     1                 disconnectDriver
+     3c8      3c8       10     1                 doUnregisterAutoLoader
+     3d8      3d8       98     1                 doUnregisterDriver
+     470      470       a0     1                 connectNewDevice
+     510      510       70     1                 signalCallbackThreadFunc
+     580      580      104     1                 callbackThreadFunc
+     684      684       7c     1                 initCallbackThread
+     700      700      ec4    16         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.text)
+     700      700       e8     1                 cleanUpFunc
+     7e8      7e8      234     1                 openDeviceEndpoint
+     a1c      a1c       4c     1                 doOpenEndpoint
+     a68      a68       44     1                 doCloseEndpoint
+     aac      aac       a8     1                 doGetDeviceStaticDescriptor
+     b54      b54      168     1                 handleRhsc
+     cbc      cbc      1d4     1                 hcdProcessIntr
+     e90      e90       78     1                 hcdIrqThread
+     f08      f08       20     1                 usbdIntrHandler
+     f28      f28       8c     1                 initHardware
+     fb4      fb4      508     1                 initHcdStructs
+    14bc     14bc      108     1                 hcdInit
+    15d0     15d0     1574    16         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.text)
+    15d0     15d0       50     1                 hubDrvProbe
+    1620     1620      1e0     1                 hubDrvConnect
+    1800     1800       58     1                 hubDrvDisconnect
+    1858     1858       e0     1                 initHubDriver
+    1938     1938       34     1                 allocHubBuffer
+    196c     196c       28     1                 freeHubBuffer
+    1994     1994       70     1                 HubControlTransfer
+    1a04     1a04      168     1                 hubStatusChangeCallback
+    1b6c     1b6c       c0     1                 hubGetHubStatusCallback
+    1c2c     1c2c      1ac     1                 hubGetPortStatusCallback
+    1dd8     1dd8       60     1                 getHubStatusChange
+    1e38     1e38       60     1                 cancelTimerCallback
+    1e98     1e98       e0     1                 addTimerCallback
+    1f78     1f78      220     1                 killEndpoint
+    2198     2198       90     1                 removeEndpointFromDevice
+    2228     2228       3c     1                 hubDeviceResetCallback
+    2264     2264       c4     1                 hubResetDevice
+    2328     2328       b4     1                 checkDelayedResetsTree
+    23dc     23dc       34     1                 checkDelayedResets
+    2410     2410       30     1                 killDevice
+    2440     2440      10c     1                 flushPort
+    254c     254c      14c     1                 fetchConfigDescriptors
+    2698     2698       90     1                 requestDevDescrptCb
+    2728     2728       60     1                 requestDeviceDescriptor
+    2788     2788       30     1                 hubPeekDeviceDescriptor
+    27b8     27b8       a0     1                 hubSetFuncAddressCB
+    2858     2858       4c     1                 hubSetFuncAddress
+    28a4     28a4       38     1                 hubTimedSetFuncAddress
+    28dc     28dc       98     1                 hubSetPortPower
+    2974     2974       c0     1                 hubSetupPorts
+    2a34     2a34       84     1                 hubCheckPorts
+    2ab8     2ab8       8c     1                 hubCheckDeviceDesc
+    2b50     2b50      6b0    16         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.text)
+    2b50     2b50       4c     1                 sceUsbdRegisterLdd
+    2b9c     2b9c       4c     1                 sceUsbdRegisterAutoloader
+    2be8     2be8       48     1                 sceUsbdUnregisterLdd
+    2c30     2c30       40     1                 sceUsbdUnregisterAutoloader
+    2c70     2c70       68     1                 sceUsbdScanStaticDescriptor
+    2cd8     2cd8       74     1                 sceUsbdGetDeviceLocation
+    2d4c     2d4c       6c     1                 sceUsbdSetPrivateData
+    2db8     2db8       60     1                 sceUsbdGetPrivateData
+    2e18     2e18       78     1                 sceUsbdOpenPipe
+    2e90     2e90       64     1                 sceUsbdClosePipe
+    2ef4     2ef4      1e4     1                 sceUsbdTransferPipe
+    30d8     30d8       78     1                 sceUsbdOpenPipeAligned
+    3150     3150       b0     1                 sceUsbdChangeThreadPriority
+    3200     3200      588    16         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.text)
+    3200     3200       2c     1                 allocIsoTd
+    322c     322c       6c     1                 freeIsoTd
+    3298     3298       2c     1                 allocTd
+    32c4     32c4       6c     1                 freeTd
+    3330     3330       ac     1                 attachChildDevice
+    33dc     33dc       a8     1                 freeDevice
+    3484     3484       38     1                 fetchPortElemByNumber
+    34bc     34bc       24     1                 addToHcEndpointList
+    34e0     34e0       40     1                 removeHcEdFromList
+    3520     3520       90     1                 allocEndpointForDevice
+    35b0     35b0       54     1                 fetchDeviceById
+    3604     3604       54     1                 fetchEndpointById
+    3658     3658       58     1                 allocIoRequest
+    36b0     36b0       d8     1                 freeIoRequest
+    3790     3790      7c8    16         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.text)
+    3790     3790       10     1                 usbdLock
+    37a0     37a0       10     1                 usbdUnlock
+    37b0     37b0       90     1                 doGetDeviceLocation
+    3840     3840      244     1                 processDoneQueue_IsoTd
+    3a84     3a84      248     1                 processDoneQueue_GenTd
+    3ccc     3ccc       b4     1                 handleTimerList
+    3d80     3d80      1d8     1                 _start
+    3f60     3f60      828    16         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.text)
+    3f60     3f60       70     1                 removeEndpointFromQueue
+    3fd0     3fd0       58     1                 enqueueEndpoint
+    4028     4028       88     1                 checkTdQueue
+    40b0     40b0       5c     1                 handleIoReqList
+    410c     410c      25c     1                 setupControlTransfer
+    4368     4368      1b8     1                 setupIsocronTransfer
+    4520     4520      174     1                 setupBulkTransfer
+    4694     4694       8c     1                 attachIoReqToEndpoint
+    4720     4720       68     1                 doControlTransfer
+    4790     4790      1a0    16         obj/usbd_ra/imports.o:(.text)
+    47a4     47a4        0     1                 RegisterLibraryEntries
+    47c8     47c8        0     1                 printf
+    47ec     47ec        0     1                 AllocSysMemory
+    4810     4810        0     1                 memcpy
+    4818     4818        0     1                 memset
+    4820     4820        0     1                 strtol
+    4844     4844        0     1                 DisableIntr
+    484c     484c        0     1                 EnableIntr
+    4854     4854        0     1                 RegisterIntrHandler
+    485c     485c        0     1                 CpuSuspendIntr
+    4864     4864        0     1                 CpuResumeIntr
+    4888     4888        0     1                 CreateSema
+    4890     4890        0     1                 WaitSema
+    4898     4898        0     1                 SignalSema
+    48a0     48a0        0     1                 DeleteSema
+    48c4     48c4        0     1                 CreateEventFlag
+    48cc     48cc        0     1                 SetEventFlag
+    48d4     48d4        0     1                 iSetEventFlag
+    48dc     48dc        0     1                 WaitEventFlag
+    4900     4900        0     1                 CreateThread
+    4908     4908        0     1                 StartThread
+    4910     4910        0     1                 DeleteThread
+    4918     4918        0     1                 DelayThread
+    4920     4920        0     1                 ChangeThreadPriority
+       0        0      215    16 .rodata
+       0        0       10    16         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.rodata)
+      10       10       78    16         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.rodata)
+      10       10       78     1                 _start.SupportedArgs
+      90       90      185    16         <internal>:(.rodata.str1.1)
+  404b65   404b65    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       70    16 .data
+       0        0        0    16         obj/usbd_ra/exports.o:(.data)
+       0        0        4    16         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.data)
+       0        0        4     1                 callbackTid
+      10       10        0    16         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.data)
+      10       10       30    16         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.data)
+      10       10       30     1                 HubDriver
+      40       40        0    16         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.data)
+      40       40        0    16         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.data)
+      40       40       30    16         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.data)
+      40       40        8     1                 _irx_id
+      48       48       28     1                 usbConfig
+      70       70        0    16         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.data)
+      70       70        0    16         obj/usbd_ra/imports.o:(.data)
+  444be0   444be0        0     1 __bss_start = .
+       0        0       c0    16 .bss
+       0        0        0    16         obj/usbd_ra/exports.o:(.bss)
+       0        0       18    16         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.bss)
+       0        0        4     1                 drvListStart
+       4        4        4     1                 drvListEnd
+       8        8        4     1                 drvAutoLoader
+       c        c        4     1                 cbListStart
+      10       10        4     1                 cbListEnd
+      14       14        4     1                 callbackEvent
+      20       20        8    16         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.bss)
+      20       20        4     1                 hcdIrqEvent
+      24       24        4     1                 hcdTid
+      30       30        4    16         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.bss)
+      30       30        4     1                 hubBufferList
+      40       40        0    16         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.bss)
+      40       40       70    16         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.bss)
+      40       40       70     1                 memPool
+      b0       b0        4    16         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.bss)
+      b0       b0        4     1                 usbdSema
+      c0       c0        0    16         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.bss)
+      c0       c0        0    16         obj/usbd_ra/imports.o:(.bss)
+  444ca0   444ca0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/usbd_ra/exports.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbd_ra/imports.o:(.mdebug.abi32)
+       0        0      c60     4 .pdr
+       0        0       20     4         obj/usbd_ra/exports.o:(.pdr)
+      20       20      160     4         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.pdr)
+     180      180      180     4         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.pdr)
+     300      300      400     4         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.pdr)
+     700      700      1a0     4         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.pdr)
+     8a0      8a0      1c0     4         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.pdr)
+     a60      a60       e0     4         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.pdr)
+     b40      b40      120     4         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.pdr)
+       0        0      318     4 .rel.pdr
+       0        0        8     4         obj/usbd_ra/exports.o:(.rel.pdr)
+       8        8       58     4         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.rel.pdr)
+      60       60       60     4         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.rel.pdr)
+      c0       c0      100     4         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.rel.pdr)
+     1c0      1c0       68     4         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.rel.pdr)
+     228      228       70     4         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.rel.pdr)
+     298      298       38     4         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.rel.pdr)
+     2d0      2d0       48     4         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.rel.pdr)
+       0        0       1a     1 .llvm_addrsig
+       0        0        0     1         obj/usbd_ra/exports.o:(.llvm_addrsig)
+       0        0        1     1         obj/usbd_ra/iop/usbd-ra/src/driver.o:(.llvm_addrsig)
+       1        1        3     1         obj/usbd_ra/iop/usbd-ra/src/hcd.o:(.llvm_addrsig)
+       4        4       13     1         obj/usbd_ra/iop/usbd-ra/src/hub.o:(.llvm_addrsig)
+      17       17        1     1         obj/usbd_ra/iop/usbd-ra/src/interface.o:(.llvm_addrsig)
+      18       18        0     1         obj/usbd_ra/iop/usbd-ra/src/mem.o:(.llvm_addrsig)
+      18       18        2     1         obj/usbd_ra/iop/usbd-ra/src/usbd.o:(.llvm_addrsig)
+      1a       1a        0     1         obj/usbd_ra/iop/usbd-ra/src/usbio.o:(.llvm_addrsig)
+      1a       1a        0     1         obj/usbd_ra/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      b20     4 .symtab
+       0        0      b20     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      9eb     1 .strtab
+       0        0      9eb     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_exp_usbd                                         obj/usbd_ra/exports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+_start                                            obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/exports.o
+_retonly                                          obj/usbd_ra/exports.o
+sceUsbdRegisterLdd                                obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdUnregisterLdd                              obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdScanStaticDescriptor                       obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdSetPrivateData                             obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdGetPrivateData                             obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdOpenPipe                                   obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdClosePipe                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdTransferPipe                               obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdOpenPipeAligned                            obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdGetDeviceLocation                          obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdRegisterAutoloader                         obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdUnregisterAutoloader                       obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+sceUsbdChangeThreadPriority                       obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/exports.o
+callUsbDriverFunc                                 obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+usbdUnlock                                        obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+usbdLock                                          obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+probeDeviceTree                                   obj/usbd_ra/iop/usbd-ra/src/driver.o
+doRegisterDriver                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+drvListStart                                      obj/usbd_ra/iop/usbd-ra/src/driver.o
+drvListEnd                                        obj/usbd_ra/iop/usbd-ra/src/driver.o
+memPool                                           obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbio.o
+doRegisterAutoLoader                              obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+drvAutoLoader                                     obj/usbd_ra/iop/usbd-ra/src/driver.o
+disconnectDriver                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+removeEndpointFromDevice                          obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+doUnregisterAutoLoader                            obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+doUnregisterDriver                                obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+connectNewDevice                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+signalCallbackThreadFunc                          obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+CpuSuspendIntr                                    obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+cbListEnd                                         obj/usbd_ra/iop/usbd-ra/src/driver.o
+cbListStart                                       obj/usbd_ra/iop/usbd-ra/src/driver.o
+CpuResumeIntr                                     obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+callbackEvent                                     obj/usbd_ra/iop/usbd-ra/src/driver.o
+SetEventFlag                                      obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+callbackThreadFunc                                obj/usbd_ra/iop/usbd-ra/src/driver.o
+WaitEventFlag                                     obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+freeIoRequest                                     obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+initCallbackThread                                obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+CreateEventFlag                                   obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+usbConfig                                         obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/mem.o
+CreateThread                                      obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+callbackTid                                       obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+StartThread                                       obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/driver.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+cleanUpFunc                                       obj/usbd_ra/iop/usbd-ra/src/hcd.o
+removeEndpointFromQueue                           obj/usbd_ra/iop/usbd-ra/src/usbio.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+openDeviceEndpoint                                obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+allocEndpointForDevice                            obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+allocTd                                           obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbio.o
+addToHcEndpointList                               obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+allocIsoTd                                        obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbio.o
+doOpenEndpoint                                    obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+doCloseEndpoint                                   obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+doGetDeviceStaticDescriptor                       obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+fetchDeviceById                                   obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+handleRhsc                                        obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hubResetDevice                                    obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+flushPort                                         obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+addTimerCallback                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hubTimedSetFuncAddress                            obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hcdProcessIntr                                    obj/usbd_ra/iop/usbd-ra/src/hcd.o
+processDoneQueue_GenTd                            obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+processDoneQueue_IsoTd                            obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+handleTimerList                                   obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+printf                                            obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+hcdIrqThread                                      obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hcdIrqEvent                                       obj/usbd_ra/iop/usbd-ra/src/hcd.o
+EnableIntr                                        obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+usbdIntrHandler                                   obj/usbd_ra/iop/usbd-ra/src/hcd.o
+iSetEventFlag                                     obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+initHardware                                      obj/usbd_ra/iop/usbd-ra/src/hcd.o
+initHcdStructs                                    obj/usbd_ra/iop/usbd-ra/src/hcd.o
+AllocSysMemory                                    obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+memset                                            obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+attachChildDevice                                 obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+hcdInit                                           obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+DisableIntr                                       obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+RegisterIntrHandler                               obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hcdTid                                            obj/usbd_ra/iop/usbd-ra/src/hcd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+initHubDriver                                     obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hcd.o
+hubDrvProbe                                       obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubDrvConnect                                     obj/usbd_ra/iop/usbd-ra/src/hub.o
+allocHubBuffer                                    obj/usbd_ra/iop/usbd-ra/src/hub.o
+memcpy                                            obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubCheckDeviceDesc                                obj/usbd_ra/iop/usbd-ra/src/hub.o
+HubControlTransfer                                obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubDrvDisconnect                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+HubDriver                                         obj/usbd_ra/iop/usbd-ra/src/hub.o
+freeHubBuffer                                     obj/usbd_ra/iop/usbd-ra/src/hub.o
+doControlTransfer                                 obj/usbd_ra/iop/usbd-ra/src/usbio.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+hubStatusChangeCallback                           obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubGetHubStatusCallback                           obj/usbd_ra/iop/usbd-ra/src/hub.o
+getHubStatusChange                                obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubGetPortStatusCallback                          obj/usbd_ra/iop/usbd-ra/src/hub.o
+fetchPortElemByNumber                             obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+attachIoReqToEndpoint                             obj/usbd_ra/iop/usbd-ra/src/usbio.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+cancelTimerCallback                               obj/usbd_ra/iop/usbd-ra/src/hub.o
+killEndpoint                                      obj/usbd_ra/iop/usbd-ra/src/hub.o
+freeIsoTd                                         obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+freeTd                                            obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbio.o
+removeHcEdFromList                                obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubDeviceResetCallback                            obj/usbd_ra/iop/usbd-ra/src/hub.o
+checkDelayedResetsTree                            obj/usbd_ra/iop/usbd-ra/src/hub.o
+checkDelayedResets                                obj/usbd_ra/iop/usbd-ra/src/hub.o
+killDevice                                        obj/usbd_ra/iop/usbd-ra/src/hub.o
+freeDevice                                        obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/hub.o
+fetchConfigDescriptors                            obj/usbd_ra/iop/usbd-ra/src/hub.o
+requestDevDescrptCb                               obj/usbd_ra/iop/usbd-ra/src/hub.o
+requestDeviceDescriptor                           obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubPeekDeviceDescriptor                           obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubSetFuncAddressCB                               obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubSetFuncAddress                                 obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubSetPortPower                                   obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubSetupPorts                                     obj/usbd_ra/iop/usbd-ra/src/hub.o
+hubCheckPorts                                     obj/usbd_ra/iop/usbd-ra/src/hub.o
+doGetDeviceLocation                               obj/usbd_ra/iop/usbd-ra/src/usbd.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+fetchEndpointById                                 obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+allocIoRequest                                    obj/usbd_ra/iop/usbd-ra/src/mem.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+ChangeThreadPriority                              obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/interface.o
+usbdSema                                          obj/usbd_ra/iop/usbd-ra/src/usbd.o
+WaitSema                                          obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+SignalSema                                        obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+checkTdQueue                                      obj/usbd_ra/iop/usbd-ra/src/usbio.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+RegisterLibraryEntries                            obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+CreateSema                                        obj/usbd_ra/imports.o
+                                                  obj/usbd_ra/iop/usbd-ra/src/usbd.o
+_irx_id                                           obj/usbd_ra/iop/usbd-ra/src/usbd.o
+enqueueEndpoint                                   obj/usbd_ra/iop/usbd-ra/src/usbio.o
+handleIoReqList                                   obj/usbd_ra/iop/usbd-ra/src/usbio.o
+setupControlTransfer                              obj/usbd_ra/iop/usbd-ra/src/usbio.o
+setupIsocronTransfer                              obj/usbd_ra/iop/usbd-ra/src/usbio.o
+setupBulkTransfer                                 obj/usbd_ra/iop/usbd-ra/src/usbio.o
+strtol                                            obj/usbd_ra/imports.o
+DeleteSema                                        obj/usbd_ra/imports.o
+DeleteThread                                      obj/usbd_ra/imports.o
+DelayThread                                       obj/usbd_ra/imports.o

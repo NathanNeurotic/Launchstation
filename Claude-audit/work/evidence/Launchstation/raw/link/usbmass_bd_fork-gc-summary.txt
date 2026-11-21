@@ -1,0 +1,16 @@
+Link: usbmass_bd_fork
+Source: usbmass_bd_fork.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 0
+Discarded code/data sections (ABI metadata excluded): 0, of which non-empty: 0, 0 bytes
+  first-party: 0 non-empty sections, 0 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 0 non-empty sections, 0 bytes
+  third-party-dep: 0 non-empty sections, 0 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file

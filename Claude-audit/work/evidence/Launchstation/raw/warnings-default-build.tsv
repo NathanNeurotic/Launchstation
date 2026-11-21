@@ -1,0 +1,26 @@
+file	line	severity	flag	message
+src/ember.c	244	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const char *' to parameter of type 'char *' discards qualifiers
+src/init.c	514	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const void *' to parameter of type 'void *' discards qualifiers
+src/init.c	1900	warning	-Wincompatible-pointer-types-discards-qualifiers	passing 'const void *' to parameter of type 'void *' discards qualifiers
+src/filer_browser.c	812	warning	-Wmisleading-indentation	misleading indentation; statement is not part of the previous 'if'
+iop/mmceman/src/mmce_cmds.c	215	warning	-Wpointer-sign	initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_cmds.c	240	warning	-Wpointer-sign	initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	314	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	665	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	729	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	793	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	863	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1043	warning	-Wpointer-sign	passing 'char[256]' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1107	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1226	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+iop/mmceman/src/mmce_fs.c	1234	warning	-Wpointer-sign	passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not
+src/main_actions.c	728	warning	-Wself-assign	explicitly assigning value of variable of type 'int' to itself
+iop/ps2host/net_fsys.c	56	warning	-Wunused-but-set-global	variable 'fsys_pid' set but not used
+src/dash_main.c	25	warning	-Wunused-but-set-global	variable 'prev_section' set but not used
+src/dash_themes.c	44	warning	-Wunused-but-set-global	variable 'store_seen' set but not used
+iop/hdl_info/hdd.c	127	warning	-Wunused-but-set-variable	variable 'count' set but not used
+iop/hdl_info/hdd.c	162	warning	-Wunused-but-set-variable	variable 'count' set but not used
+src/config.c	885	warning	-Wunused-but-set-variable	variable 'var_cnt' set but not used
+src/main_startup.c	168	warning	-Wunused-but-set-variable	variable 'var_cnt' set but not used
+iop/smbman/smb_fio.c	27	warning	-Wunused-function	unused function 'my_iomanx_retval_EIO_s64'
+src/filer_actions.c	1803	warning	-Wunused-variable	unused variable 'timestamp'

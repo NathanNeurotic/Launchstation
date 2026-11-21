@@ -1,0 +1,4 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/dev9_poweroff/iop/dev9_poweroff/main.o		48	0	8	0	0	0	32	88
+first-party	build/obj/dev9_poweroff/imports.o		36	0	0	0	0	0	0	36
+linker-internal	<internal>		0	14	0	0	0	0	0	14

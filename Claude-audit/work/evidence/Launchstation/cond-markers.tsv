@@ -1,0 +1,35 @@
+path	line	tier	text
+docs/README.md	80	docs	| [TODO.txt](TODO.txt) | Legacy | Three-line inherited wish list (HDD Manager interrupt, FTP rewrite, cleanup); not a roadmap. |
+docs/architecture-maintenance.md	76	docs	- stale markers (`TODO`/`FIXME`/`HACK`, legacy aliases)
+iop/ata_bd/src/ps2atad.c	48	module	// TODO: last sdk 3.1.0 has ATAD module version 2.9 with significant changes.
+iop/hdl_info/apa.c	175	module	/* TODO: check whether next partition is not loaded already --
+iop/mmceman/src/mmce_cmds.c	46	module	//TODO:
+iop/mx4sio_bd/src/mx4sio.h	46	module	uint16_t crc[512]; /*FIXME*/
+iop/mx4sio_bd/src/spi_sdcard_driver.c	138	module	/* TODO: use this to verify writes */
+iop/mx4sio_bd/src/spi_sdcard_driver.h	62	module	// XXX: The folowing are not fixed to correct endianness!
+iop/oldlibs/ps2ftpd/src/FtpClient.c	476	module	FIXME: non-blocking mode - if this is not enabled, the entire server will
+iop/oldlibs/ps2ftpd/src/FtpCommands.c	184	module	// TODO: validate IP?
+iop/oldlibs/ps2ftpd/src/FtpCommands.c	202	module	// TODO: is this proper?
+iop/oldlibs/ps2ftpd/src/FtpServer.c	233	module	// TODO: handle OOB data for transfer breaks
+iop/oldlibs/ps2ftpd/src/main.c	92	module	// TODO: fix CD/DVD support
+iop/ps2hdd_osd/apa.c	260	module	// TODO: switch to HDDDevices.partitionMaxSize
+iop/ps2hdd_osd/apa.c	312	module	// TODO: switch to HDDDevices.partitionMaxSize
+iop/ps2hdd_osd/hdd.c	105	module	// TODO: In DVRP firmware, this check always succeeds
+iop/ps2hdd_osd/hdd_fio.c	42	module	// TODO: For DVRP firmware 48-bit, __xdata and __xcontents partitions are created
+iop/ps2hdd_osd/hdd_fio.c	344	module	// TODO: Why does DVRP firmware start clearing at 1024 * 4104 when not 48-bit?
+iop/ps2hdd_osd/hdd_fio.c	345	module	// TODO: DVRP firmware 48-bit clears offset_24+0x2000, offset_24+0x42000, offset_24+0x242000
+iop/ps2hdd_osd/hdd_fio.c	359	module	// TODO: DVRP firmware sets this to 0x400 bytes
+iop/ps2hdd_osd/hdd_fio.c	362	module	// TODO: DVRP firmware 48-bit sets this to __extend
+iop/ps2hdd_osd/hdd_fio.c	399	module	// TODO: DVRP firmware 48-bit creates __extend partition at offset_24_bit, with same params as __mbr except content is empty
+iop/ps2hdd_osd/hdd_fio.c	406	module	// TODO: For DVRP firmware 48-bit, __xdata is created with size 1024 * 2048
+iop/ps2hdd_osd/hdd_fio.c	407	module	// TODO: For DVRP firmware 48-bit, __xcontents is created with size (offset_48_bit - offset_24_bit) - 0x240000 & 0xfffff7ff
+iop/ps2hdd_osd/hdd_fio.c	433	module	// TODO: start sector usually is at either 0x4A817C8 (40GB offset) or 0x400000 (2GiB offset)
+iop/ps2hdd_osd/libapa.h	28	module	// TODO: In DVRP firmware, the following value is 0x1000 when 48-bit
+iop/ps2host/net_fio.c	66	module	// XXX: Hm, this func should behave sorta like pko_recv_bytes imho..
+iop/ps2host/net_fio.c	122	module	dbgprintf("pko_file: XXX: did not receive a full header!!!! "
+iop/smb2man/usmb2/usmb2.h	80	module	* TODO: currently only support O_RDONLY.  Need to add O_RDWR support.
+iop/udpfs_smap/src/xfer.c	266	module	// FIXME! We want a blocking write, this works but it's not ideal.
+iop/usbmass_bd/src/usb_mass.c	449	module	// TODO: handle error in an async way (cannot block in usb callback)
+iop/vmcman/src/main.c	15	module	// TODO: last sdk 3.1.0 has MCMAN module version 0x2,0x30 with significant changes.
+iop/vmcman/src/mciomanx_backing.c	289	module	// FIXME: implement
+iop/vmcman/src/mcman-internal.h	158	module	// FIXME: The r/w/x flag order is opposite from iomanX

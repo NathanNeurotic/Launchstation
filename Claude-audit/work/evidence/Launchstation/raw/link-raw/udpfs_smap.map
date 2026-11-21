@@ -1,0 +1,198 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      6f8     4 .rel.text
+       0        0       40     4         obj/udpfs_smap/exports.o:(.rel.text)
+      40       40       28     4         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.rel.text)
+      68       68      458     4         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.rel.text)
+     4c0      4c0      238     4         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.rel.data)
+       0        0     1970    16 .text
+       0        0       40    16         obj/udpfs_smap/exports.o:(.text)
+       0        0        0     1                 _exp_smap
+      38       38        8     1                 _retonly
+      40       40       40    16         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.text)
+      40       40       40     1                 _start
+      80       80     1024    16         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.text)
+      80       80      3c4     1                 smap_init
+     444      444       30     1                 Dev9IntrCb
+     474      474       e8     1                 SetupNetDev
+     55c      55c       a0     1                 SMAPGetMACAddress
+     5fc      5fc      28c     1                 IntrHandlerThread
+     888      888      6b8     1                 InitPHY
+     f40      f40       30     1                 LinkCheckTimerCB
+     f70      f70       88     1                 _smap_write_phy
+     ff8      ff8       ac     1                 _smap_read_phy
+    10b0     10b0      710    16         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.text)
+    10b0     10b0       58     1                 xfer_init
+    1108     1108       40     1                 Dev9PreDmaCbHandler
+    1148     1148       48     1                 Dev9PostDmaCbHandler
+    1190     1190       24     1                 smap_register_rx_callback
+    11b4     11b4      164     1                 smap_fifo_read
+    1318     1318      190     1                 HandleRxIntr
+    14a8     14a8      318     1                 smap_transmit
+    17c0     17c0      1b0    16         obj/udpfs_smap/imports.o:(.text)
+    17d4     17d4        0     1                 CreateThread
+    17dc     17dc        0     1                 StartThread
+    17e4     17e4        0     1                 DelayThread
+    17ec     17ec        0     1                 DeleteThread
+    17f4     17f4        0     1                 SetAlarm
+    17fc     17fc        0     1                 USec2SysClock
+    1820     1820        0     1                 printf
+    1844     1844        0     1                 bzero
+    1868     1868        0     1                 CpuSuspendIntr
+    1870     1870        0     1                 CpuResumeIntr
+    1894     1894        0     1                 RegisterLibraryEntries
+    18b8     18b8        0     1                 CreateEventFlag
+    18c0     18c0        0     1                 WaitEventFlag
+    18c8     18c8        0     1                 SetEventFlag
+    18d0     18d0        0     1                 iSetEventFlag
+    18d8     18d8        0     1                 DeleteEventFlag
+    18fc     18fc        0     1                 CreateSema
+    1904     1904        0     1                 SignalSema
+    190c     190c        0     1                 WaitSema
+    1930     1930        0     1                 SpdIntrEnable
+    1938     1938        0     1                 SpdIntrDisable
+    1940     1940        0     1                 SpdRegisterIntrHandler
+    1948     1948        0     1                 dev9RegisterPreDmaCb
+    1950     1950        0     1                 dev9RegisterPostDmaCb
+    1958     1958        0     1                 SpdDmaTransfer
+    1960     1960        0     1                 SpdGetEthernetID
+       0        0        5    16 .rodata
+       0        0        5    16         <internal>:(.rodata.str1.1)
+  401995   401995    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       30    16 .data
+       0        0        0    16         obj/udpfs_smap/exports.o:(.data)
+       0        0        8    16         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10        8    16         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.data)
+      10       10        2     1                 g_dma_max_block_size
+      14       14        4     1                 SmapConfiguration
+      20       20        4    16         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.data)
+      20       20        4     1                 tx_sema
+      30       30        0    16         obj/udpfs_smap/imports.o:(.data)
+  4419d0   4419d0        0     1 __bss_start = .
+       0        0       80    16 .bss
+       0        0        0    16         obj/udpfs_smap/exports.o:(.bss)
+       0        0        0    16         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.bss)
+       0        0       2c    16         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.bss)
+       0        0       2c     1                 SmapDriverData
+      30       30       4c    16         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.bss)
+      30       30        4     1                 g_rx_callback
+      34       34        2     1                 g_hdr_read_bytes
+      38       38        2     1                 g_current_frame_ptr
+      3c       3c       40     1                 g_hdr_buf
+      80       80        0    16         obj/udpfs_smap/imports.o:(.bss)
+  441a50   441a50        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/udpfs_smap/exports.o:(.mdebug.abi32)
+       0        0        0     1         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.mdebug.abi32)
+       0        0        0     1         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.mdebug.abi32)
+       0        0        0     1         obj/udpfs_smap/imports.o:(.mdebug.abi32)
+       0        0      240     4 .pdr
+       0        0       20     4         obj/udpfs_smap/exports.o:(.pdr)
+      20       20       20     4         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.pdr)
+      40       40      120     4         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.pdr)
+     160      160       e0     4         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.pdr)
+       0        0       90     4 .rel.pdr
+       0        0        8     4         obj/udpfs_smap/exports.o:(.rel.pdr)
+       8        8        8     4         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.rel.pdr)
+      10       10       48     4         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.rel.pdr)
+      58       58       38     4         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.rel.pdr)
+       0        0        8     1 .llvm_addrsig
+       0        0        0     1         obj/udpfs_smap/exports.o:(.llvm_addrsig)
+       0        0        1     1         obj/udpfs_smap/iop/udpfs_smap/src/main.o:(.llvm_addrsig)
+       1        1        4     1         obj/udpfs_smap/iop/udpfs_smap/src/smap.o:(.llvm_addrsig)
+       5        5        3     1         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o:(.llvm_addrsig)
+       8        8        0     1         obj/udpfs_smap/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      480     4 .symtab
+       0        0      480     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0      372     1 .strtab
+       0        0      372     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_exp_smap                                         obj/udpfs_smap/exports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/main.o
+_retonly                                          obj/udpfs_smap/exports.o
+SMAPGetMACAddress                                 obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+                                                  obj/udpfs_smap/exports.o
+smap_transmit                                     obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+                                                  obj/udpfs_smap/exports.o
+smap_register_rx_callback                         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+                                                  obj/udpfs_smap/exports.o
+smap_fifo_read                                    obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+                                                  obj/udpfs_smap/exports.o
+_start                                            obj/udpfs_smap/iop/udpfs_smap/src/main.o
+smap_init                                         obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/main.o
+RegisterLibraryEntries                            obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/main.o
+_irx_id                                           obj/udpfs_smap/iop/udpfs_smap/src/main.o
+SmapDriverData                                    obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+g_dma_max_block_size                              obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+SpdIntrDisable                                    obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+SpdGetEthernetID                                  obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+SpdRegisterIntrHandler                            obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+xfer_init                                         obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+DelayThread                                       obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+iSetEventFlag                                     obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+CreateEventFlag                                   obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+CreateThread                                      obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+StartThread                                       obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+SetEventFlag                                      obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+DeleteThread                                      obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+DeleteEventFlag                                   obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+CpuSuspendIntr                                    obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+CpuResumeIntr                                     obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+WaitEventFlag                                     obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+SpdIntrEnable                                     obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+USec2SysClock                                     obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+SetAlarm                                          obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+HandleRxIntr                                      obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+CreateSema                                        obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+dev9RegisterPreDmaCb                              obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+dev9RegisterPostDmaCb                             obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+SpdDmaTransfer                                    obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+WaitSema                                          obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+SignalSema                                        obj/udpfs_smap/imports.o
+                                                  obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+printf                                            obj/udpfs_smap/imports.o
+bzero                                             obj/udpfs_smap/imports.o
