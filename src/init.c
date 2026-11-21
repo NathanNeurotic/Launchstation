@@ -135,7 +135,7 @@ static u8 have_mc_rpc_ready = 0;
  * ports (0 = slot 1, 1 = slot 2) have a multitap open. */
 static u8 have_mtapman = 0, mtap_bound = 0;
 static u8 mtap_open[2] = {0, 0};
-static u64 mtap_retry_after = 0;
+static u64 mtap_retry_after[2] = {0, 0};
 #endif
 static unsigned int iop_reset_generation = 0;
 
@@ -2268,8 +2268,6 @@ void mcMultitapRefresh(void)
 	 * pending libmc request. The next device list or card poll retries. */
 	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread() || dashWorkerIoBusy())
 		return;
-	if (Timer() < mtap_retry_after)
-		return;
 	if (!mtap_bound) {
 		if (mtapInit() != 1)
 			return;
@@ -2277,20 +2275,26 @@ void mcMultitapRefresh(void)
 	}
 	filerRootMcPollIdle();
 	for (port = 0; port < 2; port++) {
-		/* MTAPMAN numbers the memory-card ports 2 and 3. */
-		if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+		int eligible = port == 0 || isPathDeviceStackLoaded("mc1:/");
+
+		/* MTAPMAN numbers the memory-card ports 2 and 3. Keep absent-port
+		 * retries independent: one connected tap must not cause the other
+		 * port's failed opens to block the UI every card poll. */
+		if (!eligible)
 			mtap_open[port] = 0;
 		else if (mtap_open[port])
 			mtap_open[port] = mtapGetConnection(port + 2) == 1;
-		else
+		else if (Timer() >= mtap_retry_after[port])
 			mtap_open[port] = mtapPortOpen(port + 2) == 1;
-		if (!mtap_open[port])
+		else
+			continue;
+		if (!mtap_open[port]) {
 			mtapPortClose(port + 2);
+			mtap_retry_after[port] = eligible ? Timer() + 10000 : 0;
+		} else
+			mtap_retry_after[port] = 0;
 	}
-	/* Opening an absent port retries hardware detection synchronously. Back off
-	 * rather than stalling every card poll; an attached tap still uses the
-	 * existing cadence. A busy-skip above does not arm this delay. */
-	mtap_retry_after = (mtap_open[0] || mtap_open[1]) ? 0 : Timer() + 10000;
+	/* Busy-skipped refreshes above do not arm any retry delay. */
 #endif
 }
 
@@ -3044,7 +3048,7 @@ static void clearIopModuleState(void)
 #ifdef HOMEBREW_SIO2MAN
 	have_mtapman = mtap_bound = 0;
 	mtap_open[0] = mtap_open[1] = 0;
-	mtap_retry_after = 0;
+	mtap_retry_after[0] = mtap_retry_after[1] = 0;
 #endif
 	have_cdvd = 0;
 	have_usbd = 0;

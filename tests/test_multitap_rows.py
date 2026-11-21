@@ -82,9 +82,9 @@ static u64 now_ms;
 static int worker_busy, connected, init_calls, open_calls, connection_calls;
 static __attribute__((unused)) u64 Timer(void) { return now_ms; }
 static int mtapInit(void) { init_calls++; return 1; }
-static int mtapPortOpen(int port) { assert(port == 2 || port == 3); open_calls++; return connected; }
+static int mtapPortOpen(int port) { assert(port == 2 || port == 3); open_calls++; return (connected & (1 << (port - 2))) != 0; }
 static int mtapPortClose(int port) { assert(port == 2 || port == 3); return 1; }
-static int mtapGetConnection(int port) { assert(port == 2 || port == 3); connection_calls++; return connected; }
+static int mtapGetConnection(int port) { assert(port == 2 || port == 3); connection_calls++; return (connected & (1 << (port - 2))) != 0; }
 static int dashWorkerOnThread(void) { return 0; }
 static int dashWorkerIoBusy(void) { return worker_busy; }
 static int isPathDeviceStackLoaded(const char *path) { (void)path; return 1; }
@@ -96,8 +96,18 @@ int main(void) {
  mcMultitapRefresh();assert(open_calls==2); /* absent devices use a backoff */
  now_ms+=1000;mcMultitapRefresh();assert(open_calls==2);
  now_ms+=10000;mcMultitapRefresh();assert(open_calls==4); /* later insertion is retried */
- connected=1;now_ms+=10000;mcMultitapRefresh();assert(open_calls==6 && mtap_open[0] && mtap_open[1]);
+ connected=3;now_ms+=10000;mcMultitapRefresh();assert(open_calls==6 && mtap_open[0] && mtap_open[1]);
  now_ms+=1000;mcMultitapRefresh();assert(open_calls==6 && connection_calls==2);
+ /* A present tap on port 0 must not disable the absent port 1 backoff. */
+ mtap_open[0]=mtap_open[1]=0;mtap_retry_after[0]=mtap_retry_after[1]=0;
+ connected=1;now_ms+=10000;open_calls=connection_calls=0;
+ mcMultitapRefresh();assert(open_calls==2 && mtap_open[0] && !mtap_open[1]);
+ now_ms+=1000;mcMultitapRefresh();
+ assert(open_calls==2 && connection_calls==1); /* port 1 is still backed off */
+ now_ms+=9000;mcMultitapRefresh();
+ assert(open_calls==3 && connection_calls==2); /* only absent port retries */
+ connected=3;now_ms+=10000;mcMultitapRefresh();
+ assert(open_calls==4 && mtap_open[0] && mtap_open[1]);
  return 0;
 }
 '''
