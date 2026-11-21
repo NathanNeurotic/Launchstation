@@ -52,8 +52,8 @@ for filename in ("dash_games.c", "dash_apps.c", "dash_art.c", "dash_bg.c"):
 # the same neutral GS modulation without changing their fade alpha.
 background = (root / "src/dash_bg.c").read_text()
 for cached in ("prev", "cur"):
-    assert re.search(rf"drawCover\\({cached}, DC\\(128, 128, 128, \\(int\\)\\(", background), \\
-        f"Focus wallpaper {cached} frame clips the artwork colors"
+    assert f"drawCover({cached}, DC(128, 128, 128, (int)(" in background, (
+        f"Focus wallpaper {cached} frame clips the artwork colors")
 
 assert "jpegturbo" in ps2yaml
 assert "src/dash_image.c" in ps2yaml
