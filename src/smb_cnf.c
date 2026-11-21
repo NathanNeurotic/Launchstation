@@ -136,12 +136,21 @@ static int parseFlag(const char *value)
 	return -1;
 }
 
-static int parseVersion(const char *value)
+static int parseVersionEx(const char *value, int *proto_version)
 {
-	if (sameText(value, "1") || sameText(value, "SMB1") || sameText(value, "NT1"))
+	if (sameText(value, "1") || sameText(value, "SMB1") || sameText(value, "NT1")) {
+		*proto_version = 1;
 		return 1;
-	if (sameText(value, "2") || sameText(value, "3") || sameText(value, "SMB2") || sameText(value, "SMB3"))
+	}
+	if (sameText(value, "2") || sameText(value, "SMB2")) {
+		*proto_version = 2;
 		return 2;
+	}
+	if (sameText(value, "3") || sameText(value, "SMB3")) {
+		*proto_version = 3;
+		return 2;
+	}
+	*proto_version = 2;
 	return 0;
 }
 
@@ -316,6 +325,7 @@ static void closeShare(SmbConfig *cfg, SmbShare *sh, const char *pending_problem
 		if (sh->username[0] || sh->password[0] || sh->plaintext || sh->version == 1)
 			problem = "An NFS share takes NAME and URL only (uid/gid go in the URL)";
 		sh->version = SMB_PATH_NFS;
+		sh->proto_version = SMB_PATH_NFS;
 		if (problem == NULL)
 			problem = splitNfsUrl(sh);
 		goto record;
@@ -354,6 +364,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 	memset(cfg, 0, sizeof(*cfg));
 	memset(&cur, 0, sizeof(cur));
 	cur.version = 2;
+	cur.proto_version = 2;
 	if (text == NULL)
 		return 0;
 	/* a UTF-8 BOM, as Windows Notepad may write */
@@ -392,11 +403,12 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			if (!copyValue(cur.password, sizeof(cur.password), value) && problem == NULL)
 				problem = "PASSWORD is longer than 31 characters";
 		} else if (sameText(key, "VERSION")) {
-			cur.version = parseVersion(value);
+			cur.version = parseVersionEx(value, &cur.proto_version);
 			if (cur.version == 0) {
 				cur.version = 2;
+				cur.proto_version = 2;
 				if (problem == NULL)
-					problem = "VERSION must be 1 (SMB1) or 2 (SMB2/SMB3)";
+					problem = "VERSION must be 1 (SMB1), 2 (SMB2), or 3 (SMB3)";
 			}
 		} else if (sameText(key, "PLAINTEXT")) {
 			cur.plaintext = parseFlag(value);
@@ -414,6 +426,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			closeShare(cfg, &cur, problem);
 			memset(&cur, 0, sizeof(cur));
 			cur.version = 2;
+			cur.proto_version = 2;
 			problem = NULL;
 			has_keys = 0;
 			continue;

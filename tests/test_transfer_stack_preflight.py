@@ -82,7 +82,8 @@ static void ensureMemoryCardPortAccessible(int p){
  assert(p==1);
  if(mx4sio_driver_running&&reset_allowed)iop_reset();
 }
-'''+function(read('src/smb_cnf.c'),'int smbPathKind(')+source+r'''
+static int smbSharesConfigured(int v){(void)v;return 1;}
+'''+function(read('src/smb_cnf.c'),'int smbPathKind(')+function(read('src/smb_cnf.c'),'int smbIsRootPath(')+source+r'''
 static void reset(void){mx4sio_driver_running=1;network=usb=1;mmce=host_ready=smb_ready=0;net_stack=NET_NONE;loads=resets=open_handles=0;reset_allowed=1;}
 static int is_udpfs(const char *p){return !strncmp(p,"udpfs",5);}
 static int is_ethernet(const char *p){return !strncmp(p,"host",4)||smbPathKind(p)!=SMB_PATH_NONE;}

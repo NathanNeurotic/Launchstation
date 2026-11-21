@@ -141,8 +141,8 @@ start_line:
 	while ((*tp <= ' ') && (*tp > '\0')  //Skip pre-value whitespace, if any
 	       && (*tp != '\r') && (*tp != '\n'))
 		tp += 1;  //but do not pass the end of the line
-	if (*tp == '\0')
-		return false;  //but exit at EOF
+	/* A valid NAME = assignment may end here with an empty value.
+	 * Keep it visible to loadConfig instead of retaining the old setting. */
 	vp = tp;           //Current pos is potential value
 
 	while ((*tp != '\r') && (*tp != '\n') && (*tp != '\0'))
@@ -1049,7 +1049,7 @@ int loadConfig(char *mainMsg, char *CNF)
 #ifdef ETH
 		else if (!strcmp(name, "SMB_Server_User") && value[0] && strlen(value) < sizeof(setting->SMB_Server_User))
 			strcpy(setting->SMB_Server_User, value);
-		else if (!strcmp(name, "SMB_Server_Password") && value[0] && strlen(value) < sizeof(setting->SMB_Server_Pass))
+		else if (!strcmp(name, "SMB_Server_Password") && strlen(value) < sizeof(setting->SMB_Server_Pass))
 			strcpy(setting->SMB_Server_Pass, value);
 #endif
 		else if (!stricmp(name, "language")) {

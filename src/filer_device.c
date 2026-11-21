@@ -170,6 +170,19 @@ int ensurePathDeviceStackReady(const char *path)
 	}
 #endif
 #ifdef SMB
+	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path)) {
+		int has_v2 = smbSharesConfigured(SMB_PATH_V2) > 0;
+		int has_v1 = smbSharesConfigured(SMB_PATH_V1) > 0;
+		int ready = 0;
+
+		if (has_v2)
+			ready |= isSmbDriverLoaded(SMB_PATH_V2) || load_smb(SMB_PATH_V2);
+		if (has_v1)
+			ready |= isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1);
+		if (!has_v2 && !has_v1)
+			return 0;
+		return ready;
+	}
 	if (smbPathKind(path) != SMB_PATH_NONE)
 		return isSmbDriverLoaded(smbPathKind(path)) || load_smb(smbPathKind(path));
 #endif

@@ -222,7 +222,7 @@ static void drawThemeLayers(int fx)
 	GSTEXTURE *s1, *s2;
 
 	if (bg != NULL)
-		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(255, 255, 255, 255));
+		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(128, 128, 128, 255));
 	/* Motion speed may be 0% while detail is High; suppress effects only
 	 * for the explicit static/off render, not when animation is frozen. */
 	if (fx == DASH_FX_OFF)
@@ -385,7 +385,7 @@ static void sceneImage(float t, int fx)
 		return;
 	}
 	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
-	drawCover(tex, DC(255, 255, 255, 255));
+	drawCover(tex, DC(128, 128, 128, 255));
 }
 
 static void drawAppWallpaper(void)
@@ -410,9 +410,9 @@ static void drawAppWallpaper(void)
 	 * version of the background colour so every text colour stays
 	 * readable over bright covers */
 	if (prev != NULL)
-		drawCover(prev, DC(255, 255, 255, (int)(153 * (1.0f - wall_mix) * wall_vis)));
+		drawCover(prev, DC(128, 128, 128, (int)(153 * (1.0f - wall_mix) * wall_vis)));
 	if (cur != NULL)
-		drawCover(cur, DC(255, 255, 255, (int)(153 * wall_mix * wall_vis)));
+		drawCover(cur, DC(128, 128, 128, (int)(153 * wall_mix * wall_vis)));
 	{
 		DashColor d = dashColorScale(dashTheme.bg2, 0.3f);
 		d.a = (u8)(dashTheme.wall_dim * 2.55f * wall_vis);

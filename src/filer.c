@@ -821,8 +821,21 @@ int filerDirReadNeedsPrep(const char *path)
 	    (!isMemoryCardRpcReady() || filerRootMcPresent(mcPathUnit(path), NULL, NULL) <= 0))
 		return TRUE;
 #ifdef SMB
-	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
-		return TRUE;
+	if (smbIsRootPath(path)) {
+		int kind = smbPathKind(path);
+		if (kind == SMB_PATH_V2) {
+			int has_v2 = smbSharesKnown(SMB_PATH_V2) > 0;
+			int has_v1 = smbSharesKnown(SMB_PATH_V1) > 0;
+			if (!has_v2 && !has_v1)
+				return TRUE;
+			if (has_v2 && smbSharesConnectedCount(SMB_PATH_V2) == 0)
+				return TRUE;
+			if (has_v1 && smbSharesConnectedCount(SMB_PATH_V1) == 0)
+				return TRUE;
+		} else if (smbSharesConnectedCount(kind) == 0) {
+			return TRUE;
+		}
+	}
 #endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
@@ -848,8 +861,21 @@ int filerPrepareDirRead(const char *path)
 	if (mcPathUnit(path) >= 0)
 		return filerPrepareMemoryCardRead(mcPathUnit(path)) == sceMcResSucceed;
 #ifdef SMB
-	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
-		smbSharesConnect(smbPathKind(path), 1);
+	if (smbIsRootPath(path)) {
+		int kind = smbPathKind(path);
+		if (kind == SMB_PATH_V2) {
+			if (smbSharesConfigured(SMB_PATH_V2) > 0 && smbSharesConnectedCount(SMB_PATH_V2) == 0 &&
+			    (isSmbDriverLoaded(SMB_PATH_V2) || load_smb(SMB_PATH_V2)))
+				smbSharesConnect(SMB_PATH_V2, 1);
+			if (smbSharesConfigured(SMB_PATH_V1) > 0 && smbSharesConnectedCount(SMB_PATH_V1) == 0 &&
+			    (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)))
+				smbSharesConnect(SMB_PATH_V1, 1);
+			return (smbSharesConnectedCount(SMB_PATH_V2) > 0) ||
+			       (smbSharesConnectedCount(SMB_PATH_V1) > 0);
+		}
+		if (smbSharesConnectedCount(kind) == 0)
+			smbSharesConnect(kind, 1);
+	}
 #endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
@@ -1983,12 +2009,26 @@ int readSMB(const char *path, FILEINFO *info, int max)
 	int n;
 
 	smb_dir_open_failed = 0;
+	if (version == SMB_PATH_V2 && root && !dashWorkerOnThread() &&
+	    smbSharesConfigured(SMB_PATH_V2) == 0 && smbSharesConfigured(SMB_PATH_V1) > 0) {
+		if (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)) {
+			smbSharesConnect(SMB_PATH_V1, 1);
+			if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
+				return 0;
+		}
+		smb_dir_open_failed = 1;
+		return -ENOTCONN;
+	}
+	if (version == SMB_PATH_V2 && root && !isSmbDriverLoaded(SMB_PATH_V2) &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0 && smbSharesKnown(SMB_PATH_V2) == 0)
+		return 0;
 	if (!isSmbDriverLoaded(version)) {
 		if (dashWorkerOnThread() || !load_smb(version)) {
 			smb_dir_open_failed = 1;
 			return -ENODEV;
 		}
-	} else if (root && !dashWorkerOnThread()) {
+	}
+	if (root && !dashWorkerOnThread()) {
 		/* opening the device root retries failed shares (rate limited);
 		 * never on the dashboard worker: the retry rewrites the share table
 		 * the UI thread reads, and blocks on IOP connects */
@@ -2000,7 +2040,8 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		return -ENOTCONN;
 	}
 	n = readNetDir(path, info, max, &smb_dir_open_failed);
-	if (root && n == 0 && smbSharesConnectedCount(version) == 0)
+	if (root && n == 0 && smbSharesConnectedCount(version) == 0 &&
+	    !(version == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0))
 		smb_dir_open_failed = 1;
 	return n;
 }

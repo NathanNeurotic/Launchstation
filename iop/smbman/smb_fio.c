@@ -305,30 +305,37 @@ static FHANDLE *smbman_getfilefreeslot(void)
 static char *prepare_path(const char *path, char *full_path, int max_path)
 {
     const char *p, *p2;
-    int i;
+    int i, curlen;
 
-    // Reserve space for 2 backslashes and a NULL.
     strncpy(full_path, smb_curdir, max_path - 3);
-    strcat(full_path, "\\");
+    full_path[max_path - 3] = '\0';
+    curlen = strlen(full_path);
+    if (curlen == 0 || full_path[curlen - 1] != '\\') {
+        full_path[curlen++] = '\\';
+        full_path[curlen]   = '\0';
+    }
 
     // Skip all leading slashes and backslashes.
     p = path;
     while ((*p == '\\') || (*p == '/'))
         p++;
 
-    // Locate the end of the path, ignoring any trailing slashes and backslashes.
-    p2 = &path[strlen(path)];
-    while ((*p2 == '\\') || (*p2 == '/'))
+    // Locate the last non-separator byte of the path, ignoring trailing slashes.
+    p2 = path + strlen(path);
+    while ((p2 > p) && ((p2[-1] == '\\') || (p2[-1] == '/')))
         p2--;
 
-    // Copy path. Reserve space for a backslash and a NULL
-    for (i = strlen(full_path); (p <= p2) && (max_path - i - 2 > 0); p++, i++) { // Convert all slashes along the path to backslashes.
+    if (p2 == p) {
+        if (curlen > 1)
+            full_path[curlen - 1] = '\0';
+        return full_path;
+    }
+
+    for (i = curlen; (p < p2) && (max_path - i - 1 > 0); p++, i++) { // Convert all slashes along the path to backslashes.
         full_path[i] = (*p == '/') ? '\\' : *p;
     }
 
-    // Append a backslash and null-terminate.
-    full_path[i]     = '\\';
-    full_path[i + 1] = '\0';
+    full_path[i] = '\0';
 
     return full_path;
 }
@@ -949,14 +956,19 @@ static int smb_LogOn(smbLogOn_in_t *logon)
         return -SMB_DEVCTL_LOGON_ERR_CONN;
 
     r = smb_NegotiateProtocol(&capabilities);
-    if (r < 0)
+    if (r < 0) {
+        smb_Disconnect();
         return -SMB_DEVCTL_LOGON_ERR_PROT;
+    }
 
     r = smb_SessionSetupAndX(logon->User, logon->Password, logon->PasswordType, capabilities);
-    if (r < 0)
+    if (r < 0) {
+        smb_Disconnect();
         return -SMB_DEVCTL_LOGON_ERR_LOGON;
+    }
 
-    UID = r;
+    UID           = r;
+    smb_curdir[0] = '\0';
 
     memcpy((void *)&glogon_info, (void *)logon, sizeof(smbLogOn_in_t));
 
@@ -983,7 +995,8 @@ static int smb_LogOff(void)
     if (r < 0)
         return r;
 
-    UID = -1;
+    UID           = -1;
+    smb_curdir[0] = '\0';
 
     keepalive_lock();
 
@@ -1012,7 +1025,8 @@ static int smb_GetShareList(smbGetShareList_in_t *getsharelist)
     if (r < 0)
         return r;
 
-    TID = r;
+    TID           = r;
+    smb_curdir[0] = '\0';
 
     if (UID == -1)
         return -ENOTCONN;
@@ -1069,7 +1083,8 @@ static int smb_OpenShare(smbOpenShare_in_t *openshare)
     if (r < 0)
         return r;
 
-    TID = r;
+    TID           = r;
+    smb_curdir[0] = '\0';
 
     memcpy((void *)&gopenshare_info, (void *)openshare, sizeof(smbOpenShare_in_t));
 

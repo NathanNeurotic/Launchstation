@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
+games_source = (root / "src/dash_games.c").read_text()
+assert games_source.count("DC(128, 128, 128, 255)") == 2, "Games artwork must use GS-neutral RGB modulation"
 games = (root / "src/dash_games.c").read_text(encoding="utf-8")
 art = (root / "src/dash_art.c").read_text(encoding="utf-8")
 

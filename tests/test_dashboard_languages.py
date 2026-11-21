@@ -15,8 +15,10 @@ files = ('ENG', 'SPA', 'FRE', 'ITA', 'POL', 'POR', 'PTBR', 'GER', 'HUN')
 pattern = r'lang\((\d+),\s*(\w+),\s*("(?:[^"\\]|\\.)*")\)'
 tables = []
 for name in files:
+    raw = (root / 'Lang' / (name + '.LNG')).read_bytes()
+    assert raw.endswith(b'\n'), f'{name}.LNG has no final newline'
     entries = [(int(m[1]), m[2], ast.literal_eval(m[3]))
-               for m in re.finditer(pattern, (root / 'Lang' / (name + '.LNG')).read_text())]
+               for m in re.finditer(pattern, raw.decode())]
     assert [entry[0] for entry in entries] == list(range(len(entries))), name
     tables.append(entries)
 assert all([(n, key) for n, key, _ in entries] ==

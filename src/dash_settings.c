@@ -134,7 +134,7 @@ enum SetId {
 	S_NET_LEGACY,
 	S_SMB_SHARES,
 	S_SMBED_PICK, S_SMBED_NAME, S_SMBED_KIND, S_SMBED_IP, S_SMBED_PORT,
-	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_UID, S_SMBED_GID,
+	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_PLAINTEXT, S_SMBED_UID, S_SMBED_GID,
 	S_SMBED_SAVE, S_SMBED_DELETE, S_SMBED_TEXT,
 	S_SMBD_USER, S_SMBD_PASS,
 	S_CLOCK,
@@ -535,7 +535,7 @@ static void smbedLoadPick(void)
 		smbedNfsOption(sh->url, "gid=", smbed.gid, sizeof(smbed.gid));
 		return;
 	}
-	smbed.kind = sh->version;
+	smbed.kind = sh->proto_version ? sh->proto_version : sh->version;
 	smbed.plaintext = sh->plaintext;
 	dashStrCopy(smbed.user, sh->username, sizeof(smbed.user));
 	dashStrCopy(smbed.pass, sh->password, sizeof(smbed.pass));
@@ -620,7 +620,8 @@ static void smbedSave(void)
 	else
 		n = smbCnfBuildBlock(block, sizeof(block), smbed.name, smbed.kind,
 		                     smbed.user, smbed.pass, smbed.host,
-		                     smbed.port > 0 ? smbed.port : 445, smbed.folder, smbed.plaintext);
+		                     smbed.port > 0 ? smbed.port : 445, smbed.folder,
+		                     smbed.kind == 1 ? smbed.plaintext : 0);
 	if (n < 0) {
 		dashModalMessage(DI_WARNING, "Share not saved",
 		                 smbed.kind == SMBED_NFS ?
@@ -666,6 +667,7 @@ static void smbedSave(void)
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
 	                 smbed.kind == SMBED_NFS ? "Open Files > Network (NFS). NFS shares show only once they connect." :
+	                 smbed.kind == 1 ? "Open Files > Network (SMB). SMB1 shares show once they connect." :
 	                 "Open Files > Network (SMB). SMB2/3 shares show only once they connect.", smbed.name);
 }
 
@@ -711,6 +713,7 @@ static const SetItem smb_items[] = {
 	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
 	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
 	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in LAUNCHSTATION.CNF as plain text."},
+	{ST_CHOICE, S_SMBED_PLAINTEXT, "Allow clear-text password", "SMB1 only: send the password unencrypted if the server refuses hashed login (PLAINTEXT = 1). Leave off otherwise."},
 	{ST_ACTION, S_SMBED_SAVE, "Save share", "Saves this share in LAUNCHSTATION.CNF. Open it in Files > Network (SMB)."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share."},
 	{ST_ACTION, S_SMBED_TEXT, "Edit shares as text", "Opens LAUNCHSTATION.CNF; the shares are the blocks after its # SMB shares line. For host names, deeper paths and other options."},
@@ -1037,6 +1040,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*cur = smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
 			return 3;
 		}
+		case S_SMBED_PLAINTEXT:
+			*cur = smbed.plaintext ? 1 : 0;
+			return 2;
 		case S_SMBED_PICK: {
 			static const char *pick_names[SMB_SHARE_MAX + 1];
 			int map[SMB_SHARE_MAX], i, n = smbedPickList(map);
@@ -1871,6 +1877,10 @@ static void setChoice(int id, int v)
 			smbed.kind = v == 1 ? 3 : v == 2 ? 1 : 2;
 			dash_changed = 0;
 			break;
+		case S_SMBED_PLAINTEXT:
+			smbed.plaintext = v ? 1 : 0;
+			dash_changed = 0;
+			break;
 		case S_SMBED_PICK: {
 			int map[SMB_SHARE_MAX], n = smbedPickList(map);
 
@@ -2330,6 +2340,22 @@ int dashSettingsSaveCnf(void)
 }
 
 #ifdef SMB
+static char *cnfSaveText(void);
+
+static void refreshSharesCnfSnapshot(void)
+{
+	SETTING *cur = session ? (SETTING *)malloc(sizeof(SETTING)) : NULL;
+
+	if (cur != NULL) {
+		memcpy(cur, setting, sizeof(SETTING));
+		memcpy(setting, &snap_classic, sizeof(SETTING));
+		free(snap_cnf_text);
+		snap_cnf_text = cnfSaveText();
+		memcpy(setting, cur, sizeof(SETTING));
+		free(cur);
+	}
+}
+
 /* Share saves are written at once, with the settings as they were when
  * Settings opened, so Discard still undoes the other edits. Waits for the write. */
 static int saveSharesCnf(void)
@@ -2349,8 +2375,11 @@ static int saveSharesCnf(void)
 		free(cur);
 	}
 	/* not cancelable: the result decides what stays in memory */
-	return ok && (!dashWorkerBusy() || dashWorkerAwait(dashWorkerLastId(), "Saving settings", 0)) &&
-	       !cfg_failed[CFG_SAVE_CNF];
+	ok = ok && (!dashWorkerBusy() || dashWorkerAwait(dashWorkerLastId(), "Saving settings", 0)) &&
+	     !cfg_failed[CFG_SAVE_CNF];
+	if (ok)
+		refreshSharesCnfSnapshot();
+	return ok;
 }
 #endif
 
@@ -3365,7 +3394,7 @@ static void runAction(int id)
 			char *v = id == S_SMBD_USER ? setting->SMB_Server_User : setting->SMB_Server_Pass, edit[32];
 			dashStrCopy(edit, v, sizeof(edit));
 			if (dashModalKeyboard(id == S_SMBD_USER ? "SMB server user name" : "SMB server password", edit,
-			                      sizeof(edit) - 1) && edit[0] && strcmp(edit, v)) {
+			                      sizeof(edit) - 1) && (id == S_SMBD_PASS || edit[0]) && strcmp(edit, v)) {
 				strcpy(v, edit);
 				classic_dirty = 1;
 			}
@@ -3508,6 +3537,7 @@ static void runAction(int id)
 			if (!smbSharesReload())
 				dashModalMessage(DI_WARNING, "Restart required",
 				                 "The old SMB connections could not be closed. Restart Launchstation to use the edited configuration.", NULL);
+			refreshSharesCnfSnapshot();
 			break;
 		}
 #endif
@@ -3649,6 +3679,7 @@ static int itemDisabled(const SetItem *it)
 #ifdef SMB
 		case S_SMBED_USER:
 		case S_SMBED_PASS: return smbed.kind == SMBED_NFS;
+		case S_SMBED_PLAINTEXT: return smbed.kind != 1;
 		case S_SMBED_UID:
 		case S_SMBED_GID: return smbed.kind != SMBED_NFS;
 #endif
@@ -3676,6 +3707,7 @@ static const char *disabledHelp(const SetItem *it)
 #ifdef SMB
 		case S_SMBED_USER:
 		case S_SMBED_PASS: return "An NFS share has no user name or password: set its user and group IDs.";
+		case S_SMBED_PLAINTEXT: return "Clear-text password option applies to SMB1 shares only.";
 		case S_SMBED_UID:
 		case S_SMBED_GID: return "Only an NFS share has user and group IDs: add it in Settings > Network > NFS shares.";
 #endif

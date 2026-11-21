@@ -44,6 +44,7 @@ static SETTING config, *setting = &config;
 static char ip[16]="192.168.0.10", netmask[16]="255.255.255.0", gw[16]="192.168.0.1";
 static int preset, custom, swapKeys;
 static int cfg_pending[2], cfg_failed[2], store_failed, store_pending;
+static char mock_share[32];
 static int modal_calls, modal_result=2, queue_ok=1, queued[3];
 enum { CFG_SAVE_CNF, CFG_SAVE_NET, DI_CHECK, DI_SAVE, DI_CLOSE, DI_BACK, DASH_TOAST_INFO };
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
@@ -59,9 +60,9 @@ static char *dashStoreSettingsText(const DashSettings *c,int *len) {
     return strdup(s);
 }
 static char *configBuildSaveText(int *len) {
-    char s[512]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%s",
+    char s[512]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%s/%s",
         setting->TV_mode,setting->screen_x,setting->screen_y,setting->language,
-        setting->swapKeys,setting->lang_file,setting->font_file,setting->path);
+        setting->swapKeys,setting->lang_file,setting->font_file,setting->path,mock_share);
     return strdup(s);
 }
 static int dashStoreSaveSettings(void) { queued[2]++; store_pending=1; return 0; }
@@ -82,6 +83,9 @@ static void menuTitleClockRestore(void) { clock_restores++; }
 static int rumble_gate = -1; static void padRumbleEnable(int on) { rumble_gate = on; }
 static void updateScreenMode(void) {}
 static int dashWorkerAwaitAll(const char *s) { (void)s; return 1; }
+static int dashWorkerBusy(void) { return 0; }
+static int dashWorkerLastId(void) { return 0; }
+static int dashWorkerAwait(int id, const char *s, int cancelable) { (void)id; (void)s; (void)cancelable; return 1; }
 static void Set_Language(int l) { (void)l; }
 static void Load_External_Language(void) {}
 static void loadFont(const char *s) { (void)s; }
@@ -102,7 +106,7 @@ static void updateIpConfigRuntimeState(void) {}
 code += source[source.index("static int session;"):source.index("static const char *const onoff")]
 if "enum { SESSION_SAVE_CNF" in source:
     code += source[source.index("enum { SESSION_SAVE_CNF"):source.index("static void cfgSaveRun(")]
-for signature in ("static char *dashSaveText(", "static char *cnfSaveText(",
+for signature in ("static char *dashSaveText(", "static char *cnfSaveText(void)\n{",
                   "static int textChanged(", "static void refreshDirty("):
     code += function(signature)
 # Keep the old-ref harness working while testing the new scoped failure helper.
@@ -118,6 +122,9 @@ for signature in ("static int anyDirty(", "static int anyDirtyCached(",
     code += function(signature)
 if "static void settingsSaveAction(" in source:
     code += function("static void settingsSaveAction(")
+code += function("int dashSettingsSaveCnf(void)")
+code += function("static void refreshSharesCnfSnapshot(")
+code += function("static int saveSharesCnf(void)\n{")
 action = source[source.index("case S_SAVE_CLASSIC:") + len("case S_SAVE_CLASSIC:"):]
 code += "static void clickSaveSettings(void) {\n" + action[:action.index("break;")] + "\n}\n"
 code += r"""
@@ -203,6 +210,27 @@ int main(void) {
     begin(); assert(!anyDirty() && settingsLeave()==1 && !modal_calls);
     software_clock_active=0; clean(); clock_saves=queued[2];
     clickSaveSettings(); assert(queued[2]==clock_saves);
+    /* Save a share while an unrelated edit is dirty in the SAME session.
+       Snapshot must become the serialized saved-share/old-classic baseline. */
+    strcpy(mock_share,"before"); clean();
+    int saved_swap = setting->swapKeys;
+    strcpy(mock_share,"after"); setting->swapKeys++;
+    assert(anyDirty() && saveSharesCnf());
+    assert(setting->swapKeys==saved_swap+1 && !strcmp(mock_share,"after"));
+    {
+        int serialized_size;
+        char *expected;
+        setting->swapKeys=saved_swap;
+        expected=configBuildSaveText(&serialized_size);
+        setting->swapKeys=saved_swap+1;
+        assert(expected && snap_cnf_text && !strcmp(snap_cnf_text,expected));
+        free(expected);
+    }
+    assert(anyDirty()); /* unrelated edit was not silently committed */
+    setting->swapKeys=saved_swap;
+    assert(!anyDirty()); /* share-only save is now clean */
+    clean(); strcpy(mock_share,"final");
+    assert(saveSharesCnf() && !anyDirty());
     free(snap_dash_text); free(snap_cnf_text);
     puts("PASS: pristine/reverted/canceled sessions, stale failures, actual edits, failed saves/retry/discard");
 }

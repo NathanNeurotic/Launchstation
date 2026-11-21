@@ -18,7 +18,7 @@ $VMC_1=
 $End=1
 ```
 
-Keep `$End=1` as the last line when you edit a file by hand. A file without it is treated as unfinished (for example a save cut short) and ignored, and the older profile is used instead.
+Keep `$End=1` as the last line when editing a file by hand. An existing device profile without it is treated as unfinished (for example, a save cut short): launching warns and uses defaults without saving, while Game settings refuses to overwrite the file. Repair the file as text before saving. An absent device profile can still fall back to an older valid profile.
 
 | Key | Meaning |
 |---|---|
@@ -29,8 +29,8 @@ Keep `$End=1` as the last line when you edit a file by hand. A file without it i
 | `$NeutrinoArgs` | Space-separated; `-dbc` (debug colors) and `-logo` are read. Other words are ignored. |
 | `$VMC_0`, `$VMC_1` | Name of a virtual memory card, giving Neutrino `-mc0` / `-mc1` = `<device root>VMC/<name>.bin` on the game's own device (the file RiptOPL uses). The file must already exist; if it does not, the launch stops with a message. Not available for SMB games. Empty = none. |
 
-- Lines starting with `#` and unknown keys are ignored. A value that is not valid makes Launchstation ignore the whole file.
-- **Game settings rewrites the file** with the keys above; extra lines you added are not kept.
+- Lines starting with `#` and unknown keys are ignored. A value that is not valid makes Launchstation ignore the whole file. When the game-device file is present but invalid, Game settings refuses to overwrite it with defaults; fix it as text before saving.
+- **Game settings rewrites a valid file** with the keys above; extra lines you added are not kept.
 - Where it is saved: always on the game's own device or share, in `CFG/` at its root (`mass:/CFG/`, `smb:/<Share>/CFG/`, and the same for exFAT HDD, MX4SIO, MMCE, iLink, UDPFS and NFS). The `CFG` folder is created if it is missing. **Nothing is ever saved on the memory card**: if the device does not accept the file, Game settings says it could not save, and the settings are not stored anywhere else.
 - Where it is looked for, in order: the game's device (`CFG/NEUT-<ID>.cfg`), then the app config folder (`SYS-CONF` on the memory card), then the older profiles (`NEUT-<ID>-A.CNF` and `-B.CNF`, lines starting `NTP1|`). The app config folder and the older profiles are only read, so profiles saved there earlier still work; they are never changed or deleted. Only these per-game files are on the game device; Launchstation's own settings stay in the app config folder.
 - Not tested on a console yet: writing to each of these device types.

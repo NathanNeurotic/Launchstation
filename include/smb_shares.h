@@ -49,7 +49,8 @@ typedef struct
 	char username[SMB_CRED_LEN];
 	char password[SMB_CRED_LEN];
 	char url[SMB_URL_LEN];
-	int version; /* SMB_PATH_V1, _V2 or _NFS */
+	int version; /* driver routing: SMB_PATH_V1, _V2 or _NFS */
+	int proto_version; /* declared VERSION (1, 2 or 3 for SMB; SMB_PATH_NFS for NFS) */
 	/* PLAINTEXT = 1: an SMB1 server that asks for a clear-text password
 	 * gets it. Off, smbman refuses such a server. */
 	int plaintext;
@@ -131,6 +132,7 @@ void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
 const char *smbSharesV1Name(void); /* NAME of the SMB1 share listed in smb:/; no IO */
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
+void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smb1:/ status; no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 /* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is

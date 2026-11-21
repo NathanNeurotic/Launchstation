@@ -3213,6 +3213,8 @@ int isPathDeviceStackLoaded(const char *path)
 	if (!strncmp(path, "host:", 5))
 		return have_ps2host && have_ps2ip && have_ps2smap && ps2dev9_loaded;
 #ifdef SMB
+	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))
+		return isSmbDriverLoaded(SMB_PATH_V2) || isSmbDriverLoaded(SMB_PATH_V1);
 	if (smbPathKind(path) != SMB_PATH_NONE)
 		return isSmbDriverLoaded(smbPathKind(path));
 #endif
