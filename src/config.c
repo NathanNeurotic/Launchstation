@@ -141,8 +141,8 @@ start_line:
 	while ((*tp <= ' ') && (*tp > '\0')  //Skip pre-value whitespace, if any
 	       && (*tp != '\r') && (*tp != '\n'))
 		tp += 1;  //but do not pass the end of the line
-	if (*tp == '\0')
-		return false;  //but exit at EOF
+	/* A valid NAME = assignment may end here with an empty value.
+	 * Keep it visible to loadConfig instead of retaining the old setting. */
 	vp = tp;           //Current pos is potential value
 
 	while ((*tp != '\r') && (*tp != '\n') && (*tp != '\0'))

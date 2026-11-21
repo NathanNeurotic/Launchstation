@@ -210,14 +210,27 @@ int main(void) {
     begin(); assert(!anyDirty() && settingsLeave()==1 && !modal_calls);
     software_clock_active=0; clean(); clock_saves=queued[2];
     clickSaveSettings(); assert(queued[2]==clock_saves);
-    /* A share-only save refreshes its serialized value without hiding other edits. */
+    /* Save a share while an unrelated edit is dirty in the SAME session.
+       Snapshot must become the serialized saved-share/old-classic baseline. */
     strcpy(mock_share,"before"); clean();
-    strcpy(mock_share,"after");
-    assert(saveSharesCnf()); assert(!anyDirty());
-    clean(); setting->swapKeys++;
-    assert(saveSharesCnf());
-    assert(anyDirty());
-    clean(); assert(saveSharesCnf()); assert(!anyDirty());
+    int saved_swap = setting->swapKeys;
+    strcpy(mock_share,"after"); setting->swapKeys++;
+    assert(anyDirty() && saveSharesCnf());
+    assert(setting->swapKeys==saved_swap+1 && !strcmp(mock_share,"after"));
+    {
+        int serialized_size;
+        char *expected;
+        setting->swapKeys=saved_swap;
+        expected=configBuildSaveText(&serialized_size);
+        setting->swapKeys=saved_swap+1;
+        assert(expected && snap_cnf_text && !strcmp(snap_cnf_text,expected));
+        free(expected);
+    }
+    assert(anyDirty()); /* unrelated edit was not silently committed */
+    setting->swapKeys=saved_swap;
+    assert(!anyDirty()); /* share-only save is now clean */
+    clean(); strcpy(mock_share,"final");
+    assert(saveSharesCnf() && !anyDirty());
     free(snap_dash_text); free(snap_cnf_text);
     puts("PASS: pristine/reverted/canceled sessions, stale failures, actual edits, failed saves/retry/discard");
 }

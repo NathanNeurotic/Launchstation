@@ -655,15 +655,23 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	memset(options, 0, sizeof(*options));
 	if (DashIsActive()) {
 		NEUTRINO_LAUNCH_OPTIONS saved;
-		int read_result = active_profile_gameid[0] ? profileReadActiveFile(active_profile_gameid, &saved) : 0;
+		int read_result = 0;
+
+		/* Profile I/O must not overlap an active dashboard worker job. If
+		 * waiting was canceled, allow launch but never offer to save defaults. */
+		if (active_profile_gameid[0] && !dashWorkerAwaitAll("Loading game profile")) {
+			dashToast(DASH_TOAST_WARN, "Game settings could not be loaded; changes will not be saved");
+			active_profile_gameid[0] = '\0';
+		}
+		if (active_profile_gameid[0])
+			read_result = profileReadActiveFile(active_profile_gameid, &saved);
 
 		if (read_result < 0) {
 			dashToast(DASH_TOAST_WARN, "Game settings file is invalid; changes will not be saved");
 			active_profile_gameid[0] = '\0';
 		} else if (read_result > 0) {
 			*options = saved;
-		} else if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
-		           profileLoad(active_profile_gameid, &saved)) {
+		} else if (active_profile_gameid[0] && profileLoad(active_profile_gameid, &saved)) {
 			*options = saved;
 		}
 		return showDashboardNeutrinoOptions(options, 0);

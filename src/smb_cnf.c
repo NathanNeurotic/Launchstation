@@ -408,7 +408,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 				cur.version = 2;
 				cur.proto_version = 2;
 				if (problem == NULL)
-					problem = "VERSION must be 1 (SMB1) or 2 (SMB2/SMB3)";
+					problem = "VERSION must be 1 (SMB1), 2 (SMB2), or 3 (SMB3)";
 			}
 		} else if (sameText(key, "PLAINTEXT")) {
 			cur.plaintext = parseFlag(value);

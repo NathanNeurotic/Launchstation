@@ -161,3 +161,42 @@ with tempfile.TemporaryDirectory(prefix="smb-server-login-") as tmp:
     subprocess.run([str(exe)], check=True)
 
 print("PASS: Settings > Network > SMB shares edits the shares in LAUNCHSTATION.CNF by GUI or text, and reloads them")
+
+# Exercise the real CNF tokenizer at EOF, not just the password field parser.
+start = config.index("int get_CNF_string(")
+brace = config.index("{", start) + 1
+depth = 1
+end = brace
+while depth:
+    depth += (config[end] == "{") - (config[end] == "}")
+    end += 1
+cnf_parser = config[start:end]
+parser_test = r"""
+#include <assert.h>
+#include <stdbool.h>
+#include <string.h>
+""" + cnf_parser + r"""
+static void parse(const char *input, const char *expected) {
+    char text[160], *cursor, *name, *value;
+    strcpy(text, input); cursor = text;
+    assert(get_CNF_string(&cursor, &name, &value));
+    assert(!strcmp(name, "SMB_Server_Password"));
+    assert(!strcmp(value, expected));
+    assert(!get_CNF_string(&cursor, &name, &value));
+}
+int main(void) {
+    parse("SMB_Server_Password =", "");
+    parse("SMB_Server_Password =   ", "");
+    parse("SMB_Server_Password =\\r\\n", "");
+    parse("SMB_Server_Password = value", "value");
+    return 0;
+}
+"""
+with tempfile.TemporaryDirectory(prefix="smb-password-eof-") as tmp:
+    src, exe = Path(tmp) / "cnf.c", Path(tmp) / "cnf"
+    src.write_text(parser_test)
+    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Wextra", "-Werror",
+                    str(src), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+print("PASS: CNF tokenizer preserves empty assignments at EOF and CRLF")
+

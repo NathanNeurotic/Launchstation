@@ -18,7 +18,7 @@ $VMC_1=
 $End=1
 ```
 
-Keep `$End=1` as the last line when you edit a file by hand. A file without it is treated as unfinished (for example a save cut short) and ignored, and the older profile is used instead.
+Keep `$End=1` as the last line when editing a file by hand. An existing device profile without it is treated as unfinished (for example, a save cut short): launching warns and uses defaults without saving, while Game settings refuses to overwrite the file. Repair the file as text before saving. An absent device profile can still fall back to an older valid profile.
 
 | Key | Meaning |
 |---|---|

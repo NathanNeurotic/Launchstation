@@ -410,9 +410,9 @@ static void drawAppWallpaper(void)
 	 * version of the background colour so every text colour stays
 	 * readable over bright covers */
 	if (prev != NULL)
-		drawCover(prev, DC(255, 255, 255, (int)(153 * (1.0f - wall_mix) * wall_vis)));
+		drawCover(prev, DC(128, 128, 128, (int)(153 * (1.0f - wall_mix) * wall_vis)));
 	if (cur != NULL)
-		drawCover(cur, DC(255, 255, 255, (int)(153 * wall_mix * wall_vis)));
+		drawCover(cur, DC(128, 128, 128, (int)(153 * wall_mix * wall_vis)));
 	{
 		DashColor d = dashColorScale(dashTheme.bg2, 0.3f);
 		d.a = (u8)(dashTheme.wall_dim * 2.55f * wall_vis);

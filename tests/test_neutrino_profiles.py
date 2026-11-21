@@ -380,6 +380,14 @@ int main(void)
             assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n"));
         }
     }
+    /* Canceled worker wait must never read profiles or offer to save defaults. */
+    clear_slots();
+    strcpy(content[3],"$Compatibility=0\n$VMC_0=Leave Me\n$End=1\n");
+    allow_wait=0; menu_script=0;
+    memset(&got,0,sizeof(got));
+    assert(showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso"));
+    assert(read_attempts==0 && dev_writes==0);
+    allow_wait=1;
     (void)rev; (void)slot;
     puts("PASS: Neutrino game settings: OPL-style KEY=value round trip, hand edits, legacy NTP1 fallback, failed writes, validation");
     return 0;
