@@ -97,7 +97,7 @@ targets:
     imports_lst: iop/hdd_format/imports.lst
     defines: [EXFAT]
     cflags: [-Wall, -Wextra]
-    headers: [atad, bdm, loadcore, sifcmd, sysclib, threadman]
+    headers: [atad, bdm, iomanx, loadcore, sifcmd, sysclib, threadman]
 
   - name: ps2hdd_osd
     type: iop
@@ -569,7 +569,9 @@ targets:
       - src/save_archive.c
       - src/save_lzari.c
       - src/save_sign.c
+      - src/hdd_install_log.c
       - src/hdd_install_ps2.c
+      - src/hdd_install_boot.c
       - src/hdd_install_psbbn.c
       - src/dash_hdd_install.c
       - src/install_archive.c

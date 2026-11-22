@@ -137,6 +137,7 @@ jobs:
           python3 tests/test_gage_alignment.py
           python3 tests/test_modal_animation.py
           python3 tests/test_list_scroll_animation.py
+          python3 tests/test_modal_confirm_table.py
           python3 tests/test_nested_scissor.py
           python3 tests/test_hdd_manager_browse.py
           python3 tests/test_hdd_manager_mounts.py
@@ -148,11 +149,20 @@ jobs:
           python3 tests/test_hdd_format_ui.py
           python3 tests/test_hdd_installer.py
           python3 tests/test_hdd_installer_finish.py
+          python3 tests/test_hdd_installer_boot.py
           python3 tests/test_hdd_installer_stage.py
           python3 tests/test_hdd_installer_apply.py
           python3 tests/test_hdd_installer_preflight.py
           python3 tests/test_hdd_installer_partitions.py
           python3 tests/test_save_archive_review.py
+          python3 tests/test_hdd_installer_launchers.py
+          python3 tests/test_hdd_installer_progress.py
+          python3 tests/test_hdd_installer_choices.py
+          python3 tests/test_hdd_installer_languages.py
+          python3 tests/test_hdd_installer_raw.py
+          python3 tests/test_hdd_installer_transport.py
+          python3 tests/test_hdd_installer_log.py
+          python3 tests/test_hdd_installer_log_view.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_wallpaper_docs.py
           python3 tests/test_r3z_oct15_backport.py
@@ -266,6 +276,7 @@ jobs:
           python3 tests/test_update_ram_sink.py
           python3 tests/test_rename_devices.py
           python3 tests/test_vmc_rename.py
+          python3 tests/test_cloud_download_alignment.py
           python3 tests/test_app_packages.py
           python3 tests/test_kit_package.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip

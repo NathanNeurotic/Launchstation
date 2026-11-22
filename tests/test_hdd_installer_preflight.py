@@ -1,4 +1,4 @@
-"""Exercise two-archive PSBBN preflight with real gzip/TAR inputs and host files."""
+"""Exercise PSBBN system, language and optional Linux preflight with real gzip/TAR inputs."""
 from pathlib import Path
 import ctypes as c
 import gzip
@@ -61,6 +61,11 @@ STUBS = r'''
 #include "launchelf.h"
 #include "hdd_install.h"
 #include "install_ext2.h"
+void hddInstallLog(const char *text, ...) { (void)text; }
+void hddInstallLogFlush(HddInstall *in) { (void)in; }
+void hddInstallStatus(const char *text, int done, int total) { (void)text; (void)done; (void)total; }
+void hddInstallProgress(const char *text, int done, int total) { (void)text; (void)done; (void)total; }
+void hddInstallOverall(uint64_t done, uint64_t total) { (void)done; (void)total; }
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -91,6 +96,9 @@ int installPsbbnSwap(const HddFormatIo*i,uint32_t s,uint32_t n) {(void)i;(void)s
 int installPsbbnMusic(const HddFormatIo*i,uint32_t s,uint32_t n,uint32_t t) {(void)i;(void)s;(void)n;(void)t;return 0;}
 int hddInstallWriteConfigs(HddInstall*i) {(void)i;return 0;}
 int hddInstallCheckAsset(HddInstall*i,unsigned a) {(void)i;(void)a;return 0;}
+size_t hddInstallFixtureSize(void) { return sizeof(HddInstall); }
+size_t hddInstallFixtureLanguageOffset(void) { return offsetof(HddInstall, language); }
+size_t hddInstallFixtureCleanupOffset(void) { return offsetof(HddInstall, cleanup_pending); }
 '''
 
 
@@ -137,21 +145,38 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     lib = c.CDLL(str(library))
     lib.hddInstallPsbbnPreflight.argtypes = [c.c_void_p]
     lib.hddInstallPsbbnPreflight.restype = c.c_int
-    sizes = (c.c_uint32 * 10)()
+    class Language(c.Structure):
+        _fields_ = [('code', c.c_char * 4), ('name', c.c_char * 48)]
+
     class Install(c.Structure):
         _fields_ = [('flags', c.c_uint), ('jail', c.c_int), ('commit', c.c_char * 41),
                     ('stage', c.c_char * 1024), ('ca_path', c.c_char * 1024), ('error', c.c_char * 256),
-                    ('sizes', c.c_uint32 * 10), ('hashes', (c.c_char * 41) * 10),
-                    ('archives', (c.c_char * 128) * 2), ('linux', c.c_uint32 * 16),
-                    ('owner', c.c_ubyte * 20), ('owned', c.c_uint), ('ready', c.c_uint)]
+                    ('sizes', c.c_uint32 * 15), ('hashes', (c.c_char * 41) * 15),
+                    ('archives', (c.c_char * 128) * 2), ('linux', c.c_uint32 * 20),
+                    ('owner', c.c_ubyte * 20), ('owned', c.c_uint), ('ready', c.c_uint),
+                    ('ca_data', c.c_void_p), ('ca_size', c.c_uint),
+                    ('music_mb', c.c_uint), ('contents_mb', c.c_uint), ('linux_home_mb', c.c_uint),
+                    ('reserved_mb', c.c_uint), ('game_launcher', c.c_uint),
+                    ('launcher_files', c.c_void_p), ('launcher_count', c.c_uint), ('language', Language),
+                    ('archive_item', c.c_char * 96), ('channels', c.c_char * 128),
+                    ('download_bytes', c.c_uint64), ('cleanup_pending', c.c_uint)]
 
-    def run(system, language):
+    for name in ('Size', 'LanguageOffset', 'CleanupOffset'):
+        getattr(lib, 'hddInstallFixture' + name).restype = c.c_size_t
+    assert c.sizeof(Install) == lib.hddInstallFixtureSize()
+    assert Install.language.offset == lib.hddInstallFixtureLanguageOffset()
+    assert Install.cleanup_pending.offset == lib.hddInstallFixtureCleanupOffset()
+
+    def run(system, language, linux=None):
         (work / 'system.tar.gz').write_bytes(archive(system))
         (work / 'language.tar.gz').write_bytes(archive(language))
-        install = Install(flags=7, jail=1)
+        install = Install(flags=15 if linux is not None else 7, jail=1)
         install.stage = str(work).encode()
         install.sizes[6] = (work / 'system.tar.gz').stat().st_size
         install.sizes[7] = (work / 'language.tar.gz').stat().st_size
+        if linux is not None:
+            (work / 'PS2Linux.tar.gz').write_bytes(archive(linux))
+            install.sizes[10] = (work / 'PS2Linux.tar.gz').stat().st_size
         return lib.hddInstallPsbbnPreflight(c.byref(install))
 
     valid = base_entries()
@@ -160,8 +185,25 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     assert run(valid, [('__system/p2lboot/vmlinux', '0', b'replacement')]) == 0
     assert run(valid, [('__system/p2lboot/vmlinux', '0', b'')]) < 0
 
+    linux = [('sbin', '5', ''), ('bin', '5', ''), ('sbin/init', '0', b'init'), ('bin/sh', '2', 'bash')]
+    assert run(valid, [], linux) == 0
+    assert run(valid, [], linux + [('sbin/init', '0', b'')]) < 0
+    assert run(valid, [], linux + [('bin/sh', '0', b'')]) < 0
+    assert run(valid, [], linux + [('bin/sh', '5', '')]) < 0
+    recovered_linux = linux[:2] + [('sbin/init', '0', b''), ('bin/sh', '5', '')] + linux[2:]
+    assert run(valid, [], recovered_linux) == 0
+
     missing = [entry for entry in valid if entry[0] != '__linux.1/bin']
-    assert run(missing, []) < 0
+    assert run(missing, []) == 0
+    assert run(missing, [('__linux.1/bin', '5', '')]) == 0
+    assert run(missing, [('__linux.1/bin', '0', b'not a directory')]) < 0
+
+    nested = valid + [('__linux.1/opt/tools/file', '0', b'x'),
+                      ('__linux.1/opt/tools', '5', ''), ('__linux.1/opt', '5', '')]
+    assert run(nested, []) == 0
+
+    implicit_budget = [(f'__linux.6/t{i:04}/a/b/c/d/e/f/g/h/file', '0', b'x') for i in range(1000)]
+    assert run(valid, implicit_budget) == -28
 
     conflict = [entry for entry in valid if not entry[0].startswith('__linux.1/opt')]
     conflict.append(('__linux.1/opt', '2', '/tmp'))
@@ -173,4 +215,4 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     assert run(valid + [('__linux.1/bin/self', '1', '__linux.1/bin/self')], []) == -2
     assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin')], []) == -22
 
-print('PASS: PSBBN preflight accepts valid overlays and rejects empty replacements, missing parents, path conflicts, and invalid hard links')
+print('PASS: PSBBN preflight accepts valid overlays and implicit parents, tracks Linux requirements and space budgets, and rejects path conflicts and invalid hard links')

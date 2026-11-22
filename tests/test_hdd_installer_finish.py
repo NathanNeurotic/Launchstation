@@ -17,6 +17,7 @@ code = r'''
 #include <string.h>
 #include "hdd_format.h"
 #include "save_sign.h"
+#include "hdd_install.h"
 typedef int64_t s64;
 typedef struct { uint32_t start, size; } hddSetOsdMBR_t;
 #define FIO_O_RDONLY 1
@@ -25,7 +26,8 @@ typedef struct { uint32_t start, size; } hddSetOsdMBR_t;
 #define HF_FINISH 4
 #define HF_ZERO 5
 #define MBR_DIGEST @@MBR_DIGEST@@
-static struct { uint32_t sectors; } packet;
+#define HF_INSTALL_BEGIN 6
+static struct { uint32_t sectors, write_limit; } packet;
 static unsigned char payload[66048], disk[66048], header[1024];
 static unsigned offset, activated, recovered, populated, flushed, flushed_writes, reads, writes;
 static unsigned zeroed, zero_calls;
@@ -42,7 +44,7 @@ static int call(int cmd, uint32_t lba, unsigned count, unsigned send, unsigned r
     assert(send == 64 && receive == 64);
     if(cmd == HF_ZERO) { assert(count && count <= 2048); zero_calls++; if(zero_error) return -EIO; zeroed += count; return 0; }
     assert(!lba && !count);
-    if(cmd == HF_BEGIN) { assert(!session && packet.sectors == plan.sectors); session = 1; begun++; }
+    if(cmd == HF_BEGIN || cmd == HF_INSTALL_BEGIN) { assert(cmd == HF_INSTALL_BEGIN && packet.write_limit == plan.exfat_start); assert(!session && packet.sectors == plan.sectors); session = 1; begun++; }
     else { assert(cmd == HF_FINISH && session); session = 0; finished++; }
     return 0;
 }
@@ -65,7 +67,7 @@ static void progress(void *ctx, const char *s, uint32_t n, uint32_t total) { (vo
 static void dashWorkerStatus(const char *s, uint32_t n, uint32_t total) { assert(s && n <= total); }
 static int readPhysicalSector(void *ctx, uint32_t lba, void *data) { return readDisk(ctx, lba, 1, data); }
 int hddApaLimit(HddFsReadSector read, void *ctx, uint32_t total, uint32_t *limit) {
-    (void)read; (void)ctx; assert(total == plan.sectors && session); *limit = plan.apa_sectors; return bad_limit ? -EINVAL : 0;
+    (void)read; (void)ctx; assert(total == plan.sectors && session); *limit = plan.kind == HDD_FORMAT_APA_JAIL ? plan.apa_sectors : plan.sectors; return bad_limit ? -EINVAL : 0;
 }
 static int fileXioDevctl(const char *path, int cmd, const void *data, unsigned size, void *out, unsigned outsize) {
     const hddSetOsdMBR_t *info = data;
@@ -75,6 +77,16 @@ static int fileXioDevctl(const char *path, int cmd, const void *data, unsigned s
 }
 int hddFormatRecovery(const HddFormatPlan *p, const HddFormatIo *io) { assert(p == &plan && io && session); recovered++; return 0; }
 static int populate(void *ctx, const HddFormatIo *io) { assert(ctx == &plan && io && !activated && !writes && session); populated++; return populate_error; }
+'''
+code += r'''
+
+void hddInstallLog(const char *format, ...) { (void)format; }
+int hddInstallLogEnabled(void) { return 0; }
+void hddInstallLogFlush(HddInstall *in) { (void)in; }
+void hddInstallStatus(const char *s,int done,int total) { dashWorkerStatus(s,done,total); }
+void hddInstallProgress(const char *s,int done,int total) { dashWorkerStatus(s,done,total); }
+void hddInstallOverall(uint64_t done,uint64_t total) { assert(total&&done<=total); }
+void hddInstallPhase(unsigned phase) { assert(phase==HDD_INSTALL_PHASE_FINISH&&!activated); }
 '''
 code += function
 code += r'''

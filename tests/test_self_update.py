@@ -40,8 +40,16 @@ assert "releaseAssetDigest" in tools
 assert '"digest"' in tools
 assert "selfUpdateInstall(j->ca_path, j->digest, j->size" in tools
 assert "dashWorkerAwait(id, title, 0)" in tools  # the screen keeps drawing
-# Progress is reported for a body that came with the headers, and per read.
-assert http_c.count("cloudHttpProgress(written, chunked ? -1 : content_length)") == 2
+# The RAM updater uses the default observer for a body that arrived with the
+# headers and for later reads. The aligned HDD sink has its own observer.
+progress = http_c.split("static void download_progress(", 1)[1].split("\n}", 1)[0]
+assert "else if (cloudHttpProgress != NULL)" in progress
+assert "cloudHttpProgress(received, total);" in progress
+download = http_c.split("if (written > 0)\n", 1)[1].split("\n        if (aligned != NULL)", 1)[0]
+report = "download_progress(aligned, written, chunked ? -1 : content_length);"
+assert download.strip().startswith(report)
+read_loop = download.split("while (!complete)", 1)[1]
+assert read_loop.index("mbedtls_ssl_read(") < read_loop.index(report)
 assert '"Install update"' in tools
 assert "SHA-256 verified and installed in place" in settings
 

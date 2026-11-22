@@ -25,7 +25,7 @@ struct InstallExt2 {
     int bbdirty, ibdirty, itdirty, active;
     struct { char path[INSTALL_TAR_PATH]; uint32_t ino; } cache[CACHE];
     unsigned nextcache;
-    unsigned cursor[16][2];
+    unsigned cursor[128][2];
 };
 static int readBlock(InstallExt2 *f, uint32_t b, void *p)
 { return b < f->blocks ? f->io.read(f->io.context, f->start + b * 8, 8, p) : -EINVAL; }
@@ -207,7 +207,8 @@ static int seen(InstallExt2 *f, const char *path, int add)
     if (add) { f->bloom[a / 8] |= 1 << (a % 8); f->bloom[b / 8] |= 1 << (b % 8); }
     return yes;
 }
-static int lookup(InstallExt2 *f, const char *path, uint32_t *ino)
+static int makeDir(InstallExt2 *, uint32_t, uint32_t, const InstallTarEntry *);
+static int lookup(InstallExt2 *f, const char *path, uint32_t *ino, const InstallTarEntry *parents)
 {
     char copy[INSTALL_TAR_PATH], *part, *next;
     uint32_t dir = 2;
@@ -217,9 +218,23 @@ static int lookup(InstallExt2 *f, const char *path, uint32_t *ino)
     if (strlen(path) >= sizeof(copy)) return -ENAMETOOLONG;
     strcpy(copy, path); part = copy;
     while (*part) {
+        uint32_t child;
         next = strchr(part, '/'); if (next) *next = 0;
-        ret = directory(f, dir, part, &dir, 0, 1); if (ret < 0) return ret;
+        ret = directory(f, dir, part, &child, 0, 1);
+        if (ret == -ENOENT && parents) {
+            /* Tar can list a child before its parent. Mark the implicit path
+             * so a later directory entry updates it instead of adding a duplicate. */
+            InstallTarEntry implicit = {0};
+            implicit.type = '5'; implicit.mode = 0755; implicit.mtime = parents->mtime;
+            ret = alloc(f, 1, &child); if (ret < 0) return ret;
+            ret = makeDir(f, child, dir, &implicit); if (ret < 0) return ret;
+            ret = directory(f, dir, part, &child, 1, 0);
+            if (ret >= 0) seen(f, copy, 1);
+        }
+        if (ret < 0) return ret;
+        dir = child;
         if (!next) break;
+        *next = '/';
         part = next + 1;
     }
     *ino = dir; return 0;
@@ -261,7 +276,7 @@ int installExt2Begin(InstallExt2 *f, const InstallTarEntry *e)
         attributes(node, e); return getInode(f, 2, node, 1);
     }
     strcpy(parent, e->name); leaf = strrchr(parent, '/');
-    if (leaf) { *leaf++ = 0; ret = lookup(f, parent, &dir); if (ret < 0) return ret; }
+    if (leaf) { *leaf++ = 0; ret = lookup(f, parent, &dir, e); if (ret < 0) return ret; }
     else { leaf = parent; dir = 2; }
     possible = seen(f, e->name, 0);
     ret = possible ? directory(f, dir, leaf, &old, 0, 1) : -ENOENT;
@@ -277,7 +292,7 @@ int installExt2Begin(InstallExt2 *f, const InstallTarEntry *e)
     }
     if (e->type == '1') {
         unsigned char target[128];
-        ret = lookup(f, e->link, &ino); if (ret < 0) return ret;
+        ret = lookup(f, e->link, &ino, NULL); if (ret < 0) return ret;
         if (exists && old == ino) return 0;
         ret = getInode(f, ino, target, 0); if (ret < 0) return ret;
         if ((r16(target) & 0170000) == 0040000 || r16(target + 26) == 65535) return -EINVAL;
@@ -404,7 +419,7 @@ int installExt2Create(InstallExt2 **out, const HddFormatIo *io, uint32_t start, 
     int ret;
     if (!out) return -EINVAL;
     *out = NULL;
-    if (!io || !io->read || !io->write || !io->zero || !io->flush || sectors < 64 * 2048 || sectors > 2048u * 2048 || start > UINT32_MAX - sectors) return -EINVAL;
+    if (!io || !io->read || !io->write || !io->zero || !io->flush || sectors < 64 * 2048 || sectors > 16384u * 2048 || start > UINT32_MAX - sectors) return -EINVAL;
     f = calloc(1, sizeof(*f)); if (!f) return -ENOMEM;
     f->io = *io; f->start = start; f->blocks = sectors / 8; f->groups = (f->blocks + BPG - 1) / BPG; f->serial = serial;
     f->bbgroup = f->ibgroup = f->itblock = UINT32_MAX;

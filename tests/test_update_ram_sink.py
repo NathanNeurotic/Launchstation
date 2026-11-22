@@ -39,6 +39,7 @@ program = r'''
 #include <stdlib.h>
 #include <string.h>
 #define CLOUD_HTTP_MEM_FD (-2)
+#define CLOUD_HTTP_IO 16384
 typedef struct { unsigned long sum; unsigned long bytes; } mbedtls_sha256_context;
 static int mbedtls_sha256_update(mbedtls_sha256_context *c, const unsigned char *d, size_t n) {
     for (size_t i = 0; i < n; i++) c->sum = c->sum * 131 + d[i];
@@ -49,7 +50,8 @@ static int genWrite(int fd, void *d, int n) { (void)fd; (void)d; (void)n; abort(
 static void set_error(char *error, int error_size, const char *where, int code) {
     (void)code; snprintf(error, (size_t)error_size, "%s", where);
 }
-''' + decoder + sink + function("static int download_write(") + \
+''' + decoder + sink + source[source.index("typedef struct {\n    unsigned char *bytes;"):
+        source.index("static void download_progress(")] + function("static int download_write(") + \
     function("static int download_chunked_consume(") + r'''
 #define CAP 5000
 static unsigned char payload[CAP + 1];
@@ -67,7 +69,7 @@ static int fixed(int n, int *written, mbedtls_sha256_context *sha, char *err) {
     while (at < n) {
         int take = n - at > 1000 ? 1000 : n - at;
         if (download_write(CLOUD_HTTP_MEM_FD, payload + at, take, CAP, written,
-                           sha, err, 64) < 0)
+                           sha, NULL, err, 64) < 0)
             return -1;
         at += take;
     }
@@ -93,7 +95,7 @@ static int chunked(int n, int *written, mbedtls_sha256_context *sha, char *err) 
     for (at = 0; at < len && r == 0; at += 333) {
         int take = len - at > 333 ? 333 : len - at;
         r = download_chunked_consume(&dec, stream + at, take, CLOUD_HTTP_MEM_FD,
-                                     CAP, written, sha, err, 64);
+                                     CAP, written, sha, NULL, err, 64);
     }
     return r < 0 ? -1 : (r == 1 ? 0 : -2);
 }

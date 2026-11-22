@@ -35,6 +35,15 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                         unsigned char digest[32],
                         char *error, int error_size);
 
+/* Serialized installer HTTP operations may borrow a NUL-terminated PEM
+ * snapshot across an IOP reset. Clear the snapshot and observer after use. */
+void cloudHttpSetCaBundle(const unsigned char *pem, unsigned size);
+void cloudHttpSetStatusCallback(void (*callback)(const char *, void *), void *context);
+int cloudHttpDownloadAlignedFd(const char *url, int fd, const char *ca_path,
+                               int max_bytes, int *out_size, unsigned char digest[32],
+                               void (*progress)(int, int, void *), void *context,
+                               char *error, int error_size);
+
 /* Set by the updater around its download: bytes received so far and the
  * Content-Length (-1 when the server sent none). NULL otherwise. */
 extern void (*cloudHttpProgress)(int written, int total);

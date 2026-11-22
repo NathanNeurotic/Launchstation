@@ -374,6 +374,29 @@ static void tls_verify_error(CloudTls *tls, const char *host, const char *ca_pat
     set_error(error, error_size, "TLS certificate verification failed", result);
 }
 
+static const unsigned char *cloud_ca_snapshot;
+static unsigned cloud_ca_snapshot_size;
+static void (*cloud_status_callback)(const char *, void *);
+static void *cloud_status_context;
+
+void cloudHttpSetCaBundle(const unsigned char *pem, unsigned size)
+{
+    cloud_ca_snapshot = pem;
+    cloud_ca_snapshot_size = pem != NULL ? size : 0;
+}
+
+void cloudHttpSetStatusCallback(void (*callback)(const char *, void *), void *context)
+{
+    cloud_status_callback = callback;
+    cloud_status_context = context;
+}
+
+static void cloudStatus(const char *status)
+{
+    if (cloud_status_callback != NULL)
+        cloud_status_callback(status, cloud_status_context);
+}
+
 static int tls_open(CloudTls *tls, const char *host, const char *ca_path,
                     char *error, int error_size)
 {
@@ -392,7 +415,9 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
     mbedtls_ctr_drbg_init(&tls->ctr);
     mbedtls_entropy_init(&tls->entropy);
 
-    if (ca_path == NULL || ca_path[0] == '\0') {
+    if (cloud_ca_snapshot_size != 0) {
+        r = mbedtls_x509_crt_parse(&tls->ca, cloud_ca_snapshot, cloud_ca_snapshot_size);
+    } else if (ca_path == NULL || ca_path[0] == '\0') {
         /* No override file: trust the built-in Google Trust Services roots. */
         r = mbedtls_x509_crt_parse(&tls->ca, (const unsigned char *)cloud_google_roots_pem,
                                    sizeof(cloud_google_roots_pem));
@@ -414,6 +439,7 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
     /* Establish TCP first so DNS/connect timing contributes to the entropy
      * conditioner. No TLS data or OAuth credential is sent before the DRBG is
      * successfully seeded and the authenticated handshake completes. */
+    cloudStatus("Connecting (DNS/TCP)");
     network_start = cpu_ticks();
     r = ps2_tcp_connect(&tls->sock, host);
     cloud_entropy_network_ticks ^= (cpu_ticks() - network_start) ^ cpu_ticks();
@@ -449,6 +475,7 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
     }
     mbedtls_ssl_set_bio(&tls->ssl, &tls->sock, ps2_tls_send, ps2_tls_recv, NULL);
 
+    cloudStatus("Verifying TLS");
     while ((r = mbedtls_ssl_handshake(&tls->ssl)) != 0) {
         if (r == MBEDTLS_ERR_SSL_WANT_READ || r == MBEDTLS_ERR_SSL_WANT_WRITE) {
             if (wait_tls_io(tls, r) == 0)
@@ -837,9 +864,65 @@ static unsigned char *mem_sink;
 
 void (*cloudHttpProgress)(int written, int total);
 
+/* fileXio and the direct FatFs/ATA path need an aligned source at each
+ * write. Buffer HTTP fragments so partial sectors stay at the ends. */
+typedef struct {
+    unsigned char *bytes;
+    int pending, persisted;
+    void (*progress)(int, int, void *);
+    void *context;
+} CloudAlignedOutput;
+
+static int flush_aligned_output(CloudAlignedOutput *output, int fd)
+{
+    while (output->pending != 0) {
+        int amount = output->pending;
+        int sector_offset = output->persisted & 511;
+        int sent;
+
+        if (sector_offset != 0 && amount > 512 - sector_offset)
+            amount = 512 - sector_offset;
+        sent = genWrite(fd, output->bytes, amount);
+        if (sent <= 0 || sent > amount)
+            return -1;
+        output->persisted += sent;
+        output->pending -= sent;
+        if (output->pending != 0)
+            memmove(output->bytes, output->bytes + sent, output->pending);
+    }
+    return 0;
+}
+
+static int append_aligned_output(CloudAlignedOutput *output, int fd,
+                                 const unsigned char *data, int len)
+{
+    while (len != 0) {
+        int take = CLOUD_HTTP_IO - output->pending;
+        if (take > len)
+            take = len;
+        memcpy(output->bytes + output->pending, data, take);
+        output->pending += take;
+        data += take;
+        len -= take;
+        if (output->pending == CLOUD_HTTP_IO && flush_aligned_output(output, fd) < 0)
+            return -1;
+    }
+    return 0;
+}
+
+static void download_progress(CloudAlignedOutput *output, int received, int total)
+{
+    if (output != NULL) {
+        if (output->progress != NULL)
+            output->progress(output->persisted, total, output->context);
+    } else if (cloudHttpProgress != NULL) {
+        cloudHttpProgress(received, total);
+    }
+}
+
 static int download_write(int fd, const unsigned char *data, int len,
                           int max_bytes, int *written,
-                          mbedtls_sha256_context *sha,
+                          mbedtls_sha256_context *sha, CloudAlignedOutput *aligned,
                           char *error, int error_size)
 {
     int done = 0;
@@ -850,6 +933,13 @@ static int download_write(int fd, const unsigned char *data, int len,
     }
     if (fd == CLOUD_HTTP_MEM_FD) {
         memcpy(mem_sink + *written, data, (size_t)len);
+        done = len;
+    }
+    if (aligned != NULL) {
+        if (append_aligned_output(aligned, fd, data, len) < 0) {
+            set_error(error, error_size, "Could not write the aligned HTTPS download", 0);
+            return -1;
+        }
         done = len;
     }
     while (done < len) {
@@ -871,7 +961,7 @@ static int download_write(int fd, const unsigned char *data, int len,
 static int download_chunked_consume(CloudChunkDecoder *dec,
                                     const unsigned char *data, int len,
                                     int fd, int max_bytes, int *written,
-                                    mbedtls_sha256_context *sha,
+                                    mbedtls_sha256_context *sha, CloudAlignedOutput *aligned,
                                     char *error, int error_size)
 {
     int at = 0;
@@ -910,7 +1000,7 @@ static int download_chunked_consume(CloudChunkDecoder *dec,
                 take = (int)dec->left;
             if (take > 0 &&
                 download_write(fd, data + at, take, max_bytes, written,
-                               sha, error, error_size) < 0)
+                               sha, aligned, error, error_size) < 0)
                 return -1;
             at += take;
             dec->left -= (unsigned long)take;
@@ -954,6 +1044,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
                                        int fd, const char *ca_path,
                                        int max_bytes, int *out_size,
                                        unsigned char digest[32],
+                                       CloudAlignedOutput *aligned,
                                        char *error, int error_size)
 {
     char current[CLOUD_HTTP_LOCATION_MAX];
@@ -1038,6 +1129,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
         }
 
         header_end = NULL;
+        cloudStatus("Waiting for HTTP response headers");
         while (used < CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO && header_end == NULL) {
             r = mbedtls_ssl_read(&tls.ssl, (unsigned char *)raw + used,
                                  CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO - used);
@@ -1163,14 +1255,14 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
                 r = download_chunked_consume(&decoder,
                                              (unsigned char *)raw + header_len,
                                              body_len, fd, max_bytes, &written,
-                                             &sha, error, error_size);
+                                             &sha, aligned, error, error_size);
             else {
                 int take = body_len;
                 if (content_length >= 0 && take > content_length)
                     take = content_length;
                 r = download_write(fd, (unsigned char *)raw + header_len,
                                    take, max_bytes, &written,
-                                   &sha, error, error_size);
+                                   &sha, aligned, error, error_size);
             }
             if (r < 0) {
                 mbedtls_sha256_free(&sha);
@@ -1186,8 +1278,8 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
         }
         free(raw);
         raw = NULL;
-        if (cloudHttpProgress != NULL && written > 0)
-            cloudHttpProgress(written, chunked ? -1 : content_length);
+        if (written > 0)
+            download_progress(aligned, written, chunked ? -1 : content_length);
 
         while (!complete) {
             r = mbedtls_ssl_read(&tls.ssl, io_buf, CLOUD_HTTP_IO);
@@ -1228,7 +1320,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
 
             if (chunked) {
                 int cr = download_chunked_consume(&decoder, io_buf, r, fd,
-                                                  max_bytes, &written, &sha,
+                                                  max_bytes, &written, &sha, aligned,
                                                   error, error_size);
                 if (cr < 0) {
                     mbedtls_sha256_free(&sha);
@@ -1244,7 +1336,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
                     take = content_length - written;
                 if (take > 0 &&
                     download_write(fd, io_buf, take, max_bytes, &written,
-                                   &sha, error, error_size) < 0) {
+                                   &sha, aligned, error, error_size) < 0) {
                     mbedtls_sha256_free(&sha);
                     tls_free(&tls);
                     free(io_buf);
@@ -1253,10 +1345,19 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
                 if (content_length >= 0 && written == content_length)
                     complete = 1;
             }
-            if (cloudHttpProgress != NULL)
-                cloudHttpProgress(written, chunked ? -1 : content_length);
+            download_progress(aligned, written, chunked ? -1 : content_length);
         }
 
+        if (aligned != NULL) {
+            if (flush_aligned_output(aligned, fd) < 0) {
+                mbedtls_sha256_free(&sha);
+                tls_free(&tls);
+                free(io_buf);
+                set_error(error, error_size, "Could not flush the aligned HTTPS download", 0);
+                return -1;
+            }
+            download_progress(aligned, written, chunked ? -1 : content_length);
+        }
         if (mbedtls_sha256_finish(&sha, digest != NULL ? digest : (unsigned char [32]){0}) != 0) {
             mbedtls_sha256_free(&sha);
             tls_free(&tls);
@@ -1283,7 +1384,28 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                         char *error, int error_size)
 {
     return cloudHttpDownloadFdInternal(url, NULL, fd, ca_path, max_bytes,
-                                       out_size, digest, error, error_size);
+                                       out_size, digest, NULL, error, error_size);
+}
+
+int cloudHttpDownloadAlignedFd(const char *url, int fd, const char *ca_path,
+                               int max_bytes, int *out_size, unsigned char digest[32],
+                               void (*progress)(int, int, void *), void *context,
+                               char *error, int error_size)
+{
+    CloudAlignedOutput aligned = {.progress = progress, .context = context};
+    int result;
+
+    if (fd < 0)
+        return -1;
+    aligned.bytes = memalign(64, CLOUD_HTTP_IO);
+    if (aligned.bytes == NULL) {
+        set_error(error, error_size, "Out of memory preparing aligned HTTPS output", 0);
+        return -1;
+    }
+    result = cloudHttpDownloadFdInternal(url, NULL, fd, ca_path, max_bytes,
+                                        out_size, digest, &aligned, error, error_size);
+    free(aligned.bytes);
+    return result;
 }
 
 int cloudHttpDownloadMem(const char *url, unsigned char *buf, int cap,
@@ -1296,7 +1418,7 @@ int cloudHttpDownloadMem(const char *url, unsigned char *buf, int cap,
         return -1;
     mem_sink = buf;
     r = cloudHttpDownloadFdInternal(url, NULL, CLOUD_HTTP_MEM_FD, ca_path, cap,
-                                    out_size, digest, error, error_size);
+                                    out_size, digest, NULL, error, error_size);
     mem_sink = NULL;
     return r;
 }
@@ -1307,6 +1429,6 @@ int cloudHttpDownloadGoogleFd(const char *url, const char *bearer_token, int fd,
                               char *error, int error_size)
 {
     return cloudHttpDownloadFdInternal(url, bearer_token, fd, ca_path,
-                                       max_bytes, out_size, digest,
+                                       max_bytes, out_size, digest, NULL,
                                        error, error_size);
 }

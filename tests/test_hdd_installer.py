@@ -26,8 +26,8 @@ class Extent(c.Structure):
 class Install(c.Structure):
     _fields_ = [('flags', c.c_uint), ('jail', c.c_int), ('commit', c.c_char * 41),
                 ('stage', c.c_char * 1024), ('ca_path', c.c_char * 1024), ('error', c.c_char * 256),
-                ('sizes', c.c_uint32 * 10), ('hashes', (c.c_char * 41) * 10),
-                ('archives', (c.c_char * 128) * 2), ('linux', Extent * 8), ('owner', c.c_ubyte * 20), ('owned', c.c_uint), ('ready', c.c_uint)]
+                ('sizes', c.c_uint32 * 15), ('hashes', (c.c_char * 41) * 15),
+                ('archives', (c.c_char * 128) * 2), ('linux', Extent * 10), ('owner', c.c_ubyte * 20), ('owned', c.c_uint), ('ready', c.c_uint), ('ca_data', c.c_void_p), ('ca_size', c.c_uint), ('music_mb', c.c_uint), ('contents_mb', c.c_uint), ('linux_home_mb', c.c_uint), ('reserved_mb', c.c_uint), ('game_launcher', c.c_uint), ('launcher_files', c.c_void_p), ('launcher_count', c.c_uint), ('language', c.c_char * 52), ('archive_item', c.c_char * 96), ('channels', c.c_char * 128)]
 class Entry(c.Structure):
     _fields_ = [('name', c.c_char * 1024), ('link', c.c_char * 1024)] + [
         (n, c.c_uint32) for n in ('size', 'mode', 'uid', 'gid', 'mtime', 'major', 'minor')] + [('type', c.c_char)]
@@ -187,7 +187,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
 
     image = d / 'linux.img'; disk = Disk(image, 128); fs = c.c_void_p()
     assert lib.installExt2Create(c.byref(fs), c.byref(disk.io), 0, disk.size // 512, 1700000000) == 0
-    entries = [('etc', '5', ''), ('usr', '5', ''), ('usr/lib', '5', ''), ('bin', '5', ''),
+    entries = [('late/sub/child', '5', ''), ('late', '5', ''), ('late/sub', '5', ''), ('etc', '5', ''), ('usr', '5', ''), ('usr/lib', '5', ''), ('bin', '5', ''),
                ('dev', '5', ''), ('etc/settings', '0', b'a' * 13000), ('bin/tool', '0', b'ELF fixture'),
                ('bin/tool-link', '1', 'bin/tool'), ('bin/tool-peer', '1', 'bin/tool'), ('usr/lib/lib:fixture', '0', b'colon name'),
                ('etc/symbolic', '2', '/usr/lib/libc.so'), ('etc/exact60', '2', '/' + 'x' * 59),
@@ -208,6 +208,16 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
                ('etc/symbolic', '0', b'replaced symlink'), ('etc/long-symbolic', '2', '/short'),
                ('bin/tool', '0', b'replaced binary'), ('bin/other', '0', b'other binary'), ('bin/tool-link', '1', 'bin/other')]
     assert extract(tar(overlay, tarfile.PAX_FORMAT)) == 0
+    # The installer replaces archive-provided Navigator shortcuts with the
+    # chosen launcher and the apps that were actually installed.
+    assert extract(tar([('bn/sysconf/shortcut_0', '0', b'old launcher')])) == 0
+    settings = Install(flags=7, jail=1, game_launcher=1)
+    shortcut = c.create_string_buffer(1024)
+    length = lib.hddInstallGameShortcut(c.byref(settings), shortcut, len(shortcut))
+    assert length > 0 and b'NHDDL file%3A' in shortcut.value and b'PP.LAUNCHER' in shortcut.value
+    entry = Entry(name=b'bn/sysconf/shortcut_0', size=length, mode=0o644, type=b'0')
+    assert lib.installExt2Begin(fs, c.byref(entry)) == 0
+    assert lib.installExt2Data(fs, shortcut, length) == 0 and lib.installExt2End(fs) == 0
     assert lib.installExt2Finish(fs) == 0
     lib.installExt2Free(fs); disk.close()
     if shutil.which('e2fsck'):
@@ -219,6 +229,8 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
         target.unlink(); debug('dump usr/large ' + str(target)); assert target.read_bytes() == b'z' * (2 * 1024 * 1024)
         target.unlink(); debug('dump bin/tool-peer ' + str(target)); assert target.read_bytes() == b'ELF fixture'
         target.unlink(); debug('dump bin/tool ' + str(target)); assert target.read_bytes() == b'replaced binary'
+        target.unlink(); debug('dump bn/sysconf/shortcut_0 ' + str(target)); assert target.read_bytes() == shortcut.value
+        assert '0751' in debug('stat late/sub')
         stat = debug('stat bin/tool')
         assert '0751' in stat and 'User:   100' in stat and 'Group:   200' in stat
         other = re.search(r'Inode: (\d+)', debug('stat bin/other')).group(1)
