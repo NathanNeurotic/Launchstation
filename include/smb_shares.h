@@ -2,10 +2,10 @@
 #define SMB_SHARES_H
 
 //--------------------------------------------------------------
-// Network shares: SMB2.CNF and the smb: / smb1: / nfs: devices.
+// Network shares: SMB2.CNF and the smb: / smbold: / nfs: devices.
 //
 //   smb:/<NAME>/...  SMB2/SMB3 shares, through smb2man (iop/smb2man, usmb2)
-//   smb1:/...        one SMB1 (NT1) share, through smbman.irx
+//   smbold:/...        one SMB1 (NT1) share, through smbman.irx
 //   nfs:/<NAME>/...  NFSv4.0 exports, through nfsman (iop/nfsman, unfs4)
 //
 // An NFS share is a NAME and an nfs:// URL among the SMB shares: the URL's
@@ -26,12 +26,12 @@
 #define SMB_CNF_SECTION "# SMB shares"
 
 #define SMB_DEVICE_V2 "smb:"
-#define SMB_DEVICE_V1 "smb1:"
+#define SMB_DEVICE_V1 "smbold:"
 #define SMB_DEVICE_NFS "nfs:"
 
 enum {
 	SMB_PATH_NONE = 0,
-	SMB_PATH_V1 = 1, /* smb1: */
+	SMB_PATH_V1 = 1, /* smbold: */
 	SMB_PATH_V2 = 2, /* smb: */
 	SMB_PATH_NFS = 3 /* nfs: */
 };
@@ -50,7 +50,8 @@ typedef struct
 	char password[SMB_CRED_LEN];
 	char url[SMB_URL_LEN];
 	int version; /* driver routing: SMB_PATH_V1, _V2 or _NFS */
-	int proto_version; /* declared VERSION (1, 2 or 3 for SMB; SMB_PATH_NFS for NFS) */
+	int proto_version; /* declared VERSION: 0 = automatic, 1/2/3 = exact; SMB_PATH_NFS for NFS */
+	int active_version; /* 0 until connected, then the active SMB_PATH_* value */
 	/* PLAINTEXT = 1: an SMB1 server that asks for a clear-text password
 	 * gets it. Off, smbman refuses such a server. */
 	int plaintext;
@@ -82,7 +83,7 @@ int smbConfigValidCount(const SmbConfig *cfg, int version);
 /* Compose the KEY = value lines for one share, in canonical order
  * (NAME, VERSION for kinds 1/3, USERNAME/PASSWORD when a user is set,
  * PLAINTEXT for a kind-1 share that allows clear-text passwords, URL).
- * kind 2 = SMB2, 3 = SMB3 (same driver, marked), 1 = SMB1. A 445 port is
+ * kind 0 = Automatic (no VERSION line), 1/2/3 = exact VERSION. A 445 port is
  * left out of the URL. Returns the length, or -1 when a value breaks a
  * limit the parser enforces. */
 int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
@@ -110,14 +111,17 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
  * there is no such line. */
 const char *smbCnfSection(const char *text);
 
-/* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", SMB_PATH_NFS for
+/* SMB_PATH_V1 for "smbold:...", SMB_PATH_V2 for "smb:...", SMB_PATH_NFS for
  * "nfs:...", else SMB_PATH_NONE. Plain prefix tests on "smb" would take
- * smb1: for smb:. */
+ * smbold: for smb:. */
 int smbPathKind(const char *path);
-/* "smb:", "smb:/", "smb1:", "smb1:/", "nfs:" or "nfs:/": the device itself,
+/* "smb:", "smb:/", "smbold:", "smbold:/", "nfs:" or "nfs:/": the device itself,
  * where smb: and nfs: list their connected shares and nothing can be
  * written. */
 int smbIsRootPath(const char *path);
+/* In-place migration for saved paths from before the iomanX-safe rename.
+ * 1 = converted, 0 = not legacy, -1 = destination capacity is too small. */
+int smbLegacyPath(char *path, int size);
 
 #ifdef SMB
 /* PS2 side (smb_shares.c) */
@@ -130,9 +134,11 @@ int smbSharesSnapshot(SmbConfig *out);
 #define SMB_CNF_MAX_SIZE 16384            /* as smb_shares.c reads the file */
 void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
+/* Resolve smb:/NAME/... through its active protocol; otherwise copy unchanged. */
+int smbSharesActivePath(const char *path, char *out, int size); /* no IO */
 const char *smbSharesV1Name(void); /* NAME of the SMB1 share listed in smb:/; no IO */
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
-void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smb1:/ status; no IO */
+void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smbold:/ status; no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 /* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is

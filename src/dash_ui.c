@@ -608,18 +608,32 @@ void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const c
 	}
 }
 
-void dashDrawScrollbar(float x, float y, float h, int first, int visible, int total)
+static void scrollbarShape(float x, float y, float h, DashColor color)
+{
+	if (h <= 2.0f || dashThemeRadius(2.5f) < 1.0f) {
+		dashRect(x, y, 5, h, color);
+		return;
+	}
+	dashRect(x + 1, y, 3, h, color);
+	dashRect(x, y + 1, 1, h - 2, color);
+	dashRect(x + 4, y + 1, 1, h - 2, color);
+}
+
+void dashDrawScrollbar(float x, float y, float h, float first, int visible, int total)
 {
 	float th, ty;
 
-	if (total <= visible || total <= 0)
+	if (total <= visible || visible <= 0 || h <= 0.0f)
 		return;
-	dashPanel(x, y, 5, h, 2.5f, dashColorA(DASH_C_TEXT3, 0.22f));
+	first = dashClampf(first, 0.0f, (float)(total - visible));
+	scrollbarShape(x, y, h, dashColorA(DASH_C_TEXT3, 0.22f));
 	th = h * visible / (float)total;
 	if (th < 18)
 		th = 18;
+	if (th > h)
+		th = h;
 	ty = y + (h - th) * first / (float)(total - visible);
-	dashPanel(x, ty, 5, th, 2.5f, dashColorA(DASH_C_ACCENT, 0.75f));
+	scrollbarShape(x, ty, th, dashColorA(DASH_C_ACCENT, 0.75f));
 }
 
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength)
@@ -917,11 +931,17 @@ void dashModalSetMarks(unsigned char *marks)
  * the items' details); an unhandled Confirm selects the row as usual. */
 static int (*modal_edit)(int index, int direction, void *arg);
 static void *modal_edit_arg;
+static const unsigned char *modal_popup_rows;
 
 void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg)
 {
 	modal_edit = edit;
 	modal_edit_arg = arg;
+}
+
+void dashModalSetEditPopupRows(const unsigned char *popup_rows)
+{
+	modal_popup_rows = popup_rows;
 }
 
 /* L2/R2 jump only to actionable rows. Never focus disabled actions,
@@ -946,6 +966,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	unsigned char *marks = modal_marks;
 	int (*edit)(int, int, void *) = modal_edit;
 	void *edit_arg = modal_edit_arg;
+	const unsigned char *popup_rows = modal_popup_rows;
 	/* Eight subtitled rows left only 3 logical pixels above the popup.
 	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
 	const int max_rows = 7;
@@ -960,6 +981,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		modal_preview = NULL;
 		modal_marks = NULL;
 		modal_edit = NULL;
+		modal_popup_rows = NULL;
 		return -1;
 	}
 	if (sel < 0 || sel >= n || items[sel].disabled)
@@ -968,6 +990,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		modal_preview = NULL;
 		modal_marks = NULL;
 		modal_edit = NULL;
+		modal_popup_rows = NULL;
 		return -1;
 	}
 	sel_anim = (float)sel;
@@ -975,6 +998,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	modal_preview = NULL;
 	modal_marks = NULL;
 	modal_edit = NULL;
+	modal_popup_rows = NULL;
 	if (preview != NULL)
 		x = DASH_SAFE_R - w; /* keep the left half of the screen visible */
 	dashInputFlush();
@@ -1102,24 +1126,36 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 					 * two can never overlap. */
 					float avail = w - (tx - x) - 30.0f, label_w = avail;
 					if (items[i].detail) {
+						DashColor detail_color = DASH_C_TEXT3;
 						float dw = dashTextWidth(items[i].detail, DASH_FS_SMALL), detail_w;
+						float right = x + w - 28;
+						if (edit != NULL && i == sel && !items[i].disabled)
+							detail_color = !strcmp(items[i].detail, "On") ? DASH_C_OK : DASH_C_ACCENT;
 						label_w = dashTextWidth(items[i].label, DASH_FS_BODY * 0.92f);
 						if (label_w > avail * 0.6f)
 							label_w = avail * 0.6f;
 						detail_w = avail - label_w - 14.0f;
+						if (edit != NULL) {
+							detail_w -= 16.0f;
+							right -= 16.0f;
+							if (popup_rows != NULL && popup_rows[i])
+								dashIcon(DI_PLAY, x + w - 28, ry + 5.5f, 10, DASH_C_ACCENT);
+							else
+								dashIcon(DI_BTN_RIGHT, x + w - 28, ry + 4.5f, 12, DASH_C_ACCENT);
+						}
 						if (dw <= detail_w)
-							dashTextRight(x + w - 28, ry + 8, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+							dashTextRight(right, ry + 8, items[i].detail, DASH_FS_SMALL, detail_color);
 						else if (i == sel)
-							dashTextScroll(x + w - 28 - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+							dashTextScroll(right - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, detail_color);
 						else
-							dashTextFit(x + w - 28 - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+							dashTextFit(right - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, detail_color);
 					}
 					dashTextFit(tx, ry + 7, label_w, items[i].label, DASH_FS_BODY * 0.92f, c);
 				}
 				dashGfxPopAlpha();
 			}
 			dashGfxScissorReset();
-			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);
+			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top_anim, rows, n);
 			{
 				float hx = modalHintRow(x + 24, y + h - 36, dashOkIcon(), "Select", dashBackIcon(), "Back");
 
@@ -1315,6 +1351,36 @@ int dashLoadingActive(void)
 	return loading_active;
 }
 
+static void loadingBarShape(float x, float y, float w, DashColor color)
+{
+	float h;
+
+	w = floorf(w);
+	if (w <= 0.0f)
+		return;
+	if (dashThemeRadius(4.0f) < 1.0f) {
+		dashRect(x, y, w, 8, color);
+		return;
+	}
+	/* A fill shorter than one cap grows from a centred dot. Keeping its
+	 * height within its width prevents it spilling outside the track's cap. */
+	h = w < 8.0f ? w : 8.0f;
+	y += (8.0f - h) * 0.5f;
+	if (h < 3.0f) {
+		dashRect(x, y, w, h, color);
+	} else if (h < 7.0f) {
+		dashRect(x + 1, y, w - 2, 1, color);
+		dashRect(x, y + 1, w, h - 2, color);
+		dashRect(x + 1, y + h - 1, w - 2, 1, color);
+	} else {
+		dashRect(x + 2, y, w - 4, 1, color);
+		dashRect(x + 1, y + 1, w - 2, 1, color);
+		dashRect(x, y + 2, w, h - 4, color);
+		dashRect(x + 1, y + h - 2, w - 2, 1, color);
+		dashRect(x + 2, y + h - 1, w - 4, 1, color);
+	}
+}
+
 static void loadingDraw(void)
 {
 	float w = loading_file_operation ? 480.0f : 420.0f;
@@ -1360,9 +1426,9 @@ static void loadingDraw(void)
 		/* The final frame is followed by closing the overlay. It must show
 		 * completion rather than disappear with a partly filled bar. */
 		loading_fraction = p >= 1.0f ? 1.0f : dashApproach(loading_fraction, p, 14.0f, dt);
-		dashPanel(x + 30, bar_y, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
+		loadingBarShape(x + 30, bar_y, w - 60, dashColorA(DASH_C_TEXT3, 0.3f));
 		if (loading_fraction > 0.0f)
-			dashPanel(x + 30, bar_y, (w - 60) * loading_fraction, 8, 4, DASH_C_ACCENT);
+			loadingBarShape(x + 30, bar_y, (w - 60) * loading_fraction, DASH_C_ACCENT);
 	}
 	if (loading_cancel)
 		modalHintRow(x + 24, y + h - 34, -1, NULL, dashBackIcon(), "Continue in background");

@@ -56,9 +56,13 @@ int main(void)
     check(n > 0, "build SMB2 block");
     check(strcmp(block,
                  "NAME = PC\n"
+                 "VERSION = 2\n"
                  "USERNAME = player\n"
                  "PASSWORD = secret\n"
                  "URL = smb://192.168.1.100:445/games\n") == 0, "SMB2 block text");
+    n = smbCnfBuildBlock(block, sizeof(block), "AUTO", 0, NULL, NULL,
+                         "192.168.1.100", 445, "games", 0);
+    check(n > 0 && strstr(block, "VERSION") == NULL, "Automatic block omits VERSION");
     check(strstr(block, "100:445/games") != NULL, "445 port written");
 
     n = smbCnfBuildBlock(block, sizeof(block), "NG", 3, "player", "s",
@@ -165,7 +169,7 @@ int main(void)
         smbCnfBuildBlock(repl, sizeof(repl), "DOS", 2, NULL, NULL,
                          "10.0.0.9", 445, "y2", 0);
         len = upsert(file, "TWO", repl, out, sizeof(out), work, sizeof(work));
-        check(len > 0 && strstr(out, "NAME = DOS\nURL = smb://10.0.0.9:445/y2") != NULL &&
+        check(len > 0 && strstr(out, "NAME = DOS\nVERSION = 2\nURL = smb://10.0.0.9:445/y2") != NULL &&
               strstr(out, "NAME = TWO") == NULL, "rename via replace");
         checkParses("rename", out, 3);
     }

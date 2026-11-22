@@ -13,6 +13,9 @@
 #include "dash_internal.h"
 #include "config_private.h"
 #include "main_title.h"
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 
 DashSettings dashCfg;
 DashUserLists dashLists;
@@ -428,6 +431,39 @@ static int listsKv(const char *key, char *value, void *user)
 	return 0;
 }
 
+#ifdef SMB
+static void dashStoreLegacySmbPaths(void)
+{
+	int i;
+
+	smbLegacyPath(dashCfg.igr_backup_path, sizeof(dashCfg.igr_backup_path));
+	smbLegacyPath(dashCfg.igr_after_path, sizeof(dashCfg.igr_after_path));
+	for (i = 0; i < dashCfg.nscan && i < DASH_MAX_SCAN; i++)
+		smbLegacyPath(dashCfg.scan[i], DASH_PATH_MAX);
+	for (i = 0; i < dashLists.nfav && i < DASH_MAX_FAV; i++)
+		smbLegacyPath(dashLists.fav[i], DASH_PATH_MAX);
+	for (i = 0; i < dashLists.npin && i < DASH_MAX_FAV; i++)
+		smbLegacyPath(dashLists.pin[i], DASH_PATH_MAX);
+	for (i = 0; i < dashLists.nrecent && i < DASH_MAX_RECENT; i++)
+		smbLegacyPath(dashLists.recent[i], DASH_PATH_MAX);
+	for (i = 0; i < nhidden && i < DASH_MAX_APPS; i++) {
+		char *old = hidden_apps[i];
+		char *replacement;
+		size_t size;
+		if (old == NULL || strncmp(old, "smb1:", 5))
+			continue;
+		size = strlen(old) + 3; /* smbold adds two bytes, plus the terminator */
+		replacement = malloc(size);
+		if (replacement == NULL)
+			continue;
+		memcpy(replacement, old, size - 2);
+		smbLegacyPath(replacement, size);
+		hidden_apps[i] = replacement;
+		free(old);
+	}
+}
+#endif
+
 void dashStoreInit(void)
 {
 	char dirs[3][MAX_PATH];
@@ -485,6 +521,9 @@ void dashStoreInit(void)
 			free(text);
 		}
 	}
+#ifdef SMB
+	dashStoreLegacySmbPaths();
+#endif
 }
 
 int dashStoreLoaded(void)

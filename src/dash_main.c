@@ -1274,7 +1274,7 @@ void dashRenderScene(void)
 // Entry
 //--------------------------------------------------------------
 /* IPCONFIG.DAT / SMB2.CNF reads (with mc?:/SYS-CONF fallbacks) warm the
- * network display strings and the smb1: device entry. They probe both memory
+ * network display strings and the smbold: device entry. They probe both memory
  * cards when no file sits beside the ELF, so they run on the worker instead
  * of blocking boot (they used to run in initializeRuntimeInputModules). */
 static void dashNetConfigWarmJob(void *arg)
@@ -1287,7 +1287,7 @@ static void dashNetConfigWarmJob(void *arg)
 }
 
 /* Runs on the UI thread once the reads above are cached: a Files root that
- * was already built now learns whether smb1: exists. */
+ * was already built now learns whether smbold: exists. */
 static void dashNetConfigWarmDone(void *arg)
 {
 	(void)arg;
@@ -1461,6 +1461,19 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			bootUpdate(&in);
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
+		}
+		/* Ordinary L3 previews animated backgrounds without editing or saving
+		 * the theme. Boot input and SELECT chords keep their launch-key meaning. */
+		if (!boot_phase && !ql_down && !(paddata & PAD_SELECT) && (in.pressed & DASH_IN_L3)) {
+			DashTheme palette;
+
+			dashTheme.bg = dashThemeNextBackground(dashTheme.bg);
+			dashThemeLoadPreset(dashThemeBackgroundPreset(dashTheme.bg), &palette);
+			dashTheme.bg1 = palette.bg1;
+			dashTheme.bg2 = palette.bg2;
+			dashToast(DASH_TOAST_INFO, localizeDashboardText(dashThemeBgName(dashTheme.bg)));
+			dashInputFlush();
+			memset(&in, 0, sizeof(in));
 		}
 		/* R3 is unused by HOME navigation; SELECT+R3 remains a launch key
 		 * because quick-launch intercepts it before dashboard dispatch. */

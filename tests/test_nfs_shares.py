@@ -170,14 +170,14 @@ save = settings[settings.index("static void smbedSave(void)"):]
 save = save[:save.index("\n}\n")]
 assert "if (smbed.kind == SMBED_NFS)\n\t\tn = nfsCnfBuildBlock(" in save and "smbCnfBuildBlock(" in save
 # NFS shares have their own page: its picker lists only NFS shares and a new share is NFS
-assert '{ "SMB2", "SMB3", "SMB1" }' in settings
+assert '{ "Automatic", "SMB2", "SMB3", "SMB1" }' in settings
 nfs_page = settings.split("static const SetItem nfs_items[] = {", 1)[1].split("};", 1)[0]
 assert "S_SMBED_KIND" not in nfs_page and "S_SMBED_USER" not in nfs_page and "S_SMBED_UID" in nfs_page
 smb_page = settings.split("static const SetItem smb_items[] = {", 1)[1].split("};", 1)[0]
 assert "S_SMBED_UID" not in smb_page
 assert '{ST_PAGE, P_NFS, "NFS shares"' in settings and "[P_NFS] = PAGE(" in settings
 assert "(smbed.snap.share[i].version == SMB_PATH_NFS) == smbed.nfs" in settings
-assert "smbed.kind = smbed.nfs ? SMBED_NFS : 2;" in settings
+assert "smbed.kind = smbed.nfs ? SMBED_NFS : 0;" in settings
 load = settings[settings.index("static void smbedLoadPick(void)"):]
 load = load[:load.index("\n}\n")]
 assert "if (sh->version == SMB_PATH_NFS) {" in load and "smbed.kind = SMBED_NFS;" in load

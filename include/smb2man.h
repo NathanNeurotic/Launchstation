@@ -17,6 +17,7 @@ typedef struct
 	char username[32]; // UTF-8; Latin-1 characters only (NTLM as usmb2 does it)
 	char password[32];
 	char url[256];
+	int protocol; /* 0 = SMB2/3 automatic, 2 = SMB2 only, 3 = SMB3 only */
 } smb2Connect_in_t;
 
 typedef struct

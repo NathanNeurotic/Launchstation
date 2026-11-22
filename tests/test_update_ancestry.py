@@ -31,6 +31,8 @@ sources = "".join(function(signature) for signature in (
     function(signature) for signature in (
     "static void updateJobRun(",
     "static int updateRun(",
+    "static void updateCheckMessage(",
+    "static int updateCheckConfirm(",
     "void dashToolsCheckUpdates(void)\n{",
 ))
 enums = src[src.index("enum { UPDATE_RELATION_UNKNOWN"):src.index("static int updateIsCommitId(")]
@@ -53,7 +55,8 @@ typedef struct {
 static char comparison[32] = "ahead";
 static char release_target[80] = "51e1e0c7bc1efcb5b51c6cc9de056ee858694a03";
 static const char *last_title;
-static int requests, compares, confirmations, installs, response_status = 200, confirm_answer = 1;
+static int requests, compares, confirmations, installs, launches, loading_begins, loading_ends;
+static int response_status = 200, confirm_answer = 1, confirm_launch = 1;
 static int launchstationUpdateCaPath(char *path, int n) {
     snprintf(path,n,"ca.pem");
     return 1;
@@ -62,8 +65,15 @@ static int ensureDashboardIpNetworkReady(void) { return 1; }
 static int dashWorkerAwaitAll(const char *title) { (void)title; return 1; }
 static void filerRootMcPollIdle(void) {}
 static const char *dashboardIpNetworkError(void) { return "network error"; }
-static void dashLoadingBegin(const char *s) { (void)s; }
-static void dashLoadingEnd(void) {}
+static void dashLoadingBegin(const char *s) { (void)s; loading_begins++; }
+static void dashLoadingEnd(void) { loading_ends++; }
+static __attribute__((unused)) void dashLoadingSetCancel(int cancelable) { (void)cancelable; }
+typedef struct { char path[MAX_PATH], title[64]; } DashApp;
+static __attribute__((unused)) const char *wleBootElfPath(void) { return "mc0:/APP_LAUNCHSTATION/BOOT.ELF"; }
+static __attribute__((unused)) void dashStrCopy(char *out, const char *in, int size) { snprintf(out,size,"%s",in); }
+static __attribute__((unused)) void dashLaunchApp(const DashApp *app,int flags) {
+    (void)flags;assert(strstr(app->path,"BOOT.ELF"));launches++;
+}
 /* The worker runs the job straight away; the wait then returns at once. */
 static int dashWorkerSubmit(const char *l,int f,void (*run)(void *),void (*done)(void *),void *a) {
     (void)l;(void)f;(void)done;run(a);return 1;
@@ -77,7 +87,8 @@ static void dashModalMessage(int kind,const char *title,const char *body,const c
 }
 static int dashModalConfirm(const char *title,const char *body,const char *action,int danger) {
     (void)title;(void)body;(void)action;(void)danger;
-    confirmations++; return confirm_answer;
+    confirmations++;
+    return confirmations == 2 && confirm_answer ? confirm_launch : confirm_answer;
 }
 static int selfUpdateInstall(const char *ca,const char *digest,int package_bytes,char *result,int cap) {
     (void)ca;(void)digest;assert(package_bytes==2234368);
@@ -117,8 +128,9 @@ static void cloudHttpResponseFree(CloudHttpResponse *r) {
 program += enums + sources
 program += r'''
 static void reset(const char *status,const char *release,int code) {
-    requests=compares=confirmations=installs=0;
-    confirm_answer=1;
+    requests=compares=confirmations=installs=launches=0;
+    loading_begins=loading_ends=0;
+    confirm_answer=confirm_launch=1;
     last_title=NULL;
     snprintf(comparison,sizeof(comparison),"%s",status);
     snprintf(release_target,sizeof(release_target),"%s",release);
@@ -128,7 +140,8 @@ int main(void) {
     const char *old="51e1e0c7bc1efcb5b51c6cc9de056ee858694a03";
     reset("ahead",old,200);
     dashToolsCheckUpdates();
-    assert(compares==1 && requests==2 && confirmations==1 && installs==1);
+    assert(compares==1 && requests==2 && confirmations==2 && installs==1 && launches==1);
+    assert(loading_begins==2 && loading_ends==2);
     /* Not newer: the user is asked, and only a yes downloads it again. */
     reset("behind",old,200);
     confirm_answer=0;
@@ -136,10 +149,10 @@ int main(void) {
     assert(compares==1 && confirmations==1 && installs==0);
     reset("behind",old,200);
     dashToolsCheckUpdates();
-    assert(compares==1 && confirmations==1 && installs==1);
+    assert(compares==1 && confirmations==2 && installs==1 && launches==1);
     reset("identical",old,200);
     dashToolsCheckUpdates();
-    assert(compares==1 && confirmations==1 && installs==1);
+    assert(compares==1 && confirmations==2 && installs==1 && launches==1);
     reset("diverged",old,200);
     dashToolsCheckUpdates();
     assert(compares==1 && confirmations==0 && installs==0);
@@ -159,7 +172,12 @@ int main(void) {
     assert(compares==0 && confirmations==1 && installs==0);
     reset("ahead","e70d903c7811a1b95b95771fa6fd813f48f5ecd4",200);
     dashToolsCheckUpdates();
-    assert(compares==0 && confirmations==1 && installs==1);
+    assert(compares==0 && confirmations==2 && installs==1 && launches==1);
+    reset("ahead",old,200);
+    confirm_launch=0;
+    dashToolsCheckUpdates();
+    assert(confirmations==2 && installs==1 && launches==0);
+    assert(loading_begins==2 && loading_ends==2);
     assert(!updateIsCommitId("local") && !updateIsCommitId("../malformed"));
     assert(updateIsCommitId("e70d903"));
     puts("PASS: updater installs a proven descendant, re-downloads a same or older release only when asked, and blocks divergent/unknown builds");

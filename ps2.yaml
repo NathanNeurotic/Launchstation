@@ -90,6 +90,15 @@ targets:
     exports_tab: iop/hdl_info/exports.tab
     headers: [atad, cdvd, dev9, iomanx, sifcmd, stdio, sysclib, sysmem, threadman, intrman]
 
+  - name: hdd_format
+    type: iop
+    sources: [iop/hdd_format/main.c]
+    include_dirs: [iop/hdd_format, include]
+    imports_lst: iop/hdd_format/imports.lst
+    defines: [EXFAT]
+    cflags: [-Wall, -Wextra]
+    headers: [atad, bdm, loadcore, sifcmd, sysclib, threadman]
+
   - name: ps2hdd_osd
     type: iop
     sources:
@@ -358,9 +367,10 @@ targets:
     ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
     headers: [intrman, iomanx, loadcore, mcman, ps2ip-nm, stdio, sysclib, sysmem, threadman]
 
-  # SMB1 client for the smb1: device: OPL's fixed copy of ps2sdk smbman
-  # (iop/smbman/README.md), registered as "smb1" so it sits beside
-  # smb2man (SMB2/SMB3, above), which owns "smb".
+  # SMB1 client for the smbold: device: OPL's fixed copy of ps2sdk smbman
+  # (iop/smbman/README.md), registered as "smbold" so it sits beside
+  # smb2man (SMB2/SMB3, above), which owns "smb". A trailing digit would
+  # be parsed as a unit suffix and route the SMB1 calls back to "smb".
   - name: smbman
     type: iop
     sources:
@@ -550,6 +560,22 @@ targets:
       - src/mmce_save_versions.c
       - src/mmce_igr.c
       - src/hdd_filesystem.c
+      - src/hdd_apa_boundary.c
+      - src/hdd_format.c
+      - src/hdd_format_recovery.c
+      - src/hdd_format_upcase.c
+      - src/hdd_format_ps2.c
+      - src/hdd_install_plan.c
+      - src/save_archive.c
+      - src/save_lzari.c
+      - src/save_sign.c
+      - src/hdd_install_ps2.c
+      - src/hdd_install_psbbn.c
+      - src/dash_hdd_install.c
+      - src/install_archive.c
+      - src/install_tar.c
+      - src/install_ext2.c
+      - src/install_psbbn_media.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
       - src/editor.c
@@ -678,6 +704,7 @@ targets:
       - vmcman
       - kbd:ps2kbd
       - hdl_info
+      - hdd_format
       - allowdvdv
       - secrsif
       - xfromman

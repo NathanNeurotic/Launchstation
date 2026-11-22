@@ -11,6 +11,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_worker.c").read_text()
 queue = source[source.index("#define WORKER_STACK_SIZE"):source.index("// Waiting for results")]
+waiting = source[source.index("int dashWorkerAwait("):source.index("// Activity indicator")]
 stub = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -39,12 +40,32 @@ static void WaitSema(int id) {(void)id;}
 static void SignalSema(int id) {(void)id; signaled++;}
 static void filerRootMcPollIdle(void) {drained++;}
 static void dashStrCopy(char *d,const char *s,int n) {snprintf(d,n,"%s",s);}
+static unsigned long long clock_ms;
+static int overlay_active, overlay_begins, overlay_ends, input_calls;
+static unsigned long long Timer(void) {return clock_ms;}
+static int dashLoadingActive(void) {return overlay_active;}
+static void dashLoadingBegin(const char *s) {(void)s;overlay_begins++;overlay_active=1;}
+static void dashLoadingEnd(void) {overlay_ends++;overlay_active=0;}
+static void dashLoadingSetCancel(int c) {(void)c;}
+static void dashLoadingFrame(const char *s,int d,int t) {(void)s;(void)d;(void)t;}
+static void dashVisualUpdate(void) {}
+static void dashRenderScene(void) {}
+static void dashGfxPresent(void) {}
+typedef struct {unsigned pressed;} DashInput;
+#define DASH_IN_BACK 1
+static void dashInputPoll(DashInput *in);
 void dashWorkerPump(void);
 '''
 checks = r'''
 static int ran, finished, expected = 1;
 static void run(void *arg) {assert(*(int *)arg == expected); ran++;}
 static void done(void *arg) {assert(*(int *)arg == expected++); finished++;}
+static void dashInputPoll(DashInput *in) {
+    in->pressed=0;clock_ms+=50;
+    if (++input_calls == 4 && cur_state == CUR_RUNNING) {
+        cur.run(cur.arg);cur_state=CUR_FINISHED;
+    }
+}
 int main(void) {
     int args[JOB_QUEUE + 2], ids[JOB_QUEUE + 1];
     for (int i=0; i<JOB_QUEUE+2; i++) args[i]=i+1;
@@ -77,6 +98,12 @@ int main(void) {
     signaled=0; park_req=1; dashWorkerParkPoint();
     assert(flushes==2 && flushed_after_signal==0 && signaled==1);
     park_req=0; dashWorkerParkPoint();
+    /* A slow wait uses, but never recreates or closes, its caller's overlay. */
+    overlay_active=1;input_calls=0;args[0]=expected;
+    int slow=dashWorkerSubmit("slow",0,run,done,&args[0]);
+    assert(slow>0 && dashWorkerAwait(slow,"slow",0)==1);
+    assert(overlay_begins==0 && overlay_ends==0 && overlay_active==1);
+    overlay_active=0;
     puts("PASS: one rumble stop per IOP park, before the worker is signaled");
     puts("PASS: unavailable/full rejection, caller ownership, no UI libmc wait, FIFO IDs and callbacks");
 }
@@ -87,6 +114,6 @@ if not compiler:
 with tempfile.TemporaryDirectory(prefix="wle-worker-") as tmp:
     c = Path(tmp) / "queue.c"
     exe = Path(tmp) / "queue-test.exe"
-    c.write_text(stub + queue + checks)
+    c.write_text(stub + queue + waiting + checks)
     subprocess.run([compiler, "-std=c11", str(c), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)

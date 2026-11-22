@@ -117,6 +117,7 @@ int filerPrepareDirRead(const char *path);
 int filerPrepareMemoryCardRead(int port);
 /* Cached physical-card presence: 1 present, 0 absent, negative unresolved. */
 int filerRootMcPresent(int port, int *type, int *free_kb);
+void filerRootMcForgetMultitap(int port);
 int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);

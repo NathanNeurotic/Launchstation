@@ -395,7 +395,7 @@ static const SetItem mmce_backup_items[] = {
 static struct {
 	char orig[SMB_NAME_LEN]; /* NAME of the picked share; "" = a new one */
 	char name[SMB_NAME_LEN];
-	int kind; /* 1, 2 or 3, as smbCnfBuildBlock, or SMBED_NFS */
+	int kind; /* 0 = Automatic, 1-3 as smbCnfBuildBlock, or SMBED_NFS */
 	char host[80]; /* IPv4 from the URL (host names are edit-as-text only) */
 	int port;      /* 0 = the default, 445 or NFS's 2049 */
 	char folder[128]; /* the SMB share, or the NFS export path */
@@ -503,7 +503,7 @@ static void smbedLoadPick(void)
 	if (smbed.pick == 0) {
 		memset(smbed.orig, 0, sizeof(smbed.orig));
 		memset(smbed.name, 0, sizeof(smbed.name));
-		smbed.kind = smbed.nfs ? SMBED_NFS : 2;
+		smbed.kind = smbed.nfs ? SMBED_NFS : 0;
 		memset(smbed.host, 0, sizeof(smbed.host));
 		smbed.port = 0;
 		memset(smbed.folder, 0, sizeof(smbed.folder));
@@ -707,7 +707,7 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already saved."},
 	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Folder name under Network (SMB). Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most. NFS shares have their own page: Settings > Network > NFS shares."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "Automatic negotiates SMB2/3, then SMB1 if needed. SMB1/2/3 enforce exactly that dialect. SMB1 is legacy; one SMB1 share at most. NFS shares have their own page: Settings > Network > NFS shares."},
 	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited as text."},
 	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
 	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
@@ -1035,10 +1035,10 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 #ifdef SMB
 		case S_SMBED_KIND: {
-			static const char *const smb_kinds[] = { "SMB2", "SMB3", "SMB1" };
+			static const char *const smb_kinds[] = { "Automatic", "SMB2", "SMB3", "SMB1" };
 			*names = smb_kinds;
-			*cur = smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
-			return 3;
+			*cur = smbed.kind == 1 ? 3 : smbed.kind == 2 ? 1 : smbed.kind == 3 ? 2 : 0;
+			return 4;
 		}
 		case S_SMBED_PLAINTEXT:
 			*cur = smbed.plaintext ? 1 : 0;
@@ -1874,7 +1874,7 @@ static void setChoice(int id, int v)
 			break;
 #ifdef SMB
 		case S_SMBED_KIND:
-			smbed.kind = v == 1 ? 3 : v == 2 ? 1 : 2;
+			smbed.kind = v == 3 ? 1 : v == 2 ? 3 : v == 1 ? 2 : 0;
 			dash_changed = 0;
 			break;
 		case S_SMBED_PLAINTEXT:
@@ -3467,10 +3467,10 @@ static void runAction(int id)
 			    "# are ignored -- remove the # from a block's lines to use that block.\n"
 			    "#\n"
 			    "# NAME  the label shown for SMB2/3 (smb:/NAME). SMB1 opens via\n"
-			    "# smb1:/ without a label.\n"
+			    "# smbold:/ without a label.\n"
 			    "# USERNAME / PASSWORD  exactly as the server lists them (31 characters\n"
 			    "#   each). PASSWORD = with nothing after it is a blank password.\n"
-			    "# VERSION  optional: 1 = an SMB1-only server (opens via smb1:/);\n"
+			    "# VERSION  optional: 1 = an SMB1-only server (opens via smbold:/);\n"
 			    "#   2 or 3 = the smb: driver. Use 3 to mark a server that supports SMB3.\n"
 			    "# URL  smb://<IP address>:<port>/<share>. Give the port (445 for most\n"
 			    "#   servers) here only, never on the NAME line.\n"
@@ -3503,7 +3503,7 @@ static void runAction(int id)
 			    "# PASSWORD = secret\n"
 			    "# URL = smb://192.168.1.100:1445/games\n"
 			    "#\n"
-			    "# An SMB1-only server (PS2-Servers' SMBv1 card), opened via smb1:/:\n"
+			    "# An SMB1-only server (PS2-Servers' SMBv1 card), opened via smbold:/:\n"
 			    "# NAME = OLDBOX\n"
 			    "# VERSION = 1\n"
 			    "# URL = smb://192.168.0.30:445/PS2SMB\n"
@@ -4147,7 +4147,7 @@ static void settingsDraw(void)
 		dashGfxPopAlpha();
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
+	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top_anim, ITEM_ROWS, c->n);
 	/* help line */
 	{
 		const SetItem *it = curItem();

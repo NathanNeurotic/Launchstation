@@ -107,7 +107,7 @@ The full kit packages external loaders alongside Launchstation. Its POPStarter/E
 
 ### In-app updates and rollback
 
-Open **Settings → Storage & devices → MMCE backups → Check for updates**. The updater offers only a release verified as newer than the running commit, downloads the matching standard/DS34 PSU, checks its digest and executable, and replaces the running executable. No backup copy is kept. Restart to use the new build.
+Open **Settings → Storage & devices → MMCE backups → Check for updates**. The updater offers only a release verified as newer than the running commit, downloads the matching standard/DS34 PSU, checks its digest and executable, and replaces the running executable. No backup copy is kept. After installation, choose **Launch** to start the new build immediately, or restart later.
 
 Missing certificate/music companion files can be added from a verified package; existing files, including custom music, are preserved. The update is downloaded into RAM, verified, and written straight over the running ELF (no second file, rename or backup); if that write fails part-way the ELF must be copied to the device again. Older updaters may require a one-time manual install of the complete current app package; retain your settings.
 
@@ -189,7 +189,7 @@ Device entries depend on the build, console and visibility settings. Listing a t
 | `xfrom0:/`, `dvr_hdd0:/` | PSX DESR flash and DVR HDD paths; hidden on other consoles. |
 | `cdfs:/` | CD/DVD filesystem. |
 | `udpfs:/` | Network storage using [UDPFSD](https://github.com/pcm720/udpfsd). |
-| `smb:/<NAME>`, `smb1:/` | Configured SMB2/SMB3 shares and one optional SMB1 share. |
+| `smb:/<NAME>`, `smbold:/` | Saved shares negotiate SMB2/3 then SMB1 automatically, or enforce an exact VERSION. Saved `smb1:` launch-key, bookmark, and dashboard paths migrate automatically. |
 | `nfs:/<NAME>` | Configured NFSv4.0 shares. |
 | `host:/` | [PS2Link](https://github.com/ps2dev/ps2link) host filesystem in networking-enabled builds. |
 

@@ -25,6 +25,8 @@ fingerprints = {
 required = {
     # GitHub API/website ECC chain; absent in the original failing bundle.
     "c90f26f0fb1b4018b22227519b5ca2b53e2ca5b3be5cf18efe1bef47380c5383",
+    # Archive.org system/language downloads (Go Daddy Root G2).
+    "45140b3247eb9cc8c5b4f0d7b53091f73292089e6e5a63e2749dd3aca9198eda",
     # Retained Sectigo RSA and Let's Encrypt release-download roots.
     "7bb647a62aeeac88bf257aa522d01ffea395e0ab45c73f93f65654ec38f25a06",
     "96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6",

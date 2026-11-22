@@ -254,6 +254,7 @@ Input > Confirm button), as the classic browser did.
 | L2 / R2 | Page jump |
 | START | Dashboard menu from any native screen (home, refresh library, settings, reboot IOP, power off; Files is a tab); START again closes it. SELECT + START keeps the START launch key |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
+| L3 | Preview the next animated background and its preset colours; tiles/text/other customization and the saved theme stay unchanged |
 | R3 (HOME) | Hide/show the interface to see only the animated background |
 
 Legacy boot behaviour is kept: `Init_Delay` (default 1 s) is honoured,

@@ -282,6 +282,8 @@ char *dashThemeFolderText(int *out_len);
 int dashThemeFolderWrite(const char *folder, const char *text, int len);
 const char *dashThemeBgName(int kind);
 const char *dashThemeBgId(int kind);
+int dashThemeNextBackground(int current); /* session-only L3 preview: animated scenes only */
+int dashThemeBackgroundPreset(int kind);  /* preset supplying the scene's two background colours */
 /* focused application for the app-aware wallpaper (set while drawing) */
 enum DashThemeGroup {
 	DASH_TG_BACKGROUND = 0,
@@ -687,7 +689,8 @@ enum DashAppFlags {
 	DASH_APP_META_PIN = 1 << 3,
 	DASH_APP_TRANSIENT = 1 << 4, /* recent/fav entry not found in library */
 	DASH_APP_ART_DEFERRED = 1 << 5, /* art lookup waits for the device driver */
-	DASH_APP_GAME = 1 << 6          /* GAMES entry: ISO path, category holds its game ID */
+	DASH_APP_GAME = 1 << 6,         /* GAMES entry: ISO path, category holds its game ID */
+	DASH_APP_GAME_ID_PENDING = 1 << 7 /* ISO ID is read on demand, not during list population */
 };
 
 enum DashArtState {
@@ -901,7 +904,8 @@ void dashDrawHeader(int section, float section_anim);
 void dashDrawClock(void);
 void dashDrawSectionTitle(float x, float y, const char *title, const char *subtitle);
 void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const char *body);
-void dashDrawScrollbar(float x, float y, float h, int first, int visible, int total);
+/* Fractional first follows the view's animated scroll position. */
+void dashDrawScrollbar(float x, float y, float h, float first, int visible, int total);
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength);
 /* Themed building blocks: every list, card and selection goes through
  * these so the theme's panel, border and highlight style apply everywhere. */
@@ -970,10 +974,12 @@ enum {
 	DASH_PICK_FOLDER,
 	DASH_PICK_LAUNCH /* ELF files plus the built-in MISC commands */
 };
+int dashHttpsCaPath(char *path, int path_size);
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 void dashModalSetMarks(unsigned char *marks);    /* next dashModalMenu(): Square toggles 0/1; other values fixed */
 void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg); /* next dashModalMenu(): Left/Right/Confirm change rows in place */
+void dashModalSetEditPopupRows(const unsigned char *popup_rows); /* next editable menu: 1 marks a submenu row */
 int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
@@ -1045,6 +1051,7 @@ extern const DashScreen dashFilesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
 extern const DashScreen dashGamesScreen;
+void dashGameEnsureId(DashApp *game);
 
 /* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);

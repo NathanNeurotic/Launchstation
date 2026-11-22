@@ -357,7 +357,7 @@ static int install_update_files(const char *parent, const char *leaf,
     }
 
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). %s%s%sRestart Launchstation to run the new build.",
+             "Update installed and verified (%d bytes). %s%s%sChoose Launch to run the new build now, or restart later.",
              size,
              added_ca ? "Installed updater CA. " : "",
              added_bgm ? "Installed BGM. " : "",

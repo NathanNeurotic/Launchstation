@@ -58,9 +58,10 @@ static iop_device_ops_t smbman_ops = {
 };
 
 // Launchstation: smb2man.irx (SMB2/3) owns "smb", so this SMB1 driver
-// registers as "smb1" next to it (SMBMAN_SMB1_DEVICE, set in ps2.yaml).
+// registers as "smbold" next to it (SMBMAN_SMB1_DEVICE, set in ps2.yaml).
+// iomanX treats trailing digits as unit numbers: "smb1" would reach "smb".
 #ifdef SMBMAN_SMB1_DEVICE
-#define SMBMAN_DEVICE_NAME "smb1"
+#define SMBMAN_DEVICE_NAME "smbold"
 #else
 #define SMBMAN_DEVICE_NAME "smb"
 #endif

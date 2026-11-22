@@ -1,6 +1,7 @@
 #include "launchelf.h"
 #include "init.h"
 #include "ftp_session.h"
+#include "filer_shared.h"
 #include "main_startup.h"
 #include "dash_sound.h"
 #include "pccf_control.h"
@@ -162,7 +163,7 @@ static u8 have_ps2ip = 0;
 static u8 have_ps2ips = 0;
 #ifdef SMB
 static u8 have_smb2man = 0; /* smb:  SMB2/SMB3 */
-static u8 have_smbman = 0;  /* smb1: SMB1 */
+static u8 have_smbman = 0;  /* smbold: SMB1 */
 static u8 have_nfsman = 0;  /* nfs:  NFSv4.0 */
 static const char *smb_load_error[4]; /* by version: why load_smb() failed */
 #endif
@@ -945,7 +946,7 @@ void load_ps2host(void)
 //---------------------------------------------------------------------------
 #ifdef SMB
 /* Starts the network and the driver for smb: (version 2: smb2man.irx) or
- * smb1: (version 1: smbman.irx), then connects that version's shares from
+ * smbold: (version 1: smbman.irx), then connects that version's shares from
  * SMB2.CNF. Nothing touches the network before a device is opened.
  * A driver whose start routine refused to stay resident (AddDrv failed) is
  * not running, so only MODULE_RESIDENT_END counts as loaded. */
@@ -974,7 +975,7 @@ int load_smb(int version)
 	}
 #endif
 	if (!*have || !have_ps2ip || !have_ps2smap || !ps2dev9_loaded)
-		showLoadingModulesMsg(version == 1 ? "smb1" : version == SMB_PATH_NFS ? "nfs" : "smb");
+		showLoadingModulesMsg(version == 1 ? "smbold" : version == SMB_PATH_NFS ? "nfs" : "smb");
 
 	ensureCoreIoStackReady();
 	setupPowerOff();
@@ -2289,9 +2290,11 @@ void mcMultitapRefresh(void)
 		}
 		if (mtap_open[port])
 			mtap_open[port] = mtapGetConnection(port + 2) == 1;
-		else if (Timer() >= mtap_retry_after[port])
+		else if (Timer() >= mtap_retry_after[port]) {
 			mtap_open[port] = mtapPortOpen(port + 2) == 1;
-		else
+			if (mtap_open[port])
+				filerRootMcForgetMultitap(port);
+		} else
 			continue;
 		if (!mtap_open[port]) {
 			mtapPortClose(port + 2);

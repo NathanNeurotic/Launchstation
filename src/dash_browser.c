@@ -302,7 +302,7 @@ static void listRun(void *arg)
 #ifdef SMB
 	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path) &&
 	    smbSharesConnectedCount(SMB_PATH_V1) > 0) {
-		/* the SMB1 share is a folder of the one SMB device; fullPath opens smb1:/ */
+		/* the SMB1 share is a folder of the one SMB device; fullPath opens smbold:/ */
 		if (j->n < 0)
 			j->n = 0;
 		if (j->n < MAX_ENTRY) {
@@ -433,7 +433,7 @@ static void listDone(void *arg)
 		fb.sel_anim = (float)fb.sel;
 		fb.top_anim = -1.0f;
 #ifdef SMB
-		/* say why an smb: or smb1: listing is empty or failed */
+		/* say why an smb: or smbold: listing is empty or failed */
 		if (smb_dir_open_failed && smbPathKind(j->path) != SMB_PATH_NONE) {
 			int v = smbPathKind(j->path);
 			char why[96];
@@ -671,7 +671,7 @@ static void parentOf(const char *dir, char *out, int size, char *child, int chil
 static int fullPath(const FILEINFO *f, char *out, int size)
 {
 #ifdef SMB
-	/* the SMB1 share listed in smb:/ (listRun) is the smb1: device */
+	/* the SMB1 share listed in smb:/ (listRun) is the smbold: device */
 	const char *v1 = smbSharesV1Name();
 	if (v1 != NULL && smbPathKind(fb.dir) == SMB_PATH_V2 && smbIsRootPath(fb.dir) && !strcmp(f->name, v1))
 		return snprintf(out, size, "%s/", SMB_DEVICE_V1) < size;
@@ -2703,7 +2703,7 @@ static int tsEdit(FilerDateEditor *e)
 				tsDrawFolderRow(e, idx, 1, x, ry, w);
 			}
 			dashGfxScissorReset();
-			dashDrawScrollbar(x + w - 16, list_y, TS_LIST_H, top, TS_ROWS, e->count);
+			dashDrawScrollbar(x + w - 16, list_y, TS_LIST_H, camera / TS_ROW_H, TS_ROWS, e->count);
 			tsDrawHints(x + 24, y + h - 36, w - 48);
 			dashGfxPopAlpha();
 		}
@@ -3565,7 +3565,7 @@ static void browserDrawBody(void)
 		dashText(FB_X + FB_W * 0.5f - 44, FB_Y + 49, "Reading folder...", DASH_FS_SMALL, DASH_C_TEXT2);
 	} else if (rows_total == 0)
 		dashTextCenter(FB_X + FB_W * 0.5f, FB_Y + 50, "This folder is empty", DASH_FS_SMALL, DASH_C_TEXT3);
-	dashDrawScrollbar(FB_X + FB_W + 10, FB_Y, FB_ROWS * FB_ROW_H, fb.top, FB_ROWS, rows_total);
+	dashDrawScrollbar(FB_X + FB_W + 10, FB_Y, FB_ROWS * FB_ROW_H, fb.top_anim, FB_ROWS, rows_total);
 	{
 		DashHint h[5];
 		int n = 0;
@@ -3763,7 +3763,7 @@ static void browserTabDraw(void)
 }
 
 /* A background job that changes what the root lists (the boot-time network
- * config read adding smb1:) can finish after the root was built. Rebuild a
+ * config read adding smbold:) can finish after the root was built. Rebuild a
  * visible root in place; anywhere else the next openDir builds it fresh. */
 void dashBrowserRefreshRoot(void)
 {

@@ -565,7 +565,7 @@ static void drawGrid(void)
 		dashDrawTileFocus(x + GRID_CARD * 0.5f - w * 0.5f, y + GRID_CARD * 0.5f - w * 0.5f, w, w, w * 0.1f, 1.0f);
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(DASH_SAFE_R + 4, 104, 284, (int)(grid_cam / GRID_PITCH_Y), 3, (norder + GRID_COLS - 1) / GRID_COLS);
+	dashDrawScrollbar(DASH_SAFE_R + 4, 104, 284, grid_cam / GRID_PITCH_Y, 3, (norder + GRID_COLS - 1) / GRID_COLS);
 
 	if (a != NULL) {
 		/* focused title, right-aligned next to the view switcher */
@@ -648,7 +648,7 @@ static void drawList(void)
 		dashGfxPopAlpha();
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
+	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, list_top_anim, LIST_ROWS, norder);
 
 	/* detail panel */
 	if (a != NULL) {

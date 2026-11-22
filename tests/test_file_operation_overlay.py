@@ -74,12 +74,12 @@ static void dashTextFit(float x,float y,float w,const char *s,float fs,DashColor
  assert(x>=px+20 && x+w<=px+pw-20 && y>=py+20 && y+32*fs<=py+ph-20);
  if(emit)printf("TEXT|%.2f|%.2f|%.2f|%.2f|%s\n",x,y,w,fs,s);
 }
-static void dashPanel(float x,float y,float w,float h,float radius,DashColor c) {
- (void)radius;(void)c;
- assert(x>=px && x+w<=px+pw && y>=py && y+h<=py+ph && w>=0);
+static void loadingBarShape(float x,float y,float w,DashColor c) {
+ (void)c;
+ assert(x>=px && x+w<=px+pw && y>=py && y+8<=py+ph && w>=0);
  if(!bars) { assert(y>=text_bottom+12);track=w;bar_y=y; } else { fill=w;assert(w<=track); }
  bars++;
- if(emit)printf("BAR|%.2f|%.2f|%.2f|%.2f|%d\n",x,y,w,h,bars);
+ if(emit)printf("BAR|%.2f|%.2f|%.2f|8.00|%d\n",x,y,w,bars);
 }
 static void modalHintRow(float x,float y,int a,const char *b,int c,const char *d) {
  (void)x;(void)a;(void)b;(void)c;(void)d;assert(y>=bar_y+20);

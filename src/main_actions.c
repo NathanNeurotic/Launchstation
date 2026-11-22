@@ -558,6 +558,11 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #ifdef SMB
 	} else if (smbPathKind(path) != SMB_PATH_NONE) {
 		/* as udpfs: the loader reads the ELF while the SMB driver is resident */
+		if (!smbSharesActivePath(path, tmp, sizeof(tmp))) {
+			snprintf(ctx->main_msg, MAX_PATH, "SMB path is too long for its active protocol.");
+			return;
+		}
+		strcpy(path, tmp);
 		if (!isSmbDriverLoaded(smbPathKind(path)) && !load_smb(smbPathKind(path))) {
 			no_drivers = "SMB";
 			goto ELFnotFound;

@@ -85,7 +85,7 @@ typedef int64_t s64;
  * not running opens no file. A loader can also report a failure although
  * its drivers run, which a launch must survive as it always did. */
 enum {D_HDD,D_DVR,D_XFROM,D_MX4SIO,D_ILINK,D_MMCE,D_ATA,D_UDPFS,D_SMB,D_HOST,D_USB,D_COUNT};
-static int fail[D_COUNT],running[D_COUNT],misreport[D_COUNT],smb_silent;
+static int fail[D_COUNT],running[D_COUNT],misreport[D_COUNT],smb_silent,smb1_active;
 static int mx4sio_driver_running,console_is_PSX=1,vmcMounted[2];
 static int device(const char *p){
  if(!strncmp(p,"hdd",3)||!strncmp(p,"pfs",3))return D_HDD;
@@ -113,7 +113,11 @@ static void loadCdModules(void){}
 static void initHOST(void){load(D_HOST);}
 static int isPathDeviceStackLoaded(const char *p){return running[device(p)];}
 static const char *smb_error="";
-static int smbPathKind(const char *p){return !strncmp(p,"smb1:",5)?1:!strncmp(p,"smb:",4)?2:SMB_PATH_NONE;}
+static int smbPathKind(const char *p){return !strncmp(p,"smbold:",7)?1:!strncmp(p,"smb:",4)?2:SMB_PATH_NONE;}
+static int smbSharesActivePath(const char *p,char *out,int size){
+ if(smb1_active&&!strncmp(p,"smb:/SHARE/",11))return snprintf(out,size,"smbold:/%s",p+11)<size;
+ return snprintf(out,size,"%s",p)<size;
+}
 static int isSmbDriverLoaded(int v){(void)v;return running[D_SMB];}
 static int load_smb(int v){(void)v;int r=load(D_SMB);smb_error=r||smb_silent?"":"The network adapter is busy (UDPFS).";return r;}
 static const char *smbLoadError(int v){(void)v;return smb_error;}
@@ -230,7 +234,7 @@ static MainExecuteContext ctx={.main_msg=message};
 static int failures;
 static void reset(void){
  memset(fail,0,sizeof(fail));memset(running,0,sizeof(running));memset(misreport,0,sizeof(misreport));
- running[D_USB]=1;mx4sio_driver_running=smb_silent=fixpath_fail=0;smb_error="";
+ running[D_USB]=1;mx4sio_driver_running=smb_silent=smb1_active=fixpath_fail=0;smb_error="";
 }
 static void launch(const char *p){char in[MAX_PATH];snprintf(in,MAX_PATH,"%s",p);message[0]=launched[0]=0;ExecuteMainAction(in,&ctx);}
 static void expect(const char *what,const char *p,const char *want){
@@ -287,6 +291,11 @@ int main(void){
  }
  /* SMB without a recorded reason names its drivers. */
  reset();fail[D_SMB]=smb_silent=1;launch("smb:/SHARE/BOOT.ELF");expect("drivers fail","smb:/SHARE/BOOT.ELF","SMB drivers could not be loaded.");
+ /* A saved Automatic path follows its connected SMB1 session. */
+ reset();smb1_active=1;put("smbold:/BOOT.ELF",F_ELF);launch("smb:/SHARE/BOOT.ELF");
+ if(message[0]||strcmp(launched,"smbold:/BOOT.ELF")){
+  fprintf(stderr,"FAIL active SMB1 path: \"%s\", launched \"%s\"\n",message,launched);failures++;
+ }
  /* A loader that reports a failure while its drivers run still launches,
   * as the branches that ignored it always did. */
  static const int ignored[]={D_HDD,D_DVR,D_MMCE,D_ATA,D_UDPFS};

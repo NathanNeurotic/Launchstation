@@ -90,6 +90,8 @@ static int dashWorkerOnThread(void) { return 0; }
 static int dashWorkerIoBusy(void) { return worker_busy; }
 static int isPathDeviceStackLoaded(const char *path) { (void)path; return port1_loaded; }
 static void filerRootMcPollIdle(void) {}
+static int rediscovered[2];
+static void filerRootMcForgetMultitap(int port) { rediscovered[port]++; }
 ''' + retry_state + function(init, "void mcMultitapRefresh(void)") + r'''
 int main(void) {
  worker_busy=1;mcMultitapRefresh();assert(init_calls==0 && open_calls==0);
@@ -98,7 +100,9 @@ int main(void) {
  now_ms+=1000;mcMultitapRefresh();assert(open_calls==2);
  now_ms+=10000;mcMultitapRefresh();assert(open_calls==4); /* later insertion is retried */
  connected=3;now_ms+=10000;mcMultitapRefresh();assert(open_calls==6 && mtap_open[0] && mtap_open[1]);
+ assert(rediscovered[0]==1 && rediscovered[1]==1);
  now_ms+=1000;mcMultitapRefresh();assert(open_calls==6 && connection_calls==2);
+ assert(rediscovered[0]==1 && rediscovered[1]==1); /* steady taps keep card state */
  /* A present tap on port 0 must not disable the absent port 1 backoff. */
  mtap_open[0]=mtap_open[1]=0;mtap_retry_after[0]=mtap_retry_after[1]=0;
  connected=1;now_ms+=10000;open_calls=connection_calls=0;
@@ -115,6 +119,10 @@ int main(void) {
  assert(open_calls==0 && close_calls==0 && !mtap_open[1]);
  port1_loaded=1;mcMultitapRefresh();
  assert(open_calls==1 && mtap_open[1]); /* prompt re-detection */
+ connected=1;mcMultitapRefresh();assert(!mtap_open[1]);
+ int old_port0=rediscovered[0], old_port1=rediscovered[1];
+ connected=3;now_ms+=10000;mcMultitapRefresh();
+ assert(mtap_open[1] && rediscovered[1]==old_port1+1 && rediscovered[0]==old_port0);
  return 0;
 }
 '''

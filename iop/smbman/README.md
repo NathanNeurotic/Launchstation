@@ -1,4 +1,4 @@
-# smbman (SMB1) for Launchstation's `smb1:` device
+# smbman (SMB1) for Launchstation's `smbold:` device
 
 A copy of Open-PS2-Loader's `modules/network/smbman-ra` at
 NathanNeurotic/Open-PS2-Loader bfebafdda10fd7c090c4906e4c8930bc5000cceb,
@@ -16,8 +16,10 @@ these fixes, all described in that repository's `docs/PS2SDK-NOTES.md#smbman`:
 Launchstation changes, each marked "Launchstation" in the source:
 
 - The device name: `smb2man.irx` (SMB2/3) registers `smb`, so this driver
-  is built with `SMBMAN_SMB1_DEVICE` and registers `smb1` (see
-  `smb_fio.c`). Without the define it is `smb`, as upstream.
+  is built with `SMBMAN_SMB1_DEVICE` and registers `smbold` (see
+  `smb_fio.c`). The name cannot end in a digit because iomanX parses that
+  as a unit suffix: `smb1:` would be routed to `smb` unit 1. Without the
+  define it is `smb`, as upstream.
 - `_start` returns `MODULE_NO_RESIDENT_END` when the device cannot be
   registered (`smb_initdev()` fails). Upstream stays resident anyway, so
   the EE, which checks the start result, would take a driver with no

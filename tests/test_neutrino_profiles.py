@@ -146,6 +146,7 @@ static int dashModalChoice(const char *title, const char *const *labels, int cou
     (void)title; (void)labels; (void)count; return selected;
 }
 static void dashModalSetEdit(int (*edit)(int, int, void *), void *arg) { modal_edit = edit; modal_edit_arg = arg; }
+static void dashModalSetEditPopupRows(const unsigned char *rows) { (void)rows; }
 static int dashModalMenu(const char *title, const char *detail, DashMenuItem *items, int count, int selected) {
     (void)title; (void)detail; (void)items; (void)count; (void)selected;
     if (menu_script == 1) {
@@ -311,7 +312,8 @@ int main(void)
             {"ilink0:/DVD/Game.iso","ilink0:/CFG/NEUT-SLUS_123.45.cfg"},
             {"udpfs:/DVD/Game.iso","udpfs:/CFG/NEUT-SLUS_123.45.cfg"},
             {"smb:/Share/DVD/Game.iso","smb:/Share/CFG/NEUT-SLUS_123.45.cfg"},
-            {"smb1:/NAS/Game.iso","smb1:/NAS/CFG/NEUT-SLUS_123.45.cfg"},
+            {"smbold:/NAS/Game.iso","smbold:/CFG/NEUT-SLUS_123.45.cfg"},
+            {"smbold:/Game.iso","smbold:/CFG/NEUT-SLUS_123.45.cfg"},
             {"nfs:/Export/CD/Game.iso","nfs:/Export/CFG/NEUT-SLUS_123.45.cfg"}};
         size_t h;
         for (h=0;h<sizeof(games)/sizeof(games[0]);h++) {

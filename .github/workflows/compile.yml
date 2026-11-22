@@ -34,7 +34,7 @@ jobs:
         run: |
           python3 -m pip install --user numpy cryptography
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libmbedtls-dev
+          sudo apt-get install -y -qq libmbedtls-dev zlib1g-dev openssl exfatprogs e2fsprogs dosfstools
 
       # The smb: driver (iop/smb2man) built for the host under ASan/UBSan and driven against Samba.
       - name: "Test the smb: driver against Samba (tests/smb2man_live)"
@@ -57,7 +57,7 @@ jobs:
           python3 tests/test_scanlines.py
           python3 tests/test_pad_rumble.py
           python3 tests/test_fresh_install_defaults.py
-          python3 tests/test_panel_corners.py
+          python3 tests/test_rounded_borders.py
           python3 tests/test_browser_sort.py
           python3 tests/test_r3z_browser_wins.py
           python3 tests/test_udpfs_retry.py
@@ -84,10 +84,13 @@ jobs:
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
           python3 tests/test_smb_explicit_port.py
+          python3 tests/test_smb1_device_namespace.py
+          python3 tests/test_smb_legacy_paths.py
           python3 tests/test_smb_browser_failure.py
           python3 tests/test_smb_root_read.py
           python3 tests/test_smb_config_source.py
           python3 tests/test_smb_connect_state.py
+          python3 tests/test_smb_protocol_status.py
           python3 tests/test_smb_cnf_edit.py
           python3 tests/test_smb_settings_row.py
           python3 tests/test_nfs_shares.py
@@ -141,10 +144,19 @@ jobs:
           python3 tests/test_saildot4k_targeted_parity.py
           python3 tests/test_folder_date_arithmetic.py
           python3 tests/test_folder_date_popup.py
+          python3 tests/test_hdd_format.py
+          python3 tests/test_hdd_format_ui.py
+          python3 tests/test_hdd_installer.py
+          python3 tests/test_hdd_installer_finish.py
+          python3 tests/test_hdd_installer_stage.py
+          python3 tests/test_hdd_installer_apply.py
+          python3 tests/test_hdd_installer_preflight.py
+          python3 tests/test_save_archive_review.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_wallpaper_docs.py
           python3 tests/test_r3z_oct15_backport.py
           python3 tests/test_background_only_hotkeys.py
+          python3 tests/test_l3_background_preview.py
           python3 tests/test_dashboard_present_buffers.py
           python3 tests/test_theme_motion.py
           python3 tests/test_orb_seamless.py

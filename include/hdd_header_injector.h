@@ -16,5 +16,9 @@ int EditHddPartitionHeaderSystemCnf(const char *partition_name);
 extern int (*hddHeaderTextEditor)(char *path); /* TextEditor by default */
 int InjectHddPartitionHeaderFromSource(const char *partition_name, const char *source_device, char *source_dir, size_t source_dir_size,
                                        int *pfs_files_copied, int *pfs_copy_error);
+/* Fresh PFS launcher: generate PATINFO metadata around a downloaded SAS icon.
+ * The caller owns the unmounted partition and validates the ELF target. */
+int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
+                         const char *title, const void *icon, unsigned icon_size);
 
 #endif

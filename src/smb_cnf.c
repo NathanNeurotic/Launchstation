@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   smb_cnf.c
-//SMB2.CNF parser for the smb:, smb1: and nfs: devices. Text only, no device IO,
+//SMB2.CNF parser for the smb:, smbold: and nfs: devices. Text only, no device IO,
 //so tests/test_smb_shares.py compiles it on the host.
 //
 //The syntax is the one of wLaunchELF_R3Z's smb: device (idea and format by
@@ -105,7 +105,7 @@ int smbPathKind(const char *path)
 {
 	if (path == NULL)
 		return SMB_PATH_NONE;
-	if (!strncmp(path, SMB_DEVICE_V1, 5))
+	if (!strncmp(path, SMB_DEVICE_V1, sizeof(SMB_DEVICE_V1) - 1))
 		return SMB_PATH_V1;
 	if (!strncmp(path, SMB_DEVICE_V2, 4))
 		return SMB_PATH_V2;
@@ -120,10 +120,24 @@ int smbIsRootPath(const char *path)
 
 	if (kind == SMB_PATH_NONE)
 		return 0;
-	path += kind == SMB_PATH_V1 ? 5 : 4;
+	path += kind == SMB_PATH_V1 ? sizeof(SMB_DEVICE_V1) - 1 : 4;
 	while (*path == '/')
 		path++;
 	return *path == '\0';
+}
+
+int smbLegacyPath(char *path, int size)
+{
+	size_t tail;
+
+	if (path == NULL || strncmp(path, "smb1:", 5))
+		return 0;
+	tail = strlen(path + 5);
+	if (size < 0 || tail + sizeof(SMB_DEVICE_V1) > (size_t)size)
+		return -1;
+	memmove(path + sizeof(SMB_DEVICE_V1) - 1, path + 5, tail + 1);
+	memcpy(path, SMB_DEVICE_V1, sizeof(SMB_DEVICE_V1) - 1);
+	return 1;
 }
 
 /* 1 for 1/yes/on/true, 0 for 0/no/off/false, -1 for anything else */
@@ -150,7 +164,7 @@ static int parseVersionEx(const char *value, int *proto_version)
 		*proto_version = 3;
 		return 2;
 	}
-	*proto_version = 2;
+	*proto_version = 0;
 	return 0;
 }
 
@@ -364,7 +378,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 	memset(cfg, 0, sizeof(*cfg));
 	memset(&cur, 0, sizeof(cur));
 	cur.version = 2;
-	cur.proto_version = 2;
+	cur.proto_version = 0;
 	if (text == NULL)
 		return 0;
 	/* a UTF-8 BOM, as Windows Notepad may write */
@@ -406,7 +420,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			cur.version = parseVersionEx(value, &cur.proto_version);
 			if (cur.version == 0) {
 				cur.version = 2;
-				cur.proto_version = 2;
+				cur.proto_version = 0;
 				if (problem == NULL)
 					problem = "VERSION must be 1 (SMB1), 2 (SMB2), or 3 (SMB3)";
 			}
@@ -426,7 +440,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			closeShare(cfg, &cur, problem);
 			memset(&cur, 0, sizeof(cur));
 			cur.version = 2;
-			cur.proto_version = 2;
+			cur.proto_version = 0;
 			problem = NULL;
 			has_keys = 0;
 			continue;
@@ -493,7 +507,7 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 
 	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN)
 		return -1;
-	if (kind != 1 && kind != 2 && kind != 3)
+	if (kind != 0 && kind != 1 && kind != 2 && kind != 3)
 		return -1;
 	if (ip == NULL || !isIpv4(ip))
 		return -1;
@@ -512,7 +526,7 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 	if (url_len < 0 || url_len >= out_size)
 		return -1;
 	n = url_len;
-	if (kind != 2) {
+	if (kind != 0) {
 		url_len = snprintf(out + n, out_size - n, "VERSION = %d\n", kind);
 		if (url_len < 0 || url_len >= out_size - n)
 			return -1;

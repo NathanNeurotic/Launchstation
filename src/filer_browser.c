@@ -108,7 +108,7 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, SMB_DEVICE_V2))
 		return "smb:/";
 	if (!strcmp(name, SMB_DEVICE_V1))
-		return "smb1:/";
+		return "smbold:/";
 	if (!strcmp(name, SMB_DEVICE_NFS))
 		return "nfs:/";
 #endif
@@ -428,7 +428,7 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 	if ((isHddRootPath(path) || !strcmp(path, "dvr_hdd0:/")) || path[0] == 0)  //No menu cmds in partition/device lists
 		menu_disabled = 1;
 #ifdef SMB
-	/* smb:/ lists the connected shares; nothing can be made there. smb1:/
+	/* smb:/ lists the connected shares; nothing can be made there. smbold:/
 	 * is the top of its one share and stays writable. */
 	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))
 		write_disabled = 1;
@@ -2404,7 +2404,7 @@ int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, i
 int filerUnmountVmc(int slot)
 {
 	char dev[8];
-	int j;
+	int j, ret;
 
 	if (slot < 0 || slot > 1)
 		return -1;
@@ -2412,12 +2412,14 @@ int filerUnmountVmc(int slot)
 		return 0;
 
 	snprintf(dev, sizeof(dev), "vmc%d:", slot);
+	ret = fileXioUmount(dev);
+	if (ret < 0)
+		return ret;
 	if ((j = vmc_PartyIndex[slot]) >= 0) {
 		vmc_PartyIndex[slot] = -1;
 		if (j != vmc_PartyIndex[1 ^ slot])
 			Party_vmcIndex[j] = -1;
 	}
-	fileXioUmount(dev);
 	filerSizeCacheInvalidate(dev);
 	vmcMounted[slot] = 0;
 	return 0;

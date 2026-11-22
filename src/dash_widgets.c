@@ -1332,7 +1332,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			} else if (pk.dir[0] && pk.n == 0) {
 				dashTextCenter(x + w * 0.5f, ly + (first_entry + 1) * row_h, mode == DASH_PICK_FOLDER ? "No folders here" : "Nothing to choose here", DASH_FS_SMALL, DASH_C_TEXT3);
 			}
-			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n_rows);
+			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top_anim, rows, n_rows);
 			{
 				float hx = x + 24, hy = y + h - 36;
 				hx += dashDrawButton(hx, hy, dashOkIcon(), NULL) + 4;

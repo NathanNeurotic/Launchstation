@@ -1999,16 +1999,26 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
 }
 #endif
 #ifdef SMB
-/* smb: (SMB2/SMB3), smb1: (SMB1) and nfs: (NFSv4.0). The drivers are loaded on the UI
+/* smb: (SMB2/SMB3), smbold: (SMB1) and nfs: (NFSv4.0). The drivers are loaded on the UI
  * thread only (filerPrepareDirRead); a dashboard worker listing an
  * unloaded device gets -ENODEV rather than loading IOP modules itself. */
 int readSMB(const char *path, FILEINFO *info, int max)
 {
+	char active[MAX_PATH];
 	int version = smbPathKind(path);
-	int root = smbIsRootPath(path);
+	int root;
 	int n;
 
 	smb_dir_open_failed = 0;
+	if (version == SMB_PATH_V2) {
+		if (!smbSharesActivePath(path, active, sizeof(active))) {
+			smb_dir_open_failed = 1;
+			return -ENAMETOOLONG;
+		}
+		path = active;
+		version = smbPathKind(path);
+	}
+	root = smbIsRootPath(path);
 	if (version == SMB_PATH_V2 && root && !dashWorkerOnThread() &&
 	    smbSharesConfigured(SMB_PATH_V2) == 0 && smbSharesConfigured(SMB_PATH_V1) > 0) {
 		if (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)) {
@@ -2019,11 +2029,14 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		smb_dir_open_failed = 1;
 		return -ENOTCONN;
 	}
-	if (version == SMB_PATH_V2 && root && !isSmbDriverLoaded(SMB_PATH_V2) &&
-	    smbSharesConnectedCount(SMB_PATH_V1) > 0 && smbSharesKnown(SMB_PATH_V2) == 0)
+	if (version == SMB_PATH_V2 && root && smbSharesKnown(SMB_PATH_V2) == 0 &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0)
 		return 0;
 	if (!isSmbDriverLoaded(version)) {
 		if (dashWorkerOnThread() || !load_smb(version)) {
+			/* The dashboard builds the SMB1 row independently of SMB2. */
+			if (version == SMB_PATH_V2 && root && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+				return 0;
 			smb_dir_open_failed = 1;
 			return -ENODEV;
 		}
@@ -2039,9 +2052,11 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		smb_dir_open_failed = 1;
 		return -ENOTCONN;
 	}
+	if (version == SMB_PATH_V2 && root && smbSharesConnectedCount(SMB_PATH_V2) == 0 &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		return 0;
 	n = readNetDir(path, info, max, &smb_dir_open_failed);
-	if (root && n == 0 && smbSharesConnectedCount(version) == 0 &&
-	    !(version == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0))
+	if (root && n == 0 && smbSharesConnectedCount(version) == 0)
 		smb_dir_open_failed = 1;
 	return n;
 }
@@ -2492,7 +2507,7 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 #endif
 #ifdef SMB
-			/* smb1: only when SMB2.CNF has a VERSION = 1 share; the read
+			/* smbold: only when SMB2.CNF has a VERSION = 1 share; the read
 			 * touches no network but probes the memory cards, so while the
 			 * dashboard worker owns IO only the cached flag is safe */
 			strcpy(files[nfiles].name, SMB_DEVICE_V2);
@@ -2612,6 +2627,21 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 //--------------------------------------------------------------
 // Dashboard accessors (read-only views of state the browser already keeps).
 //--------------------------------------------------------------
+/* A new tap can contain different cards. Require a fresh reply before
+ * exposing any of its extra slots. The caller has drained pending libmc I/O. */
+void filerRootMcForgetMultitap(int port)
+{
+	int unit;
+
+	for (unit = port + 2; unit < MC_UNITS; unit += 2) {
+		root_mc_present[unit] = 0;
+		root_mc_polled[unit] = 0;
+		root_mc_failures[unit] = 0;
+		root_mc_known_type[unit] = 0;
+		root_mc_known_free[unit] = -1;
+	}
+}
+
 int filerRootMcPresent(int port, int *type, int *free_kb)
 {
 	if (!mcUnitAvailable(port)) {

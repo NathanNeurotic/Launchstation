@@ -876,6 +876,18 @@ void initConfig(void)
 }
 //------------------------------
 //endfunc initConfig
+#ifdef SMB
+static void configLegacySmbPaths(void)
+{
+	int i;
+
+	for (i = 0; i < SETTING_LK_COUNT; i++)
+		smbLegacyPath(setting->LK_Path[i], MAX_PATH);
+	for (i = 0; i < MAX_PATH_PAD; i++)
+		smbLegacyPath(PathPad[i], MAX_PATH);
+}
+#endif
+
 //---------------------------------------------------------------------------
 // Load LAUNCHELF.CNF
 // Return value: 0==OK, -1==failure
@@ -1101,6 +1113,9 @@ int loadConfig(char *mainMsg, char *CNF)
 			}
 		}
 	}  //ends for
+#ifdef SMB
+	configLegacySmbPaths();
+#endif
 	if (CNF_version == 0)
 		DPRINTF("loadConfig: CNF_version missing, treating \"%s\" as legacy config.\n", cnf_path);
 	for (i = 0; i < SETTING_LK_BTN_COUNT; i++)

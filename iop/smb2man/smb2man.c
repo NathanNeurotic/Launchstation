@@ -234,6 +234,7 @@ struct smb2man_share
     uint32_t io_read_max, io_write_max;
     uint32_t retry_at;           // smb2man_seconds() before which no reconnect is tried
     uint16_t port, dialect;
+    int protocol;                // 0 = SMB2/3 automatic, 2 = SMB2 only, 3 = SMB3 only
     char name[SMB2_MAX_NAME_LEN];
     char ipstr[16];
     char user[32], password[32]; // Latin-1, as usmb2's NTLM code takes them
@@ -525,7 +526,7 @@ static int smb2man_negotiate(struct smb2man_share *sh, struct usmb2_context *u, 
 
     dialect = u->buf[4] | (u->buf[5] << 8);
     if (dialect != d0 && dialect != d1)
-        return -1;
+        return -2;
     *sign_required = (u->buf[2] & 0x02) ? 1 : 0; // SMB2_NEGOTIATE_SIGNING_REQUIRED
     sh->io_read_max = rd32(&u->buf[32]);
     sh->io_write_max = rd32(&u->buf[36]);
@@ -588,14 +589,22 @@ static int smb2man_connect(int s)
     strcpy(u->username, sh->user[0] ? sh->user : "Guest");
     strcpy(u->password, sh->password);
 
-    rv = smb2man_negotiate(sh, u, 0x0202, 0x0210, &sign_required);
-    if (rv == -2) {
-        smb2man_sock_close(u->fd);
-        u->fd = smb2man_tcp_connect(sh);
-        rv = u->fd < 0 ? -1 : smb2man_negotiate(sh, u, 0x0300, 0x0302, &sign_required);
+    if (sh->protocol == 3)
+        rv = smb2man_negotiate(sh, u, 0x0300, 0x0302, &sign_required);
+    else {
+        rv = smb2man_negotiate(sh, u, 0x0202, 0x0210, &sign_required);
+        if (rv == -2 && sh->protocol == 0) {
+            smb2man_sock_close(u->fd);
+            u->fd = smb2man_tcp_connect(sh);
+            if (u->fd < 0) {
+                rv = -SMB2_CONNECT_ERR_CONN;
+                goto fail;
+            }
+            rv = smb2man_negotiate(sh, u, 0x0300, 0x0302, &sign_required);
+        }
     }
     if (rv < 0) {
-        rv = -SMB2_CONNECT_ERR_PROT;
+        rv = rv == -1 ? -SMB2_CONNECT_ERR_CONN : -SMB2_CONNECT_ERR_PROT;
         goto fail;
     }
     // 3.x signs with AES-CMAC, which this driver does not implement: refuse rather than send unsigned.
@@ -1496,7 +1505,8 @@ static int smb2man_connect_devctl(const smb2Connect_in_t *in)
 
     // Every field NUL-terminated within its size: the EE's buffers are copied in whole.
     if (memchr(in->name, 0, sizeof(in->name)) == NULL || memchr(in->url, 0, sizeof(in->url)) == NULL ||
-        memchr(in->username, 0, sizeof(in->username)) == NULL || memchr(in->password, 0, sizeof(in->password)) == NULL)
+        memchr(in->username, 0, sizeof(in->username)) == NULL || memchr(in->password, 0, sizeof(in->password)) == NULL ||
+        (in->protocol != 0 && in->protocol != 2 && in->protocol != 3))
         return -SMB2_CONNECT_ERR_URL;
     strcpy(name, in->name);
     if (name[0] == '\0' || strchr(name, '/') || strchr(name, '\\'))
@@ -1526,6 +1536,7 @@ static int smb2man_connect_devctl(const smb2Connect_in_t *in)
         strcpy(sh->user, user);
         strcpy(sh->password, password);
         strcpy(sh->name, name);
+        sh->protocol = in->protocol;
         rv = smb2man_connect(free_slot);
     }
     if (rv < 0)

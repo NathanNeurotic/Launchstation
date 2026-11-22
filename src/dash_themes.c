@@ -143,6 +143,19 @@ const char *dashThemeBgId(int kind)
 	return (kind >= 0 && kind < DASH_BG_COUNT) ? bg_ids[kind] : "solid";
 }
 
+int dashThemeNextBackground(int current)
+{
+	int candidate = current;
+	int i;
+
+	for (i = 0; i < DASH_BG_COUNT; i++) {
+		candidate = (candidate + 1) % DASH_BG_COUNT;
+		if (candidate != DASH_BG_SOLID && candidate != DASH_BG_GRADIENT && candidate != DASH_BG_IMAGE)
+			return candidate;
+	}
+	return DASH_BG_TUNNEL;
+}
+
 //--------------------------------------------------------------
 // Presets
 //--------------------------------------------------------------
@@ -438,6 +451,32 @@ void dashThemeLoadPreset(int i, DashTheme *t)
 			t->clock = DASH_CLOCK_STANDARD;
 			t->clock_seconds = 0;
 			break;
+	}
+}
+
+int dashThemeBackgroundPreset(int kind)
+{
+	switch (kind) {
+		case DASH_BG_SOLID: return P_BLACK;
+		case DASH_BG_GRADIENT: return P_BIOSBLUE;
+		case DASH_BG_MIST:
+		case DASH_BG_CLOUDS: return P_MIST;
+		case DASH_BG_TOWERS: return P_TOWERS;
+		case DASH_BG_DISC: return P_DISC;
+		case DASH_BG_ORBIT: return P_MINIMAL;
+		case DASH_BG_CLOCKRING: return P_CLOCKRING;
+		case DASH_BG_GRID: return P_MCGRID;
+		case DASH_BG_LINES: return P_BOOTLINES;
+		case DASH_BG_CUBES: return P_CUBES;
+		case DASH_BG_STREAM: return P_STREAM;
+		case DASH_BG_TILES: return P_MCBLUE;
+		case DASH_BG_BRUSHED: return P_BRUSHED;
+		case DASH_BG_WAVE: return P_PSX;
+		case DASH_BG_CRYSTAL:
+		case DASH_BG_IMAGE: return P_CRYSTAL;
+		case DASH_BG_TUNNEL:
+		case DASH_BG_STREAKS:
+		default: return P_OSD;
 	}
 }
 

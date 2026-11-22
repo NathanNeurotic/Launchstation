@@ -7,6 +7,20 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 
+receiver = (root / "src/pc_game_receiver.c").read_text()
+assert '#include "filer_size_cache.h"' in receiver
+for signature, paths in (
+    ("static void writeResult(", ("PC_RECV_RESULT",)),
+    ("static int copyWithResume(", ("dest",)),
+    ("static void receiveGames(", ("PC_RECV_STAGE_DIR", "dest")),
+    ("int pcGameReceiverPoll(", ("PC_RECV_REQUEST",)),
+):
+    start = receiver.index(signature)
+    end = receiver.index("\n}", start)
+    body = receiver[start:end]
+    for path in paths:
+        assert f"filerSizeCacheInvalidate({path});" in body, (signature, path)
+
 
 def function(source, signature):
     start = source.index(signature)

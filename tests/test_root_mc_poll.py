@@ -71,6 +71,7 @@ code += function(filer, "static void rootMcPollNext(")
 code += function(filer, "static void rootMcPollFailed(")
 code += function(filer, "int pollRootMemoryCardDevices(")
 code += function(filer, "int filerRootMcPresent(")
+code += function(filer, "void filerRootMcForgetMultitap(")
 code += function(filer, "void filerRootMcPollIdle(void)\n{")
 code += r'''
 static void run(int steps) { int i; for (i = 0; i < steps; i++) { pollRootMemoryCardDevices(); now_ms += 600; } }
@@ -140,7 +141,18 @@ int main(void) {
     assert(filerRootMcPresent(2,NULL,NULL)==1 && filerRootMcPresent(4,NULL,NULL)==1 &&
            filerRootMcPresent(6,NULL,NULL)==1);
     open_port0_on_refresh=0;
-    puts("PASS: root polling retries a busy-skipped multitap refresh");
+    /* Newly discovered taps must wait for fresh card replies. Keep the
+     * direct slots and the other tap's results as they were. */
+    mtap_open[1]=1;root_mc_present[3]=root_mc_polled[3]=1;
+    root_mc_failures[2]=2;
+    filerRootMcForgetMultitap(0);
+    assert(filerRootMcPresent(2,NULL,NULL)==-1 && filerRootMcPresent(4,NULL,NULL)==-1);
+    assert(!root_mc_failures[2] && !root_mc_known_type[2] && root_mc_known_free[2]==-1);
+    assert(filerRootMcPresent(0,NULL,NULL)==1 && filerRootMcPresent(3,NULL,NULL)==1);
+    mtap_open[1]=0;
+    run(20);
+    assert(filerRootMcPresent(2,NULL,NULL)==1);
+    puts("PASS: root polling retries a busy-skipped multitap refresh and forgets replaced tap cards");
     /* An unbound card client (failed start) is never polled; opening a card
      * retries the start, after which polling resumes. */
     filerRootMcPollIdle();mc_rpc_ready=0;info_before=info_calls;
