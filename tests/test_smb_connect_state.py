@@ -233,6 +233,27 @@ int main(void)
     assert(calls1 == 0 && calls2 == 1 && smb_cfg.share[0].active_version == 1);
     assert(smb_cfg.share[1].state == SMB_STATE_FAILED && smb_cfg.share[1].active_version == 0);
 
+    /* Explicit SMB1 cannot displace an Automatic share already using the session. */
+    reset_case();
+    config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\nNAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\n";
+    separate_results = 1; result1 = 0; result2 = -SMB2_CONNECT_ERR_PROT;
+    smbSharesConnect(2, 1);
+    assert(smb_cfg.share[0].active_version == 1 && calls1 == 1);
+    smbSharesConnect(1, 1);
+    assert(calls1 == 1 && smb_cfg.share[0].active_version == 1);
+    assert(smb_cfg.share[1].state == SMB_STATE_FAILED && smb_cfg.share[1].active_version == 0);
+
+    /* A failed configured SMB1 entry must not shadow the active fallback share. */
+    reset_case();
+    config_text = "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\nNAME=NEW\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_PROT; result1 = -123;
+    smbSharesConnect(1, 1);
+    assert(smb_cfg.share[0].state == SMB_STATE_FAILED && smb_cfg.share[0].active_version == 0);
+    result1 = 0;
+    smbSharesConnect(2, 1);
+    assert(smb_cfg.share[1].active_version == 1);
+    assert(smbSharesV1Name() != NULL && !strcmp(smbSharesV1Name(), "NEW"));
+
     /* A failed fallback reports the SMB1 error, not a generic SMB2 one. */
     reset_case();
     config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\n";

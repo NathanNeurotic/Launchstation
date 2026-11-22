@@ -48,11 +48,15 @@ typedef struct smb2man_share {
 
 static smb2man_share shares[1];
 static unsigned session_gen;
-static int refuse_2, calls;
+static int refuse_2, calls, fail_reconnect, tcp_calls;
 static uint16_t offered[2][2];
 
 static void smb2man_free_session(int s) { shares[s].u = NULL; }
-static int smb2man_tcp_connect(const struct smb2man_share *sh) { (void)sh; return 10; }
+static int smb2man_tcp_connect(const struct smb2man_share *sh) {
+    (void)sh;
+    tcp_calls++;
+    return fail_reconnect && tcp_calls > 1 ? -1 : 10;
+}
 static void smb2man_sock_close(int fd) { (void)fd; }
 static int smb2man_negotiate(struct smb2man_share *sh, struct usmb2_context *u, uint16_t d0, uint16_t d1,
                              int *sign_required)
@@ -75,7 +79,8 @@ static void reset(int protocol, int refuse) {
     memset(shares, 0, sizeof(shares));
     shares[0].protocol = protocol;
     refuse_2 = refuse;
-    calls = 0;
+    fail_reconnect = 0;
+    tcp_calls = calls = 0;
     memset(offered, 0, sizeof(offered));
 }
 int main(void) {
@@ -91,6 +96,10 @@ int main(void) {
     assert(smb2man_connect(0) == 0 && calls == 2);
     assert(offered[0][0] == 0x0202 && offered[0][1] == 0x0210);
     assert(offered[1][0] == 0x0300 && offered[1][1] == 0x0302);
+
+    reset(0, 1);
+    fail_reconnect = 1;
+    assert(smb2man_connect(0) == -SMB2_CONNECT_ERR_CONN && calls == 1 && tcp_calls == 2);
     free(shares[0].u);
     puts("PASS: exact SMB2/SMB3 and automatic two-stage negotiation");
     return 0;

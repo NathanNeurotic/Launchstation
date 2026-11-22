@@ -388,7 +388,10 @@ void smbSharesConnect(int version, int retry_failed)
 			continue;
 		if (sh->state == SMB_STATE_FAILED && !retry_failed)
 			continue;
-		ret = version == 1 ? connectSmb1(sh) : version == SMB_PATH_NFS ? connectNfs(sh) : connectSmb2(sh);
+		if (version == 1 && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+			ret = SMB1_ERR_BUSY;
+		else
+			ret = version == 1 ? connectSmb1(sh) : version == SMB_PATH_NFS ? connectNfs(sh) : connectSmb2(sh);
 		if (version == SMB_PATH_V2 && sh->proto_version == 0 && ret == -SMB2_CONNECT_ERR_PROT) {
 			/* smb2man discards a session that failed negotiation. smbman has one
 			 * session: never displace a different SMB1 share for a fallback. */
@@ -426,9 +429,12 @@ const char *smbSharesV1Name(void)
 {
 	int i;
 
+	/* A failed configured SMB1 entry must not shadow the active session. */
 	for (i = 0; smb_cfg_loaded && i < smb_cfg.count; i++)
-		if (smb_cfg.share[i].state != SMB_STATE_INVALID &&
-		    (smb_cfg.share[i].version == 1 || smb_cfg.share[i].active_version == 1))
+		if (smb_cfg.share[i].state == SMB_STATE_CONNECTED && smb_cfg.share[i].active_version == 1)
+			return smb_cfg.share[i].name;
+	for (i = 0; smb_cfg_loaded && i < smb_cfg.count; i++)
+		if (smb_cfg.share[i].version == 1 && smb_cfg.share[i].state != SMB_STATE_INVALID)
 			return smb_cfg.share[i].name;
 	return NULL;
 }

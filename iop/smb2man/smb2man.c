@@ -596,7 +596,11 @@ static int smb2man_connect(int s)
         if (rv == -2 && sh->protocol == 0) {
             smb2man_sock_close(u->fd);
             u->fd = smb2man_tcp_connect(sh);
-            rv = u->fd < 0 ? -1 : smb2man_negotiate(sh, u, 0x0300, 0x0302, &sign_required);
+            if (u->fd < 0) {
+                rv = -SMB2_CONNECT_ERR_CONN;
+                goto fail;
+            }
+            rv = smb2man_negotiate(sh, u, 0x0300, 0x0302, &sign_required);
         }
     }
     if (rv < 0) {

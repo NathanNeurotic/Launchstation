@@ -1874,7 +1874,7 @@ static void setChoice(int id, int v)
 			break;
 #ifdef SMB
 		case S_SMBED_KIND:
-			smbed.kind = v == 3 ? 1 : v == 2 ? 2 : v == 1 ? 3 : 0;
+			smbed.kind = v == 3 ? 1 : v == 2 ? 3 : v == 1 ? 2 : 0;
 			dash_changed = 0;
 			break;
 		case S_SMBED_PLAINTEXT:
