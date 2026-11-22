@@ -170,6 +170,8 @@ static void mbedtls_entropy_free(int *entropy) { assert(*entropy); }
 program += function("static void set_error(")
 program += function("static void tls_free(")
 program += function("static void tls_verify_error(")
+program += source[source.index('static const unsigned char *cloud_ca_snapshot;'):
+                  source.index('static int tls_open(')]
 program += function("static int tls_open(")
 program += r'''
 static void reset(int result,uint32_t flags) {

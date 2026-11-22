@@ -982,6 +982,8 @@ void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *ar
 void dashModalSetEditPopupRows(const unsigned char *popup_rows); /* next editable menu: 1 marks a submenu row */
 int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
+typedef struct { const char *label, *value; } DashTableRow;
+int dashModalConfirmTable(const char *title, const DashTableRow *rows, int count, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
 int dashModalChoice(const char *title, const char *const *options, int n, int current);
 
@@ -989,6 +991,8 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 void dashLoadingBegin(const char *title);
 void dashFileLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
+typedef void (*DashLoadingView)(const char *title);
+DashLoadingView dashLoadingSetView(DashLoadingView view);
 void dashLoadingFrame(const char *status, int done, int total); /* always draws */
 void dashLoadingHoldProbeStatus(int hold); /* DashStorageProbeStatus keeps the current text */
 void dashLoadingSetCancel(int cancelable); /* shows "Back: keep working in background" */

@@ -11,6 +11,10 @@ I_bdm_disconnect_bd
 bdm_IMPORTS_end
 #endif
 
+iomanX_IMPORTS_start
+I_iomanX_devctl
+iomanX_IMPORTS_end
+
 sifcmd_IMPORTS_start
 I_sceSifInitRpc
 I_sceSifSetRpcQueue
@@ -19,6 +23,7 @@ I_sceSifRpcLoop
 sifcmd_IMPORTS_end
 
 sysclib_IMPORTS_start
+I_memcpy
 I_memset
 I_strcmp
 sysclib_IMPORTS_end

@@ -123,7 +123,7 @@ static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,i
 code += function(orbs, "static void osdTime(")
 code += r"""
 static int modalButtons(const char *,const char *,const char *,int,DashColor,
-                        const char *,const char *,int,u64);
+                        const char *,const char *,int,u64,const DashTableRow *,int);
 static int dash_start_menu_blocked,blocked_polls,open_polls;
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
@@ -145,7 +145,7 @@ static void dashInputPoll(DashInput *in) {
     }
     if(nested && depth==0 && f==2) {
         depth=1;
-        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0));
+        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0,NULL,0));
         depth=0;
     }
 }
@@ -250,18 +250,18 @@ int main(void) {
     reset();nav_scenario=4;
     assert(dashModalMenu("interrupted",NULL,items,2,0)==-1 && !renders);
     reset();nav_scenario=4;
-    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0) && !renders);
+    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0,NULL,0) && !renders);
     /* Untimed dialogs leave START's Dashboard popup available. */
     assert(open_polls && !blocked_polls);
     reset();nav_scenario=5;blocked_polls=open_polls=0;
-    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
+    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000,NULL,0));
     assert(now_ms>=11000 && now_ms<11100);
     /* Timed previews block it, so the revert deadline keeps running. */
     assert(blocked_polls && !open_polls && !dash_start_menu_blocked);
     reset();nav_scenario=6;
-    assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
+    assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000,NULL,0));
     reset();nav_scenario=7;
-    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000));
+    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000,NULL,0));
     /* Square marks enabled rows whose mark is 0 or 1; other values and disabled rows stay. */
     DashMenuItem markable[]={{0,"a",NULL,0},{0,"b",NULL,1},{0,"c",NULL,0}};
     unsigned char marks[3]={0,0,2};
@@ -285,6 +285,11 @@ int main(void) {
     puts("PASS: ordinary/preview/nested menus, Square marks, L1/R1 pages, measured timing, RTC interpolation, no double ticks, motion off and stalls");
 }
 """
+if "const DashTableRow *table" in buttons:
+    code = 'typedef struct { const char *label,*value; } DashTableRow;\n#define dashText(...) ((void)0)\n' + code
+    code = code.replace("const char *,const char *,u64);", "const char *,const char *,u64,const DashTableRow *,int);")
+    for arguments in ('"OK","Cancel",0', '"Keep","Revert",7000', '"Keep","Revert",1032'):
+        code = code.replace(arguments + ")", arguments + ",NULL,0)")
 compiler = shutil.which("gcc") or shutil.which("clang")
 if not compiler:
     raise SystemExit("Host gcc or clang required")

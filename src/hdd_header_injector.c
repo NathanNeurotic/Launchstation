@@ -1164,20 +1164,28 @@ int InjectHddPartitionHeaderFromSource(const char *partition_name, const char *s
 int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
                          const char *title, const void *icon, unsigned icon_size)
 {
+	return InjectHddAppLauncherWithArg(partition_name, elf_path, title, icon, icon_size, NULL);
+}
+
+int InjectHddAppLauncherWithArg(const char *partition_name, const char *elf_path,
+                                const char *title, const void *icon, unsigned icon_size, const char *argument)
+{
 	char partition[MAX_NAME + 6], cnf[512], settings[1024];
 	iox_stat_t stat;
 	unsigned char *scratch;
 	int ret, cnf_size, settings_size;
 	u32 length, offset, lba;
 	if (!elf_path || !title || !icon || !icon_size || icon_size > hdd_header_files[HDD_HEADER_LIST_ICO].max_size ||
-	    strchr(elf_path, '\n') || strchr(elf_path, '\r') || strchr(title, '\n') || strchr(title, '\r')) return -EINVAL;
+	    strchr(elf_path, '\n') || strchr(elf_path, '\r') || strchr(title, '\n') || strchr(title, '\r') ||
+	    (argument && (strchr(argument, '\n') || strchr(argument, '\r')))) return -EINVAL;
 	ret = hddHeaderBuildPartitionPath(partition, sizeof(partition), partition_name);
 	if (ret < 0) return ret;
 	ret = fileXioGetStat(partition, &stat);
 	if (ret < 0) return ret;
 	if (stat.mode != APA_TYPE_PFS || stat.private_5 < 262144) return -EINVAL;
 	lba = stat.private_5;
-	cnf_size = snprintf(cnf, sizeof(cnf), "BOOT2 = PATINFO\nHDDUNITPOWER = NICHDD\npath = %s\n", elf_path);
+	cnf_size = snprintf(cnf, sizeof(cnf), "BOOT2 = PATINFO\nHDDUNITPOWER = NICHDD\npath = %s\n%s%s%s",
+	                    elf_path, argument ? "arg = " : "", argument ? argument : "", argument ? "\n" : "");
 	settings_size = snprintf(settings, sizeof(settings),
 	    "PS2X\ntitle0=%.64s\ntitle1=Homebrew\nbgcola=58\nbgcol0=0,3,43\nbgcol1=0,0,10\n"
 	    "bgcol2=1,0,9\nbgcol3=0,1,19\nlightdir0=1.0,-1.0,1.0\nlightdir1=-1.0,1.0,-1.0\n"
@@ -1191,7 +1199,7 @@ int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
 	for (int i = 0; i < 3; i++) {
 		const HddHeaderFileSpec *spec = &hdd_header_files[i];
 		const void *data = i == 0 ? (const void *)cnf : i == 1 ? (const void *)settings : icon;
-		length = i == 0 ? cnf_size : i == 1 ? settings_size : icon_size;
+		length = i == 0 ? (u32)cnf_size : i == 1 ? (u32)settings_size : icon_size;
 		offset = spec->data_offset - APA_HEADER_ATTRIBUTE_AREA_OFFSET;
 		memcpy(scratch + spec->data_offset, data, length);
 		memcpy(scratch + spec->offset_offset, &offset, 4);

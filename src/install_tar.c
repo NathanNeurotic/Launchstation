@@ -26,7 +26,7 @@ static int fill(Reader *r)
     r->z.next_out = r->output; r->z.avail_out = sizeof(r->output);
     ret = inflate(&r->z, Z_NO_FLUSH);
     r->pos = 0; r->count = sizeof(r->output) - r->z.avail_out;
-    if (r->count > 1024u * 1024 * 1024 - r->expanded) return -EFBIG;
+    if (r->count > 2048u * 1024 * 1024 - r->expanded) return -EFBIG;
     r->expanded += r->count;
     if (ret == Z_STREAM_END) {
         r->ended = 1;
@@ -144,7 +144,7 @@ int installTarGzip(const InstallArchiveIo *io, uint32_t bytes, const InstallTarS
     char *extra, longname[INSTALL_TAR_PATH] = "", longlink[INSTALL_TAR_PATH] = "";
     unsigned paxsize = 0, entries = 0;
     int ret = -EINVAL, initialized = 0;
-    if (!io || !io->read || !sink || !sink->begin || !sink->data || !sink->end || !bytes || bytes > 256u * 1024 * 1024) return -EINVAL;
+    if (!io || !io->read || !sink || !sink->begin || !sink->data || !sink->end || !bytes || bytes > 512u * 1024 * 1024) return -EINVAL;
     r = calloc(1, sizeof(*r)); e = calloc(1, sizeof(*e)); extra = malloc(8193);
     if (!r || !e || !extra) { ret = -ENOMEM; goto done; }
     r->io = io; r->size = bytes;
@@ -200,7 +200,7 @@ int installTarGzip(const InstallArchiveIo *io, uint32_t bytes, const InstallTarS
         if (*longlink) { strcpy(e->link, longlink); *longlink = 0; }
         if (paxsize) { ret = pax(e, extra, paxsize, 0); paxsize = 0; if (ret < 0) goto done; }
         if (path(e->name) < 0 || (e->type == '1' && path(e->link) < 0) ||
-            !strchr("0123456", e->type) || (e->type != '0' && e->size) || e->size > 16u * 1024 * 1024) { ret = -EINVAL; goto done; }
+            !strchr("0123456", e->type) || (e->type != '0' && e->size) || e->size > 256u * 1024 * 1024) { ret = -EINVAL; goto done; }
         ret = sink->begin(sink->context, e); if (ret < 0) goto done;
         remaining = e->size; padding = (512 - e->size % 512) % 512;
         while (remaining) {

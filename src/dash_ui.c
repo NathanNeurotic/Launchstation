@@ -1194,12 +1194,15 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 }
 
 static int modalButtons(const char *title, const char *body, const char *detail, int icon, DashColor icon_col,
-                        const char *ok_label, const char *cancel_label, int default_sel, u64 deadline)
+                        const char *ok_label, const char *cancel_label, int default_sel, u64 deadline,
+                        const DashTableRow *table, int table_count)
 {
 	int sel = default_sel;
 	char countdown[64];
 	float open = 0.0f, sel_anim = (float)default_sel, title_age = 0.0f;
-	float w = 440.0f, h;
+	float w = table ? 520.0f : 440.0f, h;
+	float scroll = 0, target = 0, table_h = 0;
+	const float table_row_h = 24.0f;
 	float x = (DASH_VW - w) * 0.5f, y;
 	int body_lines;
 	DashInput in;
@@ -1216,6 +1219,13 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			body_lines = 6;
 	}
 	h = 92.0f + body_lines * 24.0f + (detail ? 26.0f : 0.0f) + 50.0f;
+	if (table) {
+		int visible = (int)((DASH_VH - 40.0f - 150.0f) / table_row_h);
+		if (visible < 1) visible = 1;
+		if (visible > table_count) visible = table_count;
+		table_h = visible * table_row_h;
+		h = 150.0f + table_h;
+	}
 	y = (DASH_VH - h) * 0.5f;
 	dashInputFlush();
 
@@ -1232,7 +1242,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 		if (deadline && Timer() >= deadline) { dashInputFlush(); return 0; }
 		if (dashDashboardPending())
 			return 0;
-		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
+		if (table == NULL && cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
@@ -1246,7 +1256,15 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : 0;
 		}
+		if (table) {
+			if (in.pressed & DASH_IN_DOWN) target += table_row_h;
+			if (in.pressed & DASH_IN_UP) target -= table_row_h;
+			if (in.pressed & DASH_IN_RIGHT) target += table_h;
+			if (in.pressed & DASH_IN_LEFT) target -= table_h;
+			target = dashClampf(target, 0, table_count * table_row_h - table_h);
+		}
 		float dt = dashVisualUpdate();
+		scroll = dashApproach(scroll, target, 18.0f * dashAnimSpeed(), dt);
 		title_age += dt;
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), dt);
@@ -1266,6 +1284,24 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 		}
 		dashIcon(icon, x + 26, y + 24, 36, icon_col);
 		dashTextScrollTimed(x + 76, y + 28, w - 106, title, DASH_FS_LABEL, DASH_C_TEXT, title_age);
+		if (table) {
+			const float column = x + 204, row_y = y + 100;
+			float shift = 2.0f * floorf(scroll * 0.5f + 0.5f);
+			dashText(x + 30, y + 76, "Setting", DASH_FS_SMALL, DASH_C_ACCENT);
+			dashText(column, y + 76, "Selection", DASH_FS_SMALL, DASH_C_ACCENT);
+			dashGfxScissor(x + 24, row_y, w - 48, table_h);
+			for (int i = 0; i < table_count; i++) {
+				float ry = row_y + i * table_row_h - shift;
+				if (ry + table_row_h <= row_y || ry >= row_y + table_h) continue;
+				dashTextFit(x + 30, ry, column - x - 46, table[i].label, DASH_FS_SMALL, DASH_C_TEXT2);
+				dashTextFit(column, ry, x + w - 42 - column, table[i].value, DASH_FS_SMALL, DASH_C_TEXT);
+			}
+			dashGfxScissorReset();
+			if (table_count * table_row_h > table_h) {
+				dashDrawScrollbar(x + w - 20, row_y, table_h, scroll, (int)table_h, (int)(table_count * table_row_h));
+				drawButton(x + w - 34, y + 24, DI_DPAD_UD, NULL);
+			}
+		}
 		if (body)
 			dashTextWrap(x + 30, y + 78, w - 60, 6, body, DASH_FS_BODY * 0.9f, DASH_C_TEXT2, 24);
 		if (detail) {
@@ -1314,7 +1350,14 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger)
 {
 	return modalButtons(title, body, NULL, danger ? DI_WARNING : DI_INFO,
-	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0, 0);
+	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0, 0, NULL, 0);
+}
+
+int dashModalConfirmTable(const char *title, const DashTableRow *rows, int count, const char *ok_label, int danger)
+{
+	if (!rows || count < 1) return 0;
+	return modalButtons(title, NULL, NULL, danger ? DI_WARNING : DI_INFO,
+	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", 0, 0, rows, count);
 }
 
 /* Timed preview from saildot4k/Launchstation; ordinary confirmations retain
@@ -1322,13 +1365,13 @@ int dashModalConfirm(const char *title, const char *body, const char *ok_label, 
 int dashModalKeepVideo(void)
 {
 	return modalButtons("Keep this video mode?", "Confirm only if the picture is visible and stable.",
-	                    "", DI_INFO, DASH_C_ACCENT, "Keep", "Revert", 1, Timer() + 10000);
+	                    "", DI_INFO, DASH_C_ACCENT, "Keep", "Revert", 1, Timer() + 10000, NULL, 0);
 }
 
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail)
 {
 	DashColor c = (icon == DI_WARNING) ? DASH_C_WARM : DASH_C_ACCENT;
-	modalButtons(title, body, detail, icon, c, "OK", NULL, 0, 0);
+	modalButtons(title, body, detail, icon, c, "OK", NULL, 0, 0, NULL, 0);
 }
 
 //--------------------------------------------------------------
@@ -1381,6 +1424,15 @@ static void loadingBarShape(float x, float y, float w, DashColor color)
 	}
 }
 
+static DashLoadingView loading_view;
+
+DashLoadingView dashLoadingSetView(DashLoadingView view)
+{
+    DashLoadingView previous = loading_view;
+    loading_view = view;
+    return previous;
+}
+
 static void loadingDraw(void)
 {
 	float w = loading_file_operation ? 480.0f : 420.0f;
@@ -1393,6 +1445,11 @@ static void loadingDraw(void)
 		return;
 	dt = dashVisualUpdate();
 
+    if (loading_view != NULL) {
+        loading_view(loading_title);
+        loading_last_draw = Timer();
+        return;
+    }
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
 	dashRenderScene();
 	modalBackdrop(loading_open);

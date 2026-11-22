@@ -20,5 +20,7 @@ int InjectHddPartitionHeaderFromSource(const char *partition_name, const char *s
  * The caller owns the unmounted partition and validates the ELF target. */
 int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
                          const char *title, const void *icon, unsigned icon_size);
+int InjectHddAppLauncherWithArg(const char *partition_name, const char *elf_path,
+                                const char *title, const void *icon, unsigned icon_size, const char *argument);
 
 #endif

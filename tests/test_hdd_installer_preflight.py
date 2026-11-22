@@ -61,6 +61,11 @@ STUBS = r'''
 #include "launchelf.h"
 #include "hdd_install.h"
 #include "install_ext2.h"
+void hddInstallLog(const char *text, ...) { (void)text; }
+void hddInstallLogFlush(HddInstall *in) { (void)in; }
+void hddInstallStatus(const char *text, int done, int total) { (void)text; (void)done; (void)total; }
+void hddInstallProgress(const char *text, int done, int total) { (void)text; (void)done; (void)total; }
+void hddInstallOverall(uint64_t done, uint64_t total) { (void)done; (void)total; }
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>

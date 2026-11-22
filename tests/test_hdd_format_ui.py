@@ -21,9 +21,11 @@ code = r'''
 #include "hdd_format.h"
 #include "hdd_install.h"
 typedef uint32_t u32;
+typedef struct { const char *label, *value; } DashTableRow;
 typedef struct { HddFormatPlan format_plan; HddInstall *installer; int format_started, ret, op; } HddJob;
 #define ETH
 #define DI_WARNING 1
+#define DI_INFO 20
 #define DASH_TOAST_OK 2
 #define HOP_FORMAT 3
 #define HDIOC_TOTALSECTOR 4
@@ -51,32 +53,54 @@ static int dashModalChoice(const char *title, const char *const *options, int co
     return selected;
 }
 static int pickSize(const char *title, int min, int max, int initial) {
-    assert(strstr(title, "Additional APA") && min == (install_flags & HDD_INSTALL_PSBBN ? 6400 : install_flags & HDD_INSTALL_APPS ? 256 : 0) && max % 128 == 0 && initial <= max);
+    assert((strstr(title, "Additional APA") || strstr(title, "Reserved APA")) && min == (install_flags & HDD_INSTALL_PSBBN ? 0 : install_flags & HDD_INSTALL_APPS ? 256 : 0) && max % 128 == 0 && initial <= max);
     return reserve;
 }
 static void dashModalMessage(int icon, const char *title, const char *body, const char *detail) {
-    assert(icon == DI_WARNING && title && body); if(detail) cache_kept++; messages++;
+    assert(title && body);
+    if (icon == DI_INFO) return;
+    assert(icon == DI_WARNING); if(detail) cache_kept++; messages++;
 }
 static int dashModalConfirm(const char *title, const char *body, const char *button, int danger) {
     assert(title && body && button && danger == 1);
     confirms++;
-    if (confirms == 1 && selected == HDD_FORMAT_EXFAT)
-        assert(strstr(body, "PS2") && strstr(body, "32 KiB") && strstr(body, "one MBR"));
-    if (confirms == 1 && selected == HDD_FORMAT_APA_JAIL)
-        assert(strstr(body, "PS2") && strstr(body, "Recovery: 32 MiB") && strstr(body, "additional"));
+    assert(confirms == 2 && strstr(body,"Every partition") && !strcmp(button,"Format"));
     return confirms != cancel_confirm;
 }
+static const char *reviewValue(const DashTableRow *rows,int count,const char *label) {
+    for(int i=0;i<count;i++){assert(rows[i].label&&rows[i].value);if(!strcmp(rows[i].label,label))return rows[i].value;}
+    assert(0);return NULL;
+}
+static int dashModalConfirmTable(const char *title,const DashTableRow *rows,int count,const char *button,int danger) {
+    assert(!strcmp(title,"Review HDD format") && count>2 && count<=18 && !strcmp(button,"Continue") && danger==1);
+    assert(!confirms);confirms++;
+    assert(!strcmp(reviewValue(rows,count,"Format"),selected==0?"APA":selected==1?"exFAT":"APA Jail (APA + exFAT)"));
+    if(selected!=HDD_FORMAT_APA)assert(!strcmp(reviewValue(rows,count,"exFAT label / cluster"),"PS2 / 32 KiB"));
+    if(selected==HDD_FORMAT_APA_JAIL)assert(!strcmp(reviewValue(rows,count,"Recovery"),"32 MiB"));
+    if(install_flags&HDD_INSTALL_PSBBN){
+        assert(!strcmp(reviewValue(rows,count,"PSBBN language"),"French"));
+        assert(!strcmp(reviewValue(rows,count,"Music"),"1024 MiB"));
+        assert(!strcmp(reviewValue(rows,count,"Console HDD boot"),"Enable"));
+    }
+    return confirms!=cancel_confirm;
+}
+void dashHddInstallDebugBegin(HddInstall *in,const HddFormatPlan *p) { (void)in;(void)p; }
+void dashHddInstallDebugEnd(HddInstall *in,int ret) { (void)in;(void)ret; }
+void hddInstallLog(const char *format,...) { (void)format; }
+void hddInstallPhase(unsigned phase) { assert(phase==HDD_INSTALL_PHASE_FORMAT||phase==HDD_INSTALL_PHASE_DOWNLOAD); }
 int dashHddInstallChoose(HddInstall *in, int jail) { in->jail = jail; in->flags = install_flags; return 1; }
-int dashHddInstallPrepare(HddInstall *in) { assert(!confirms); strcpy(in->stage, "usb0:/cache"); return 1; }
+int dashHddInstallConfigure(HddInstall *in,unsigned max) { assert(max>=2048); in->music_mb=in->contents_mb=1024; return 1; }
+int dashHddInstallPrepare(HddInstall *in) { assert(!confirms && !jobs); strcpy(in->language.name,"French"); return 1; }
+int dashHddInstallPrepareStorage(HddInstall *in) { assert(confirms == 2 && reset == 1 && jobs == 1); strcpy(in->stage, in->jail ? "ata0:/PSBBN_DP_TEMP" : "pfs2:/PSBBN_DP_TEMP"); return 0; }
+void hddInstallRelease(HddInstall *in) { (void)in; }
 int hddInstallCleanup(HddInstall *in) { in->stage[0] = 0; return 0; }
-static int prepareTransferDeviceStacks(const char *a, const char *b) { assert(a && b); return 0; }
 static HddJob *jobNew(int operation) { HddJob *j = calloc(1, sizeof(HddJob)); j->op = operation; return j; }
 static void hddJobFree(HddJob *j) { freed++; free(j); }
 int hddFormatLoad(void) { assert(confirms == 2); loaded++; return load_error; }
 static void dashSoundShutdown(void) { assert(loaded); stopped++; }
 static int runJob(HddJob *j, const char *title, int cancelable) {
     assert(title && cancelable == 0);
-    if (j->op == HOP_DOWNLOAD_INSTALLER) { assert(!confirms && !stopped); downloads++; j->ret = download_error; return 1; }
+    if (j->op == HOP_DOWNLOAD_INSTALLER) { assert(confirms == 2 && stopped && reset == 1 && jobs == 1); assert(strstr(j->installer->stage, "/PSBBN_DP_TEMP")); downloads++; j->ret = download_error; return 1; }
     if (j->op == HOP_INSTALL_SOFTWARE) { assert(reset && confirms == 2); installed++; j->ret = install_error; j->format_started = 1; return 1; }
     assert(stopped); jobs++;
     actual = j->format_plan;
@@ -85,7 +109,7 @@ static int runJob(HddJob *j, const char *title, int cancelable) {
     return 1;
 }
 static void rebootIopAndReloadCoreStackSilent(void) { assert(jobs && started); reset++; }
-static void loadHddModules(void) { assert(reset || downloads); reloaded++; }
+static void loadHddModules(void) { assert(reset || install_flags); reloaded++; }
 static void dashSoundMaintain(void) { maintained++; }
 static void dashBgmStart(void) { bgm++; }
 static void dashToast(int icon, const char *text) { assert(icon == DASH_TOAST_OK && text); toasts++; }
@@ -129,10 +153,14 @@ int main(void) {
     clear(); total = 100 * 1024 * 2048; reserve = 8192; install_flags = 7; actFormat();
     assert(downloads == 1 && installed == 1 && confirms == 2 && jobs == 1 && reset == 2 && !messages && toasts == 1);
     clear(); total = 100 * 1024 * 2048; reserve = 8192; install_flags = 7; download_error = -EIO; actFormat();
-    assert(downloads == 1 && !confirms && !jobs && !stopped && messages == 1);
+    assert(downloads == 1 && confirms == 2 && jobs == 1 && stopped && reset == 1 && !installed && !toasts && cache_kept == 1 && messages == 1);
     clear(); total = 100 * 1024 * 2048; reserve = 8192; install_flags = 7; install_error = -EIO; actFormat();
     assert(downloads == 1 && installed == 1 && jobs == 1 && reset == 2 && !toasts && cache_kept == 1 && messages == 1);
-    puts("PASS: pre-erase download, failed-install cache retention, three format choices, PSX/FTP/capacity guards, two confirmations, cancellation, queue/load failures and storage reload after success/failure");
+    clear(); selected = HDD_FORMAT_APA; install_flags = 3; actFormat();
+    assert(downloads == 1 && installed == 1 && confirms == 2 && toasts == 1 && !messages);
+    clear(); total = 100 * 1024 * 2048; reserve = 8192; install_flags = 7; cancel_confirm = 2; actFormat();
+    assert(confirms == 2 && !downloads && !jobs);
+    puts("PASS: format-before-download, internal staging, failed-install cache retention, three format choices, PSX/FTP/capacity guards, two confirmations, cancellation, queue/load failures and storage reload after success/failure");
 }
 '''
 compiler = shutil.which("gcc") or shutil.which("cc")
@@ -141,7 +169,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-ui-") as temp:
     cfile, executable = Path(temp) / "check.c", Path(temp) / "check"
     cfile.write_text(code)
     subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-I", str(root / "include"),
-                    str(cfile), str(root / "src/hdd_format.c"), str(root / "src/hdd_format_upcase.c"),
+                    str(cfile), str(root / "src/hdd_format.c"), str(root / "src/hdd_install_plan.c"), str(root / "src/hdd_format_upcase.c"),
                     "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True, timeout=10)
 
@@ -189,6 +217,13 @@ int InjectHddPartitionHeaderFromSource(const char *a, const char *b, char *dir, 
 int HddHeaderListSourcePartitions(const char *source, HddHeaderSourcePartition *parts, int max, int *invalid) {
     (void)source; (void)parts; (void)max; (void)invalid; return 0;
 }
+void hddInstallLog(const char *text, ...) { (void)text; }
+void hddInstallLogFlush(HddInstall *in) { (void)in; }
+int hddInstallMountStage(HddInstall *in) { (void)in; return 0; }
+int hddInstallUnmountStage(HddInstall *in) { (void)in; return 0; }
+int hddInstallCreateStage(HddInstall *in) { (void)in; return 0; }
+int hddInstallCleanup(HddInstall *in) { (void)in; return 0; }
+int hddInstallEnableBoot(HddInstall *in) { (void)in; return 0; }
 int hddInstallDownload(HddInstall *in) { (void)in; return 0; }
 int hddInstallApply(HddInstall *in) { (void)in; return 0; }
 int hddInstallPsbbnPayload(void *in, const HddFormatIo *io) { (void)in; (void)io; return 0; }

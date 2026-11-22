@@ -30,6 +30,7 @@ code = r"""
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+static void (*loading_view)(const char *title);
 #include <string.h>
 typedef uint64_t u64;
 typedef int DashColor;
