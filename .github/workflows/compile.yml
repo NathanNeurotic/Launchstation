@@ -85,6 +85,7 @@ jobs:
           python3 tests/test_smb_shares.py
           python3 tests/test_smb_explicit_port.py
           python3 tests/test_smb1_device_namespace.py
+          python3 tests/test_smb_legacy_paths.py
           python3 tests/test_smb_browser_failure.py
           python3 tests/test_smb_root_read.py
           python3 tests/test_smb_config_source.py

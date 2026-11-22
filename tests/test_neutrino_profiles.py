@@ -312,7 +312,8 @@ int main(void)
             {"ilink0:/DVD/Game.iso","ilink0:/CFG/NEUT-SLUS_123.45.cfg"},
             {"udpfs:/DVD/Game.iso","udpfs:/CFG/NEUT-SLUS_123.45.cfg"},
             {"smb:/Share/DVD/Game.iso","smb:/Share/CFG/NEUT-SLUS_123.45.cfg"},
-            {"smbold:/NAS/Game.iso","smbold:/NAS/CFG/NEUT-SLUS_123.45.cfg"},
+            {"smbold:/NAS/Game.iso","smbold:/CFG/NEUT-SLUS_123.45.cfg"},
+            {"smbold:/Game.iso","smbold:/CFG/NEUT-SLUS_123.45.cfg"},
             {"nfs:/Export/CD/Game.iso","nfs:/Export/CFG/NEUT-SLUS_123.45.cfg"}};
         size_t h;
         for (h=0;h<sizeof(games)/sizeof(games[0]);h++) {

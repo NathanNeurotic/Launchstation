@@ -165,12 +165,14 @@ static int profilePath(const char *id, int slot, char *out, int size)
 static int profileDeviceRoot(const char *iso)
 {
 	static const char *const devices[] = { "mass", "usb", "ata", "mx4sio", "mmce", "ilink", "udpfs" };
-	static const char *const shares[] = { "smbold:/", "smb:/", "nfs:/" };
+	static const char *const shares[] = { "smb:/", "nfs:/" };
 	const char *p;
 	size_t i, n;
 
 	if (iso == NULL)
 		return 0;
+	if (!strncmp(iso, "smbold:/", 8))
+		return 8; /* one SMB1 share: its root, not smb:/<NAME>/ */
 	for (i = 0; i < sizeof(devices) / sizeof(devices[0]); i++)
 		if (!strncmp(iso, devices[i], strlen(devices[i]))) {
 			p = strstr(iso, ":/");

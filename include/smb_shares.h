@@ -118,6 +118,9 @@ int smbPathKind(const char *path);
  * where smb: and nfs: list their connected shares and nothing can be
  * written. */
 int smbIsRootPath(const char *path);
+/* In-place migration for saved paths from before the iomanX-safe rename.
+ * 1 = converted, 0 = not legacy, -1 = destination capacity is too small. */
+int smbLegacyPath(char *path, int size);
 
 #ifdef SMB
 /* PS2 side (smb_shares.c) */

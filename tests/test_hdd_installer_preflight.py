@@ -170,6 +170,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     linked = valid + [('__linux.1/bin/linked', '1', '__linux.1/bin/sh')]
     assert run(linked, []) == 0
     assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin/missing')], []) == -2
+    assert run(valid + [('__linux.1/bin/self', '1', '__linux.1/bin/self')], []) == -2
     assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin')], []) == -22
 
 print('PASS: PSBBN preflight accepts valid overlays and rejects empty replacements, missing parents, path conflicts, and invalid hard links')

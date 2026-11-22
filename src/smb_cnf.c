@@ -126,6 +126,20 @@ int smbIsRootPath(const char *path)
 	return *path == '\0';
 }
 
+int smbLegacyPath(char *path, int size)
+{
+	size_t tail;
+
+	if (path == NULL || strncmp(path, "smb1:", 5))
+		return 0;
+	tail = strlen(path + 5);
+	if (size < 0 || tail + sizeof(SMB_DEVICE_V1) > (size_t)size)
+		return -1;
+	memmove(path + sizeof(SMB_DEVICE_V1) - 1, path + 5, tail + 1);
+	memcpy(path, SMB_DEVICE_V1, sizeof(SMB_DEVICE_V1) - 1);
+	return 1;
+}
+
 /* 1 for 1/yes/on/true, 0 for 0/no/off/false, -1 for anything else */
 static int parseFlag(const char *value)
 {

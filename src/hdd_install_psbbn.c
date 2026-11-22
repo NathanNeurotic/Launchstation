@@ -163,13 +163,13 @@ static int begin(void *context, const InstallTarEntry *entry)
          * and configs are generated from this install's actual paths. */
         if (entry->type != '5' && (r == 8 || r == 9) && !strncmp(relative, "osdmenu/", 8)) return -EINVAL;
         if (r < 8) {
-            ret = preflightPath(p, entry);
-            if (ret < 0) return ret;
             if (entry->type == '1') {
                 ret = preflightPathType(p, entry->link);
                 if (ret < 0) return -ENOENT;
                 if (ret == '5') return -EINVAL;
             }
+            ret = preflightPath(p, entry);
+            if (ret < 0) return ret;
         }
         /* Conservative accounting: count language replacements a second time,
          * and charge one inode plus two indirect blocks for every entry. */
