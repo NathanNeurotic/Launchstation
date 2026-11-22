@@ -282,6 +282,8 @@ char *dashThemeFolderText(int *out_len);
 int dashThemeFolderWrite(const char *folder, const char *text, int len);
 const char *dashThemeBgName(int kind);
 const char *dashThemeBgId(int kind);
+int dashThemeNextBackground(int current); /* session-only L3 preview: animated scenes only */
+int dashThemeBackgroundPreset(int kind);  /* preset supplying the scene's two background colours */
 /* focused application for the app-aware wallpaper (set while drawing) */
 enum DashThemeGroup {
 	DASH_TG_BACKGROUND = 0,
