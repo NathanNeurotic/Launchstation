@@ -83,6 +83,7 @@ int installZipExtract(const InstallArchiveIo *io, uint32_t bytes, const char *na
         if (at > directory || available < 12) goto done;
         ret = io->read(io->context, at, descriptor, available >= 16 ? 16 : 12);
         if (ret < 0) goto done;
+        ret = -EINVAL;
         base = u32(descriptor) == 0x08074b50 ? 4 : 0;
         if ((base == 0 && available < 12) || (base == 4 && available < 16) ||
             u32(descriptor + base) != crc || u32(descriptor + base + 4) != compressed ||

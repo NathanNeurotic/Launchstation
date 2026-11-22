@@ -162,12 +162,12 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     zi, keep = archive_io(bytes(broken), [])
     assert lib.installZipExtract(c.byref(zi), len(broken), b'extras/FNTOSD', 100000, None) < 0
 
-    def stored_with_descriptor(signed=True, include=True):
+    def stored_with_descriptor(signed=True, include=True, valid=True):
         payload = b'descriptor payload'; name = b'extras/STORED'; crc = zlib.crc32(payload)
         local = (struct.pack('<I', 0x04034b50) + struct.pack('<5H', 20, 8, 0, 0, 0) +
                  struct.pack('<3I', 0, 0, 0) + struct.pack('<2H', len(name), 0) + name + payload)
         if include:
-            local += (struct.pack('<I', 0x08074b50) if signed else b'') + struct.pack('<3I', crc, len(payload), len(payload))
+            local += (struct.pack('<I', 0x08074b50) if signed else b'') + struct.pack('<3I', crc if valid else crc ^ 1, len(payload), len(payload))
         central = struct.pack('<I6H3I5H2I', 0x02014b50, 20, 20, 8, 0, 0, 0, crc, len(payload), len(payload),
                               len(name), 0, 0, 0, 0, 0, 0) + name
         end = struct.pack('<I4H2IH', 0x06054b50, 0, 0, 1, 1, len(central), len(local), 0)
@@ -179,6 +179,9 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
         assert lib.installZipExtract(c.byref(zi), len(packed), b'extras/STORED', 1000, None) == 0
         assert b''.join(extracted) == b'descriptor payload'
     packed = stored_with_descriptor(include=False)
+    zi, keep = archive_io(packed, [])
+    assert lib.installZipExtract(c.byref(zi), len(packed), b'extras/STORED', 1000, None) < 0
+    packed = stored_with_descriptor(valid=False)
     zi, keep = archive_io(packed, [])
     assert lib.installZipExtract(c.byref(zi), len(packed), b'extras/STORED', 1000, None) < 0
 

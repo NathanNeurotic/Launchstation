@@ -165,6 +165,11 @@ static int begin(void *context, const InstallTarEntry *entry)
         if (r < 8) {
             ret = preflightPath(p, entry);
             if (ret < 0) return ret;
+            if (entry->type == '1') {
+                ret = preflightPathType(p, entry->link);
+                if (ret < 0) return -ENOENT;
+                if (ret == '5') return -EINVAL;
+            }
         }
         /* Conservative accounting: count language replacements a second time,
          * and charge one inode plus two indirect blocks for every entry. */

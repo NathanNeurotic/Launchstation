@@ -210,4 +210,25 @@ with tempfile.TemporaryDirectory(prefix='save-archive-review-') as directory:
     lib.saveHashFinish(c.byref(hash_state), digest)
     assert digest.raw == expected.digest()
 
+    short_test = Path(directory) / 'short-max.c'
+    short_exe = Path(directory) / 'short-max'
+    short_test.write_text(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include "save_archive.h"
+int main(void) {
+    SaveArchive archive;
+    uint8_t input[12] = "Ps2PowerSave";
+    assert(!saveArchiveParse(&archive, input, sizeof(input), "short.max"));
+    return 0;
+}
+''')
+    subprocess.run(['gcc', '-std=c99', '-O1', '-g', '-Wall', '-Wextra', '-Werror',
+                    '-fsanitize=address,undefined', '-fno-sanitize-recover=undefined',
+                    '-I', str(ROOT / 'include'), str(short_test),
+                    *[str(ROOT / 'src' / name) for name in ('save_archive.c', 'save_lzari.c', 'save_sign.c')],
+                    '-lz', '-o', str(short_exe)], check=True)
+    subprocess.run([str(short_exe)], check=True)
+
 print('PASS: reviewed save parsers, card append, LZARI bounds/state, MAX/XPS/CBS integrity, and 64-bit SHA-1 length')

@@ -167,4 +167,9 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     conflict.append(('__linux.1/opt', '2', '/tmp'))
     assert run(conflict, [('__linux.1/opt/extra', '0', b'x')]) < 0
 
-print('PASS: PSBBN preflight accepts valid overlays and rejects empty replacements, missing parents, and cross-archive path conflicts')
+    linked = valid + [('__linux.1/bin/linked', '1', '__linux.1/bin/sh')]
+    assert run(linked, []) == 0
+    assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin/missing')], []) == -2
+    assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin')], []) == -22
+
+print('PASS: PSBBN preflight accepts valid overlays and rejects empty replacements, missing parents, path conflicts, and invalid hard links')

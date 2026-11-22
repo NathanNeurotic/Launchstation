@@ -269,8 +269,9 @@ static int maxSave(SaveArchive *s, uint8_t *d, size_t n)
 {
 	size_t pos = 0, length;
 	unsigned count;
-	uint32_t stored = le32(d + 12), crc;
+	uint32_t stored, crc;
 	if (n < 96) return 0;
+	stored = le32(d + 12);
 	if (stored) {
 		crc = crc32(0, NULL, 0);
 		for (size_t i = 0; i < n; i++) {
