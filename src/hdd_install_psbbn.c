@@ -141,6 +141,9 @@ static int preflightPath(Payload *p, const InstallTarEntry *entry)
         if (type < 0) {
             int ret = preflightPathAdd(p, parent, '5');
             if (ret < 0) return ret;
+            /* Match makeDir plus the conservative indirect-block allowance. */
+            p->inodes[p->route]++;
+            p->blocks[p->route] += 3;
         } else if (type != '5') return -ENOTDIR;
     }
     for (i = 0; i < p->path_count; i++) if (!strcmp(p->paths[i].name, entry->name)) {

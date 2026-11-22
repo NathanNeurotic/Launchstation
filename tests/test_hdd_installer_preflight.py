@@ -202,6 +202,9 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
                       ('__linux.1/opt/tools', '5', ''), ('__linux.1/opt', '5', '')]
     assert run(nested, []) == 0
 
+    implicit_budget = [(f'__linux.6/t{i:04}/a/b/c/d/e/f/g/h/file', '0', b'x') for i in range(1000)]
+    assert run(valid, implicit_budget) == -28
+
     conflict = [entry for entry in valid if not entry[0].startswith('__linux.1/opt')]
     conflict.append(('__linux.1/opt', '2', '/tmp'))
     assert run(conflict, [('__linux.1/opt/extra', '0', b'x')]) < 0
@@ -212,4 +215,4 @@ with tempfile.TemporaryDirectory(prefix='hdd-preflight-') as directory:
     assert run(valid + [('__linux.1/bin/self', '1', '__linux.1/bin/self')], []) == -2
     assert run(valid + [('__linux.1/bin/linked', '1', '__linux.1/bin')], []) == -22
 
-print('PASS: PSBBN preflight accepts valid overlays and implicit parents, tracks Linux requirements, and rejects path conflicts and invalid hard links')
+print('PASS: PSBBN preflight accepts valid overlays and implicit parents, tracks Linux requirements and space budgets, and rejects path conflicts and invalid hard links')
