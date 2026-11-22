@@ -26,6 +26,8 @@ code = r'''
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include "smb_shares.h"
+#define SMB 1
 #define MAX_PATH 1024
 #define DASH_TITLE_MAX 64
 #define DASH_LAUNCH_PENDING_ARGS 2
@@ -54,6 +56,8 @@ static int dash_active = 1;
 static int boot_init_pending = 1;
 static int muted, suspended, restored, bgm, calls, commit;
 static int shutdown_calls, pad_ended;
+static char opened_path[MAX_PATH];
+static int active_path_calls, neutrino_smb_calls;
 static jmp_buf launched;
 static void dashLaunchHook(const char *p) { (void)p; }
 static void dashMsgHook(const char *p) { (void)p; }
@@ -95,7 +99,16 @@ static void padEnd(void) { pad_ended++; }
 static void closeKeyboardIfOpened(void) {}
 static void dashGfxRestoreLegacyState(void) {}
 static void dashClassicUiInstall(int n) { (void)n; }
+int smbPathKind(const char *p) { return !strncmp(p, "smbold:", 7) ? SMB_PATH_V1 : !strncmp(p, "smb:", 4) ? SMB_PATH_V2 : SMB_PATH_NONE; }
+int smbSharesActivePath(const char *p, char *out, int size) {
+    active_path_calls++;
+    return !strncmp(p, "smb:/AUTO/", 10) ? snprintf(out, size, "smbold:/%s", p + 10) < size : snprintf(out, size, "%s", p) < size;
+}
+int smbSharesNeutrino(const char *p, SmbShare *share, char *dvd, size_t size, const char **problem) {
+    (void)p; memset(share, 0, sizeof(*share)); snprintf(dvd, size, "smb:game.iso"); *problem = NULL; neutrino_smb_calls++; return 1;
+}
 static int openPathForRead(const char *p, char *o, size_t n) {
+    snprintf(opened_path, sizeof(opened_path), "%s", p);
     if (o && n) snprintf(o, n, "%s", p);
     return (commit < 0 && (strstr(p, "neutrino.elf") || strstr(p, "NEUTRINO.ELF"))) ? -1 : 1;
 }
@@ -108,9 +121,17 @@ static int genRead(int fd, void *buf, size_t sz) {
     else if (sz >= 6) { b[0] = 1; memcpy(b + 1, "CD001", 5); }
     return (int)sz;
 }
-static void genClose(int fd) { (void)fd; }
+static int genClose(int fd) { (void)fd; return 0; }
 #define FIO_O_RDONLY 1
+#define FIO_O_WRONLY 2
+#define FIO_O_CREAT 4
+#define FIO_O_TRUNC 8
 static int genOpen(const char *p, int f) { (void)p; (void)f; return -1; }
+static int genWrite(int fd, const void *data, size_t size) { (void)fd; (void)data; return (int)size; }
+static char ip[16], netmask[16], gw[16];
+int neutrinoSmbConfig(const char *original, const SmbShare *share, const char *address, const char *mask, const char *gateway, char *out, size_t size) {
+    (void)original; (void)share; (void)address; (void)mask; (void)gateway; (void)out; (void)size; return -1;
+}
 static int addPopstarterCandidate(POPSTARTER_CANDIDATE_LIST *c, const char *p) { (void)p; c->count++; return 1; }
 static void initPopstarterCandidates(POPSTARTER_CANDIDATE_LIST *c) { c->count = 0; }
 static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *o, NEUTRINO_OPTION_ARGS *a) { (void)o; (void)a; return 0; }
@@ -184,6 +205,10 @@ int main(void) {
     strcpy(app.path,"usb0:/app.elf");
     dashLaunchApp(&app, 0);
     assert(!muted && suspended == 1 && restored == 3 && bgm == 3);
+    commit = 0; active_path_calls = neutrino_smb_calls = 0; opened_path[0] = 0;
+    LaunchNeutrinoIso("smb:/AUTO/game.iso", exec_ctx.main_msg, MAX_PATH);
+    assert(active_path_calls == 1 && neutrino_smb_calls == 1);
+    assert(!strcmp(opened_path, "smbold:/game.iso"));
     free(setting);
     puts("PASS: ISO menu audio, cancellation/failure recovery, committed launch and ordinary ELF muting");
 }
@@ -194,5 +219,5 @@ with tempfile.TemporaryDirectory(prefix="neutrino-menu-audio-") as folder:
     exe = path / "test.exe"
     compiler = shutil.which("gcc") or shutil.which("clang")
     assert compiler, "Host C compiler required"
-    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Wextra", "-Werror", str(path / "test.c"), "-o", str(exe)], check=True)
+    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", str(root / "include"), str(path / "test.c"), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True, timeout=10)

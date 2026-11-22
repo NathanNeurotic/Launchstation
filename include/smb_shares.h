@@ -134,6 +134,8 @@ int smbSharesSnapshot(SmbConfig *out);
 #define SMB_CNF_MAX_SIZE 16384            /* as smb_shares.c reads the file */
 void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
+/* Resolve smb:/NAME/... through its active protocol; otherwise copy unchanged. */
+int smbSharesActivePath(const char *path, char *out, int size); /* no IO */
 const char *smbSharesV1Name(void); /* NAME of the SMB1 share listed in smb:/; no IO */
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
 void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smbold:/ status; no IO */

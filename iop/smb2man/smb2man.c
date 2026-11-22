@@ -526,7 +526,7 @@ static int smb2man_negotiate(struct smb2man_share *sh, struct usmb2_context *u, 
 
     dialect = u->buf[4] | (u->buf[5] << 8);
     if (dialect != d0 && dialect != d1)
-        return -1;
+        return -2;
     *sign_required = (u->buf[2] & 0x02) ? 1 : 0; // SMB2_NEGOTIATE_SIGNING_REQUIRED
     sh->io_read_max = rd32(&u->buf[32]);
     sh->io_write_max = rd32(&u->buf[36]);
@@ -604,7 +604,7 @@ static int smb2man_connect(int s)
         }
     }
     if (rv < 0) {
-        rv = -SMB2_CONNECT_ERR_PROT;
+        rv = rv == -1 ? -SMB2_CONNECT_ERR_CONN : -SMB2_CONNECT_ERR_PROT;
         goto fail;
     }
     // 3.x signs with AES-CMAC, which this driver does not implement: refuse rather than send unsigned.

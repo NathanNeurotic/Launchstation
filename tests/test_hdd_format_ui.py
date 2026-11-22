@@ -145,6 +145,82 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-ui-") as temp:
                     "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True, timeout=10)
 
+# A VMC unmount failure must survive filerUnmountVmc() and stop the real
+# format job before the raw formatter is entered.
+browser = (root / "src/filer_browser.c").read_text()
+vmc_unmount = browser[browser.index("int filerUnmountVmc(int slot)\n{"):browser.index("/* Writes icon.sys", browser.index("int filerUnmountVmc(int slot)\n{"))]
+job_start = source.index("static void hddJobRun(void *arg)\n{")
+job = source[job_start:source.index("static void hddJobFree(HddJob *j)\n{", job_start)]
+job_types = source[source.index("enum {\n\tHOP_SCAN"):source.index("} HddJob;") + len("} HddJob;")]
+vmc_code = r'''
+#include <assert.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "hdd_format.h"
+#include "hdd_install.h"
+#include "hdd_header_injector.h"
+#define MAX_PATH 1024
+#define MAX_PART_NAME 256
+#define MAX_PARTITIONS 128
+#define MOUNT_LIMIT 16
+#define FS_GROUP_APPLICATION 1
+typedef uint32_t u32;
+typedef struct { int unused; } HddPart;
+static int vmcMounted[2], vmc_PartyIndex[2], Party_vmcIndex[MOUNT_LIMIT];
+static char mountedParty[MOUNT_LIMIT][MAX_PATH];
+static int unmount_result, format_calls;
+static int fileXioUmount(const char *dev) { assert(!strcmp(dev, "vmc0:")); return unmount_result; }
+static void filerSizeCacheInvalidate(const char *path) { (void)path; }
+static void releaseMounts(void) {}
+static void unmountParty(int i) { (void)i; }
+static void scanRun(void *j) { (void)j; }
+static void pfsRun(void *j) { (void)j; }
+static int hddMakeFilesystem(int size, const char *name, int group) { (void)size; (void)name; (void)group; return 0; }
+static int fileXioRemove(const char *path) { (void)path; return 0; }
+static int fileXioRename(const char *a, const char *b) { (void)a; (void)b; return 0; }
+static int HdlRenameGame(char *a, char *b) { (void)a; (void)b; return 0; }
+int hddFormatDisk(const HddFormatPlan *plan, int *started) { (void)plan; (void)started; format_calls++; return 0; }
+int InjectHddPartitionHeaderFromSource(const char *a, const char *b, char *dir, size_t size, int *copied, int *error) {
+    (void)a; (void)b; (void)dir; (void)size; (void)copied; (void)error; return 0;
+}
+int HddHeaderListSourcePartitions(const char *source, HddHeaderSourcePartition *parts, int max, int *invalid) {
+    (void)source; (void)parts; (void)max; (void)invalid; return 0;
+}
+int hddInstallDownload(HddInstall *in) { (void)in; return 0; }
+int hddInstallApply(HddInstall *in) { (void)in; return 0; }
+int hddInstallPsbbnPayload(void *in, const HddFormatIo *io) { (void)in; (void)io; return 0; }
+int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, const char *hash, int *started,
+                     int (*populate)(void *, const HddFormatIo *), void *context) {
+    (void)plan; (void)mbr; (void)hash; (void)started; (void)populate; (void)context; return 0;
+}
+'''
+vmc_code += job_types + "\n" + vmc_unmount + "\n" + job + r'''
+int main(void) {
+    HddJob j = {0};
+    j.op = HOP_FORMAT;
+    vmcMounted[0] = 1; vmc_PartyIndex[0] = 1; Party_vmcIndex[1] = 0;
+    unmount_result = -EIO;
+    hddJobRun(&j);
+    assert(j.ret == -EIO && format_calls == 0);
+    assert(vmcMounted[0] == 1 && vmc_PartyIndex[0] == 1 && Party_vmcIndex[1] == 0);
+    unmount_result = 0;
+    hddJobRun(&j);
+    assert(j.ret == 0 && format_calls == 1);
+    assert(vmcMounted[0] == 0 && vmc_PartyIndex[0] == -1 && Party_vmcIndex[1] == -1);
+    puts("PASS: failed VMC unmount retains state and prevents raw formatting");
+    return 0;
+}
+'''
+with tempfile.TemporaryDirectory(prefix="hdd-format-vmc-") as temp:
+    cfile, executable = Path(temp) / "check.c", Path(temp) / "check"
+    cfile.write_text(vmc_code)
+    subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-Wno-format-truncation",
+                    "-I", str(root / "include"), str(cfile), "-o", str(executable)], check=True)
+    subprocess.run([str(executable)], check=True, timeout=10)
+
 # Every allocation path in the common EE library must check the predicted
 # destination before invoking the existing driver's allocation command.
 library = (root / "ee_libs/hdd/libhdd.c").read_text()

@@ -353,24 +353,27 @@ int hddInstallCleanup(HddInstall *in)
     char path[MAX_PATH];
     int ret = 0, result;
     in->ready = 0;
-    result = hddInstallFindStage(in);
-    if (result < 0) return result;
-    for (unsigned asset = 0; asset < HDD_INSTALL_ASSETS; asset++) {
-        if (pathJoin(path, sizeof(path), in->stage, hddInstallAssetName(asset)) < 0) {
-            ret = ret < 0 ? ret : -ENAMETOOLONG;
-            continue;
+    if (!in->cleanup_pending) {
+        result = hddInstallFindStage(in);
+        if (result < 0) return result;
+        for (unsigned asset = 0; asset < HDD_INSTALL_ASSETS; asset++) {
+            if (pathJoin(path, sizeof(path), in->stage, hddInstallAssetName(asset)) < 0) {
+                ret = ret < 0 ? ret : -ENAMETOOLONG;
+                continue;
+            }
+            result = removeStagedFile(path);
+            if (result < 0 && ret >= 0) ret = result;
         }
-        result = removeStagedFile(path);
-        if (result < 0 && ret >= 0) ret = result;
+        if (ret < 0) return ret;
+        if (pathJoin(path, sizeof(path), in->stage, "owner.bin") < 0) return -ENAMETOOLONG;
+        ret = removeStagedFile(path);
+        if (ret < 0) return ret;
+        in->cleanup_pending = 1;
     }
-    if (ret < 0) return ret;
-    if (pathJoin(path, sizeof(path), in->stage, "owner.bin") < 0) return -ENAMETOOLONG;
-    ret = removeStagedFile(path);
-    if (ret < 0) return ret;
     snprintf(path, sizeof(path), "%s", in->stage);
     ret = genRmdir(path);
     if (ret < 0) return ret;
-    in->stage[0] = 0; in->owned = 0;
+    in->stage[0] = 0; in->owned = 0; in->cleanup_pending = 0;
     return 0;
 }
 

@@ -2004,11 +2004,21 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
  * unloaded device gets -ENODEV rather than loading IOP modules itself. */
 int readSMB(const char *path, FILEINFO *info, int max)
 {
+	char active[MAX_PATH];
 	int version = smbPathKind(path);
-	int root = smbIsRootPath(path);
+	int root;
 	int n;
 
 	smb_dir_open_failed = 0;
+	if (version == SMB_PATH_V2) {
+		if (!smbSharesActivePath(path, active, sizeof(active))) {
+			smb_dir_open_failed = 1;
+			return -ENAMETOOLONG;
+		}
+		path = active;
+		version = smbPathKind(path);
+	}
+	root = smbIsRootPath(path);
 	if (version == SMB_PATH_V2 && root && !dashWorkerOnThread() &&
 	    smbSharesConfigured(SMB_PATH_V2) == 0 && smbSharesConfigured(SMB_PATH_V1) > 0) {
 		if (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)) {

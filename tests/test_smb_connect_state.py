@@ -43,7 +43,7 @@ static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
 static int disconnect_calls, disconnect_result;
 static int separate_results, result1, result2, calls1, calls2;
-static int driver1_loaded = 1, load_connects_v1;
+static int driver1_loaded = 1, load_connects_v1, load1_result = 1;
 
 static char *smbReadConfigText(int *refused)
 {
@@ -69,6 +69,7 @@ static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure";
 static int isSmbDriverLoaded(int version) { return version == 1 ? driver1_loaded : 1; }
 static __attribute__((unused)) int load_smb(int version) {
     if (version == 1) {
+        if (!load1_result) return 0;
         driver1_loaded = 1;
         if (load_connects_v1) {
             smb_cfg.share[0].state = SMB_STATE_CONNECTED;
@@ -78,13 +79,24 @@ static __attribute__((unused)) int load_smb(int version) {
     return 1;
 }
 static const char *smb2Problem(int ret) { (void)ret; return "mock SMB2 failure"; }
+static __attribute__((unused)) const char *smbLoadError(int version) { (void)version; return "mock SMB1 load failure"; }
 static const char *nfsProblem(int ret) { (void)ret; return "mock NFS failure"; }
 static unsigned int Timer(void) { return now; }
 '''
 code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.index("static void smbReadConfig(void)\n{")]
 code += function("static void smbReadConfig(void)\n{")
+code += function("int smbSharesConfigured(int version)\n{")
+code += function("int smbSharesKnown(int version)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
 code += function("int smbSharesConnectedCount(int version)\n{")
+if "int smbSharesActivePath(const char *path, char *out, int size)\n{" in source:
+    code += function("int smbSharesActivePath(const char *path, char *out, int size)\n{")
+else:
+    code += r'''static int smbSharesActivePath(const char *path, char *out, int size)
+{
+    return snprintf(out, size, "%s", path) < size;
+}
+'''
 code += function("const char *smbSharesV1Name(void)\n{")
 code += function("static int versionInMask(int version, int mask)\n{")
 code += function("static void smbStatusForMask(int version_mask, const char *none_label, const char *missing_group,\n                             char *out, int out_size)\n{")
@@ -109,6 +121,7 @@ static void reset_case(void)
     result1 = result2 = calls1 = calls2 = 0;
     driver1_loaded = 1;
     load_connects_v1 = 0;
+    load1_result = 1;
 }
 
 int main(void)
@@ -199,6 +212,14 @@ int main(void)
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED && smb_cfg.share[0].active_version == 1);
     assert(smbSharesConnectedCount(1) == 1 && smbSharesConnectedCount(2) == 0);
     assert(smbSharesV1Name() != NULL && !strcmp(smbSharesV1Name(), "AUTO"));
+    assert(smbSharesKnown(1) == 1);
+    {
+        char active[MAX_PATH];
+        assert(smbSharesActivePath("smb:/AUTO/DVD/game.iso", active, sizeof(active)));
+        assert(!strcmp(active, "smbold:/DVD/game.iso"));
+        assert(smbSharesActivePath("smb:/OTHER/DVD/game.iso", active, sizeof(active)));
+        assert(!strcmp(active, "smb:/OTHER/DVD/game.iso"));
+    }
 
     /* Network and explicit-version failures never fall back. */
     reset_case();
@@ -261,6 +282,15 @@ int main(void)
     smbSharesConnect(2, 1);
     assert(calls1 == 1 && calls2 == 1 && smb_cfg.share[0].state == SMB_STATE_FAILED);
     assert(smb_cfg.share[0].problem != NULL && !strcmp(smb_cfg.share[0].problem, "mock SMB1 failure"));
+
+    /* A fallback that cannot load smbman reports the load failure. */
+    reset_case();
+    config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_PROT;
+    driver1_loaded = 0; load1_result = 0;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 0 && calls2 == 1 && smb_cfg.share[0].state == SMB_STATE_FAILED);
+    assert(smb_cfg.share[0].problem != NULL && !strcmp(smb_cfg.share[0].problem, "mock SMB1 load failure"));
 
     puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
     return 0;

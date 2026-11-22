@@ -118,6 +118,11 @@ int main(void) {
     parse(&cfg,"NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/games\n");
     assert(neutrinoSmbResolve(&cfg,"smbold:/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
     assert(!strcmp(dvd,"smb:DVD/game.iso"));
+    parse(&cfg,"NAME=AUTO\nURL=smb://10.0.0.2/games\n");
+    cfg.share[0].active_version=1;
+    assert(neutrinoSmbResolve(&cfg,"smbold:/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
+    assert(!strcmp(dvd,"smb:DVD/game.iso"));
+    assert(neutrinoSmbResolve(&cfg,"smb:/AUTO/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
     return 0;
 }
 '''

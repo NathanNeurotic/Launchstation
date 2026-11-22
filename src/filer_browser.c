@@ -2404,7 +2404,7 @@ int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, i
 int filerUnmountVmc(int slot)
 {
 	char dev[8];
-	int j;
+	int j, ret;
 
 	if (slot < 0 || slot > 1)
 		return -1;
@@ -2412,12 +2412,14 @@ int filerUnmountVmc(int slot)
 		return 0;
 
 	snprintf(dev, sizeof(dev), "vmc%d:", slot);
+	ret = fileXioUmount(dev);
+	if (ret < 0)
+		return ret;
 	if ((j = vmc_PartyIndex[slot]) >= 0) {
 		vmc_PartyIndex[slot] = -1;
 		if (j != vmc_PartyIndex[1 ^ slot])
 			Party_vmcIndex[j] = -1;
 	}
-	fileXioUmount(dev);
 	filerSizeCacheInvalidate(dev);
 	vmcMounted[slot] = 0;
 	return 0;

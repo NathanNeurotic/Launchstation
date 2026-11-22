@@ -387,7 +387,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	char opened_iso[MAX_PATH], args[1400];
 #ifdef SMB
 	SmbShare smb_share;
-	char smb_dvd[132];
+	char smb_dvd[132], active_path[MAX_PATH];
 	const char *smb_problem;
 #endif
 	const char *bsd;
@@ -409,6 +409,15 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "Neutrino ISO launching is not supported from this device", path);
 		return 0;
 	}
+#ifdef SMB
+	if (!strcmp(bsd,"smb")) {
+		if (!smbSharesActivePath(path, active_path, sizeof(active_path))) {
+			setMessage(message, message_size, "SMB path is too long for its active protocol", path);
+			return 0;
+		}
+		path = active_path;
+	}
+#endif
 	if (!validateIso(path, opened_iso, sizeof(opened_iso))) {
 		setMessage(message, message_size, "ISO9660 image could not be read", path);
 		return 0;

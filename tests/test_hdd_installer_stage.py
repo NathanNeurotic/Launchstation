@@ -35,14 +35,16 @@ static int mapped(const char *p, char *out, size_t cap) {
     u=p[3]-'0';if(!units[u])return -ENOENT;
     n=snprintf(out,cap,"%s%s",units[u],p+5);return n<0||n>=(int)cap?-ENAMETOOLONG:0;
 }
-static int genOpen(const char*p,int mode) { char path[2048]; int r=mapped(p,path,sizeof(path));return r<0?r:open(path,mode,0600); }
+static int restore_open_error;
+static int genOpen(const char*p,int mode) { char path[2048]; int r=mapped(p,path,sizeof(path));if(r<0)return r;if(restore_open_error && (mode & FIO_O_CREAT) && strstr(p,"owner.bin"))return -EIO;return open(path,mode,0600); }
 static int genRead(int fd,void*p,unsigned n) {if(n>3)n=3;return read(fd,p,n);}
 static int genWrite(int fd,const void*p,unsigned n) {if(n>3)n=3;return write(fd,p,n);}
 #define genLseek lseek
 #define genClose close
 static int remove_error;
 static int genRemove(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));if(r<0)return r;if(remove_error)return -EIO;return unlink(path);}
-static int genRmdir(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));return r<0?r:rmdir(path);}
+static int rmdir_error;
+static int genRmdir(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));if(r<0)return r;if(rmdir_error)return -EIO;return rmdir(path);}
 typedef struct stat iox_stat_t;
 static int fileXioGetStat(const char*p,iox_stat_t*s) {char path[2048];int r=mapped(p,path,sizeof(path));if(r<0)return r;r=stat(path,s);return r<0?-errno:0;}
 '''
@@ -72,6 +74,15 @@ int main(int argc,char**argv) {
     remove_error=0;assert(hddInstallCleanup(&in)==0);assert(!in.stage[0] && !in.owned);
     snprintf(path,sizeof(path),"%s/cache",argv[1]);assert(access(path,F_OK)<0);
     snprintf(path,sizeof(path),"%s/cache",argv[2]);assert(access(path,F_OK)==0);
+    units[0]=argv[1];units[1]=argv[2];
+    snprintf(path,sizeof(path),"%s/cache",argv[1]);assert(!mkdir(path,0700));
+    strcpy(in.stage,"usb0:/cache");in.owned=0;assert(hddInstallClaimStage(&in)==0);
+    rmdir_error=1;assert(hddInstallCleanup(&in)<0 && in.owned && in.stage[0]);
+    rmdir_error=0;assert(hddInstallCleanup(&in)==0 && !in.owned && !in.stage[0]);
+    snprintf(path,sizeof(path),"%s/cache",argv[1]);assert(!mkdir(path,0700));
+    strcpy(in.stage,"usb0:/cache");in.owned=0;assert(hddInstallClaimStage(&in)==0);
+    rmdir_error=restore_open_error=1;assert(hddInstallCleanup(&in)<0 && in.owned && in.stage[0]);
+    rmdir_error=restore_open_error=0;assert(hddInstallCleanup(&in)==0 && !in.owned && !in.stage[0]);
     puts("PASS: short marker I/O, USB renumbering, duplicate rejection and ownership-checked cleanup");
 }
 '''

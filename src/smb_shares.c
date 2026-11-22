@@ -203,12 +203,20 @@ int smbSharesConfigured(int version)
 {
 	if (!smb_cfg_loaded || smb_cfg_mc1_pending)
 		smbReadConfig();
-	return smbConfigValidCount(&smb_cfg, version);
+	return smbSharesKnown(version);
 }
 
 int smbSharesKnown(int version)
 {
-	return smb_cfg_loaded ? smbConfigValidCount(&smb_cfg, version) : 0;
+	int i, n = smb_cfg_loaded ? smbConfigValidCount(&smb_cfg, version) : 0;
+
+	if (smb_cfg_loaded && version == SMB_PATH_V1)
+		for (i = 0; i < smb_cfg.count; i++)
+			if (smb_cfg.share[i].version == SMB_PATH_V2 &&
+			    smb_cfg.share[i].state == SMB_STATE_CONNECTED &&
+			    smb_cfg.share[i].active_version == SMB_PATH_V1)
+				n++;
+	return n;
 }
 
 const char *smbSharesConfigPath(void)
@@ -383,6 +391,7 @@ void smbSharesConnect(int version, int retry_failed)
 	for (i = 0; i < smb_cfg.count; i++) {
 		SmbShare *sh = &smb_cfg.share[i];
 		int used_v1 = version == 1;
+		int v1_load_failed = 0;
 
 		if (sh->version != version || sh->state == SMB_STATE_INVALID || sh->state == SMB_STATE_CONNECTED)
 			continue;
@@ -405,7 +414,8 @@ void smbSharesConnect(int version, int retry_failed)
 					used_v1 = 1;
 					ret = connectSmb1(sh);
 				}
-			}
+			} else
+				v1_load_failed = 1;
 			if (ret >= 0)
 				sh->active_version = SMB_PATH_V1;
 		}
@@ -418,6 +428,10 @@ void smbSharesConnect(int version, int retry_failed)
 			sh->state = SMB_STATE_FAILED;
 			sh->active_version = 0;
 			sh->problem = ret == SMB1_ERR_BUSY || used_v1 ? smb1Problem(ret) : version == SMB_PATH_NFS ? nfsProblem(ret) : smb2Problem(ret);
+			if (v1_load_failed) {
+				const char *load_error = smbLoadError(SMB_PATH_V1);
+				sh->problem = load_error[0] ? load_error : "SMB1 drivers could not be loaded.";
+			}
 		}
 		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", used_v1 ? 1 : version, sh->url,
 		        used_v1 ? SMB_DEVICE_V1 "/" : version == SMB_PATH_NFS ? SMB_DEVICE_NFS "/" : SMB_DEVICE_V2 "/",
@@ -437,6 +451,36 @@ const char *smbSharesV1Name(void)
 		if (smb_cfg.share[i].version == 1 && smb_cfg.share[i].state != SMB_STATE_INVALID)
 			return smb_cfg.share[i].name;
 	return NULL;
+}
+
+int smbSharesActivePath(const char *path, char *out, int size)
+{
+	const char *name, *end, *relative;
+	int i, written;
+
+	if (path == NULL || out == NULL || size <= 0)
+		return 0;
+	if (smbPathKind(path) != SMB_PATH_V2)
+		goto copy;
+	name = path + 4;
+	while (*name == '/')
+		name++;
+	end = strchr(name, '/');
+	if (end == NULL)
+		end = name + strlen(name);
+	for (i = 0; smb_cfg_loaded && i < smb_cfg.count; i++) {
+		const SmbShare *sh = &smb_cfg.share[i];
+		if (sh->version == SMB_PATH_V2 && sh->state == SMB_STATE_CONNECTED &&
+		    sh->active_version == SMB_PATH_V1 && strlen(sh->name) == (size_t)(end - name) &&
+		    !strncmp(sh->name, name, (size_t)(end - name))) {
+			relative = *end ? end + 1 : end;
+			written = snprintf(out, size, "%s/%s", SMB_DEVICE_V1, relative);
+			return written >= 0 && written < size;
+		}
+	}
+copy:
+	written = snprintf(out, size, "%s", path);
+	return written >= 0 && written < size;
 }
 
 int smbSharesConnectedCount(int version)

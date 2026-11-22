@@ -40,7 +40,8 @@ int neutrinoSmbResolve(const SmbConfig *cfg, const char *path, SmbShare *share,
 	relative = strchr(name, '/');
 	for (i = 0; i < cfg->count; i++) {
 		const SmbShare *s = &cfg->share[i];
-		if (s->state != SMB_STATE_CONNECTED || s->version != kind) continue;
+		int active = s->active_version ? s->active_version : s->version;
+		if (s->state != SMB_STATE_CONNECTED || (s->version != kind && active != kind)) continue;
 		if (kind == SMB_PATH_V2 && (!relative || strlen(s->name) != (size_t)(relative-name) ||
 		    strncmp(s->name, name, relative-name))) continue;
 		*share = *s;

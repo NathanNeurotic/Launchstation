@@ -30,9 +30,11 @@ enum { SMB_PATH_NONE = 0, SMB_PATH_V1 = 1, SMB_PATH_V2 = 2, SMB_PATH_NFS = 3 };
 #define SMB_DEVICE_V1 "smbold:"
 #define SMB_DEVICE_V2 "smb:"
 #define SMB_DEVICE_NFS "nfs:"
+#define MAX_PATH 1024
 static int smb_dir_open_failed;
 static int loaded[4], configured[4], connected[4], load_ok[4], connect_ok[4];
-static int load_attempts[4], connect_attempts[4], net_calls, worker;
+static int load_attempts[4], connect_attempts[4], net_calls, worker, auto_v1;
+static char net_path[1024];
 
 static int isSmbDriverLoaded(int version) { return loaded[version]; }
 static int load_smb(int version) {
@@ -43,6 +45,11 @@ static int load_smb(int version) {
 static int smbSharesConfigured(int version) { return configured[version]; }
 static int smbSharesKnown(int version) { return configured[version]; }
 static int smbSharesConnectedCount(int version) { return connected[version]; }
+static __attribute__((unused)) int smbSharesActivePath(const char *path, char *out, int size) {
+    if (auto_v1 && !strncmp(path, "smb:/AUTO/", 10))
+        return snprintf(out, size, "smbold:/%s", path + 10) < size;
+    return snprintf(out, size, "%s", path) < size;
+}
 static void smbSharesConnect(int version, int retry_failed) {
     (void)retry_failed;
     connect_attempts[version]++;
@@ -54,6 +61,7 @@ static int smbPathKind(const char *path);
 static int readNetDir(const char *path, FILEINFO *info, int max, int *failed) {
     (void)info; (void)max; (void)failed;
     net_calls++;
+    snprintf(net_path, sizeof(net_path), "%s", path);
     return connected[smbPathKind(path)] ? 1 : 0;
 }
 """
@@ -69,7 +77,8 @@ static void reset_case(void) {
     memset(connect_attempts, 0, sizeof(connect_attempts));
     load_ok[SMB_PATH_V1] = load_ok[SMB_PATH_V2] = load_ok[SMB_PATH_NFS] = 1;
     connect_ok[SMB_PATH_V1] = connect_ok[SMB_PATH_V2] = connect_ok[SMB_PATH_NFS] = 1;
-    net_calls = worker = smb_dir_open_failed = 0;
+    net_calls = worker = auto_v1 = smb_dir_open_failed = 0;
+    net_path[0] = 0;
 }
 
 int main(void) {
@@ -138,6 +147,16 @@ int main(void) {
     connect_ok[SMB_PATH_V2] = 1;
     assert(readSMB("smb:/", files, 4) == 1);
     assert(!smb_dir_open_failed && net_calls == 1);
+
+    /* Cached library/scan paths follow an Automatic share's SMB1 session. */
+    reset_case();
+    configured[SMB_PATH_V2] = 1;
+    loaded[SMB_PATH_V1] = connected[SMB_PATH_V1] = 1;
+    loaded[SMB_PATH_V2] = 1;
+    auto_v1 = worker = 1;
+    assert(readSMB("smb:/AUTO/APPS/", files, 4) == 1);
+    assert(!strcmp(net_path, "smbold:/APPS/") && !smb_dir_open_failed);
+    assert(load_attempts[SMB_PATH_V1] == 0 && load_attempts[SMB_PATH_V2] == 0);
 
     puts("PASS: SMB root reads connect on the UI thread and preserve a usable SMB1 root in mixed configurations");
     return 0;

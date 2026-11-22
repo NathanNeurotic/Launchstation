@@ -25,7 +25,7 @@ typedef struct {
     char archives[2][128];
     struct { uint32_t start, sectors; } linux[8];
     unsigned char owner[20];
-    unsigned owned, ready;
+    unsigned owned, ready, cleanup_pending;
 } HddInstall;
 
 const char *hddInstallAssetPath(unsigned asset);
