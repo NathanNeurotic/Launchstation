@@ -219,7 +219,8 @@ with tempfile.TemporaryDirectory(prefix='save-archive-review-') as directory:
 #include "save_archive.h"
 int main(void) {
     SaveArchive archive;
-    uint8_t input[12] = "Ps2PowerSave";
+    uint8_t input[12];
+    memcpy(input, "Ps2PowerSave", sizeof(input));
     assert(!saveArchiveParse(&archive, input, sizeof(input), "short.max"));
     return 0;
 }
