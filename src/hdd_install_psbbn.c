@@ -25,7 +25,9 @@ int hddInstallPsbbnPartitions(HddInstall *in)
         ret = hddCheckAllocation(linux_mb[i] * 2048u);
         if (ret < 0) return ret;
         dashWorkerStatus("Creating PSBBN partitions", i, 9);
-        snprintf(path, sizeof(path), "hdd0:%s,,,%uM,%s", linux_names[i], linux_mb[i], i == 1 ? "EXT2SWAP" : "EXT2");
+        snprintf(path, sizeof(path), "hdd0:%s,,,%u%c,%s", linux_names[i],
+                 linux_mb[i] >= 1024 ? linux_mb[i] / 1024 : linux_mb[i], linux_mb[i] >= 1024 ? 'G' : 'M',
+                 i == 1 ? "EXT2SWAP" : "EXT2");
         ret = fileXioOpen(path, FIO_O_CREAT | FIO_O_EXCL | FIO_O_RDWR, 0);
         if (ret < 0) return ret;
         ret = fileXioClose(ret); if (ret < 0) return ret;
