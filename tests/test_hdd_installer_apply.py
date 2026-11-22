@@ -101,6 +101,7 @@ int main(int argc,char**argv){
     HddInstall in={0};FILE*f;char path[4096],hash[41];unsigned i,size;int ret;
     assert(argc==5);snprintf(work,sizeof(work),"%s",argv[1]);in.flags=atoi(argv[2]);in.jail=!!(in.flags&4);in.game_launcher=atoi(argv[4]);
     in.ready=in.owned=1;strcpy(in.stage,in.jail?"ata0:/PSBBN_DP_TEMP":"pfs2:/PSBBN_DP_TEMP");memset(in.commit,'a',40);
+    if(in.jail)strcpy(in.language.code,"jpn");
     snprintf(path,sizeof(path),"%s/manifest",work);f=fopen(path,"r");assert(f);
     while(fscanf(f,"%u %u %40s",&i,&size,hash)==3){assert(i<HDD_INSTALL_ASSETS);in.sizes[i]=size;strcpy(in.hashes[i],hash);}fclose(f);
     if(in.jail){
@@ -157,7 +158,8 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
               ('SYS_R3CONFIGURATOR.psu', psu('SYS_R3CONFIGURATOR','r3configurator.elf')),
               ('extras.zip', extra.getvalue()), ('version.txt', b'fixture'),
               ('system.tar.gz', b'preflight fixture'), ('language.tar.gz', b'preflight fixture'),
-              ('APP_WLER3Z.png', b'jacket fixture'), ('SYS_R3CONFIG.png', b'jacket fixture'), ('PS2Linux.tar.gz', b'linux preflight fixture'), ('ps2-linux-ntsc', b'new NTSC kernel'), ('ps2-linux-vga', b'new VGA kernel')]
+              ('APP_WLER3Z.png', b'jacket fixture'), ('SYS_R3CONFIG.png', b'jacket fixture'), ('PS2Linux.tar.gz', b'linux preflight fixture'), ('ps2-linux-ntsc', b'new NTSC kernel'), ('ps2-linux-vga', b'new VGA kernel'),
+              ('channels.tar.gz', b'channels preflight fixture'), ('vmlinux_jpn', b'new Japanese kernel')]
     elf = bytearray(120); elf[:6] = b'\x7fELF\x01\x01'; elf[18] = 8
     launchers = [
         ('scripts/assets/OPL/OPNPS2LD.ELF', bytes(elf)), ('scripts/assets/NHDDL/nhddl.elf', bytes(elf)),
@@ -173,12 +175,13 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
         work = d / (str(flags) + failure + str(launcher)); work.mkdir()
         for part in ('stage','ata','__system','__sysconf','__common'): (work / part).mkdir()
         stage = work / ('ata' if flags & 4 else '__common') / 'PSBBN_DP_TEMP'; stage.mkdir()
-        if flags & 8: (work / '__system/p2lboot').mkdir()
+        if flags & 12: (work / '__system/p2lboot').mkdir()
+        if flags & 4: (work / '__system/p2lboot/vmlinux').write_bytes(b'older archive kernel')
         (stage / 'owner.bin').write_bytes(bytes(20))
         manifest = []
         for i, (name, data) in enumerate(assets):
             (stage / name).write_bytes(data)
-            prefix = b'' if i in (4,6,7,10) else b'blob ' + str(len(data)).encode() + b'\0'
+            prefix = b'' if i in (4,6,7,10,13) else b'blob ' + str(len(data)).encode() + b'\0'
             manifest.append(f'{i} {len(data)} {hashlib.sha1(prefix+data).hexdigest()}\n')
         (work / 'manifest').write_text(''.join(manifest))
         if flags & 4:
@@ -199,6 +202,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
             assert (work / '__system/p2lboot/ps2-linux-vga').read_bytes() == b'new VGA kernel'
             assert b'boot_circle = $PSBBN' in (work / '__sysconf/osdmenu/OSDMBR.CNF').read_bytes()
         if flags & 4 and failure == 'ok':
+            assert (work / '__system/p2lboot/vmlinux').read_bytes() == b'new Japanese kernel'
             assert (work / 'PP.APP_WLE-R3Z/res/info.sys').exists()
             assert (work / 'PP.SYS_R3CONFIGURATOR/res/jkt_001.png').read_bytes() == b'jacket fixture'
             assert (work / 'PP.LAUNCHER/res/jkt_001.png').read_bytes() == b'launcher art'

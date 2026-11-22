@@ -124,8 +124,9 @@ void hddInstallRawTrace(int command, uint32_t lba, unsigned count, int pending, 
 }
 void hddInstallLogSnapshot(HddInstallLogSnapshot *out)
 {
-    u64 now = Timer();
+    u64 now;
     lock();
+    now = Timer();
     out->next = log_state.next;
     out->first = out->next > HDD_INSTALL_LOG_ROWS ? out->next - HDD_INSTALL_LOG_ROWS : 0;
     out->elapsed = (log_state.active ? now : log_state.stopped) - log_state.started;

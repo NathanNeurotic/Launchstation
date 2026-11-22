@@ -142,6 +142,18 @@ static const char *const launcher_required[] = {
         "scripts/assets/OPL/version.txt", "scripts/assets/NHDDL/version.txt",
         "scripts/licenses/OPL", "scripts/licenses/nhddl", "scripts/licenses/neutrino"
 };
+static int launcherDestination(const char *source, char target[MAX_PATH])
+{
+    if (!strcmp(source, "scripts/assets/OPL/OPNPS2LD.ELF")) strcpy(target, "pfs0:/launcher/OPNPS2LD.ELF");
+    else if (!strcmp(source, "scripts/assets/NHDDL/nhddl.elf")) strcpy(target, "pfs0:/launcher/nhddl.elf");
+    else if (!strcmp(source, "scripts/assets/OPL/version.txt")) strcpy(target, "pfs0:/launcher/OPL-version.txt");
+    else if (!strcmp(source, "scripts/assets/NHDDL/version.txt")) strcpy(target, "pfs0:/launcher/NHDDL-version.txt");
+    else if (!strncmp(source, "scripts/assets/OPL/LNG/", sizeof("scripts/assets/OPL/LNG/") - 1)) snprintf(target, MAX_PATH, "ata0:/LNG/%s", source + sizeof("scripts/assets/OPL/LNG/") - 1);
+    else if (!strncmp(source, "scripts/assets/neutrino/", sizeof("scripts/assets/neutrino/") - 1)) snprintf(target, MAX_PATH, "ata0:/neutrino/%s", source + sizeof("scripts/assets/neutrino/") - 1);
+    else if (!strncmp(source, "scripts/licenses/", 17)) snprintf(target, MAX_PATH, "pfs0:/launcher/licenses/%s", source + 17);
+    else return -EINVAL;
+    return 0;
+}
 static int launcherManifest(HddInstall *in)
 {
     if (!in->launcher_files || !in->launcher_count || in->launcher_count > HDD_INSTALL_LAUNCHER_FILES ||
@@ -153,6 +165,12 @@ static int launcherManifest(HddInstall *in)
         }
     }
     if (findLauncher(in, launcherIcon(in)) < 0 || findLauncher(in, launcherArt(in)) < 0) return -ENOENT;
+    for (unsigned i = 0; i < in->launcher_count; i++) {
+        char target[MAX_PATH];
+        if (strncmp(in->launcher_files[i].path, "icons/", 6) && launcherDestination(in->launcher_files[i].path, target) < 0) {
+            hddInstallLog("Unmapped launcher asset: %s", in->launcher_files[i].path); return -EINVAL;
+        }
+    }
     return 0;
 }
 static int checkLaunchers(HddInstall *in)
@@ -841,14 +859,8 @@ static int installLaunchers(HddInstall *in)
         const HddInstallFile *file = &in->launcher_files[i];
         const char *source = file->path;
         if (!strncmp(source, "icons/", 6)) continue; /* PP.LAUNCHER metadata below. */
-        if (!strcmp(source, "scripts/assets/OPL/OPNPS2LD.ELF")) strcpy(target, "pfs0:/launcher/OPNPS2LD.ELF");
-        else if (!strcmp(source, "scripts/assets/NHDDL/nhddl.elf")) strcpy(target, "pfs0:/launcher/nhddl.elf");
-        else if (!strcmp(source, "scripts/assets/OPL/version.txt")) strcpy(target, "pfs0:/launcher/OPL-version.txt");
-        else if (!strcmp(source, "scripts/assets/NHDDL/version.txt")) strcpy(target, "pfs0:/launcher/NHDDL-version.txt");
-        else if (!strncmp(source, "scripts/assets/OPL/LNG/", sizeof("scripts/assets/OPL/LNG/") - 1)) snprintf(target, sizeof(target), "ata0:/LNG/%s", source + sizeof("scripts/assets/OPL/LNG/") - 1);
-        else if (!strncmp(source, "scripts/assets/neutrino/", sizeof("scripts/assets/neutrino/") - 1)) snprintf(target, sizeof(target), "ata0:/neutrino/%s", source + sizeof("scripts/assets/neutrino/") - 1);
-        else if (!strncmp(source, "scripts/licenses/", 17)) snprintf(target, sizeof(target), "pfs0:/launcher/licenses/%s", source + 17);
-        else return -EINVAL;
+        ret = launcherDestination(source, target);
+        if (ret < 0) return ret;
         /* Target paths derive only from the validated manifest's leaf names. */
         for (char *p = strchr(target, ':'); p && *p; p++) if (*p == '/' && p[1] && p[-1] != ':') {
             *p = 0; ret = makeDirectory(target, 0); *p = '/';
@@ -924,7 +936,8 @@ int hddInstallWriteConfigs(HddInstall *in)
     }
     /* Install kernels after the system archive, which may contain older copies. */
     if (hddInstallSelectedAsset(in, HI_KERNEL_JPN)) {
-        int ret = copyAsset(in, HI_KERNEL_JPN, "pfs0:/p2lboot/vmlinux");
+        int ret = checkHash(in, HI_KERNEL_JPN);
+        if (ret >= 0) ret = copyFile(in, hddInstallAssetName(HI_KERNEL_JPN), in->sizes[HI_KERNEL_JPN], "pfs0:/p2lboot/vmlinux", 1);
         if (ret < 0) return ret;
     }
     if (in->flags & HDD_INSTALL_PS2LINUX) {

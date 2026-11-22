@@ -104,6 +104,7 @@ int main(int argc,char **argv) {
     strcpy(in.stage,"ata0:/stage");strcpy(in.ca_path,"fixture.pem");memset(in.commit,'a',40);
     ret=launcherMetadata(&in);
     if(ret>=0)ret=downloadLaunchers(&in,&phase,0,downloadBytes(&in));
+    if(!strcmp(failure,"unmapped"))assert(ret<0&&downloads==0);
     assert((ret==0)==!strcmp(failure,"ok"));
     unsigned nonempty=0;for(unsigned i=0;i<in.launcher_count;i++)nonempty+=!!in.launcher_files[i].size;
     if(!ret){assert(in.launcher_count>=15&&downloads==nonempty&&requests>=8&&(uint64_t)read_bytes==downloadBytes(&in)+3*52);
@@ -132,7 +133,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-installer-launchers-") as directory
              **{f"icons/{kind}/APP_{app}{suffix}": b"icon" for app in ("OPL", "NHDDL")
                 for kind, suffix in (("art", ".png"), ("ico", "_LST.ico"))}}
     for choice in (0, 1):
-        for failure in ("ok", "bad-hash", "truncated", "request", "write", "missing", "duplicate", "symlink", "traversal", "oversize", "file-limit", "directory-limit"):
+        for failure in ("ok", "bad-hash", "truncated", "request", "write", "missing", "duplicate", "symlink", "traversal", "oversize", "file-limit", "directory-limit", "unmapped"):
             work = d / f"{choice}-{failure}"
             (work / "stage").mkdir(parents=True)
             listings = {path: [] for path in ("scripts/assets/OPL", "scripts/assets/NHDDL", "scripts/assets/neutrino", "icons/art", "icons/ico", "scripts/licenses")}
@@ -153,6 +154,13 @@ with tempfile.TemporaryDirectory(prefix="hdd-installer-launchers-") as directory
                 ensure_directory(parent)
                 listings[parent].append({"name": Path(remote).name, "type": "file", "size": len(data),
                                          "sha": "b"*40 if failure=="bad-hash" else hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
+            if failure == "unmapped":
+                remote = "scripts/assets/OPL/README.md"
+                data = b"unmapped documentation"
+                path = work / "remote" / remote
+                path.write_bytes(data)
+                listings["scripts/assets/OPL"].append({"name": "README.md", "type": "file", "size": len(data),
+                                                       "sha": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
             if failure in ("duplicate", "symlink", "traversal", "oversize"):
                 entry = dict(listings["scripts/assets/OPL"][0])
                 if failure == "symlink": entry["type"] = "symlink"

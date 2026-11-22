@@ -19,11 +19,11 @@ code=r'''
 typedef uint64_t u64;
 typedef struct {int init_count,max_count;} ee_sema_t;
 static u64 now=1000;
-static int locked,fail_write;
+static int locked,fail_write,lock_delay;
 static const char *filename;
 static u64 Timer(void){return now;}
 static int CreateSema(ee_sema_t*s){assert(s->init_count==1&&s->max_count==1);return 1;}
-static int WaitSema(int id){assert(id==1&&!locked);locked=1;return 0;}
+static int WaitSema(int id){assert(id==1&&!locked);locked=1;if(lock_delay){now+=50;lock_delay=0;}return 0;}
 static int SignalSema(int id){assert(id==1&&locked);locked=0;return 0;}
 #define MAX_PATH 1025
 #define FIO_O_WRONLY O_WRONLY
@@ -48,6 +48,7 @@ int main(int argc,char**argv){
  hddInstallProgress("Downloading system.tar.gz",200,1000);
  hddInstallLogFlush(&in);hddInstallLogSnapshot(&snapshot);assert(!snapshot.disk_error&&snapshot.path[0]&&snapshot.elapsed==10300&&snapshot.idle==0);
  hddInstallRawTrace(3,8192,64,1,0);now+=7000;hddInstallLogSnapshot(&snapshot);assert(strstr(snapshot.io,"WAITING 7 s"));assert(snapshot.idle==7000&&snapshot.done==200&&snapshot.total==1000);
+ lock_delay=1;hddInstallLogSnapshot(&snapshot);assert(snapshot.idle==7050);
  hddInstallRawTrace(3,8192,64,0,-EIO);hddInstallLogSnapshot(&snapshot);assert(strstr(snapshot.io,"rc=-5"));
  for(unsigned i=0;i<600;i++)hddInstallLog("row %u",i);
  hddInstallLogSnapshot(&snapshot);assert(snapshot.next-snapshot.first==HDD_INSTALL_LOG_ROWS&&!hddInstallLogRead(snapshot.first-1,line));

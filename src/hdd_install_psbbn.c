@@ -112,6 +112,21 @@ static int preflightPathType(Payload *p, const char *name)
     return -1;
 }
 
+static int preflightPathAdd(Payload *p, const char *name, unsigned char type)
+{
+    if (p->path_count == p->path_capacity) {
+        unsigned capacity = p->path_capacity ? p->path_capacity * 2 : 128;
+        PreflightPath *grown = realloc(p->paths, capacity * sizeof(*grown));
+        if (!grown) return -ENOMEM;
+        p->paths = grown; p->path_capacity = capacity;
+    }
+    p->paths[p->path_count].name = malloc(strlen(name) + 1);
+    if (!p->paths[p->path_count].name) return -ENOMEM;
+    strcpy(p->paths[p->path_count].name, name);
+    p->paths[p->path_count++].type = type;
+    return 0;
+}
+
 static int preflightPath(Payload *p, const InstallTarEntry *entry)
 {
     const char *slash;
@@ -123,7 +138,10 @@ static int preflightPath(Payload *p, const InstallTarEntry *entry)
         if (n >= sizeof(parent)) return -ENAMETOOLONG;
         memcpy(parent, entry->name, n); parent[n] = 0;
         type = preflightPathType(p, parent);
-        if (type != '5') return type < 0 ? -ENOENT : -ENOTDIR;
+        if (type < 0) {
+            int ret = preflightPathAdd(p, parent, '5');
+            if (ret < 0) return ret;
+        } else if (type != '5') return -ENOTDIR;
     }
     for (i = 0; i < p->path_count; i++) if (!strcmp(p->paths[i].name, entry->name)) {
         if (entry->type != '5' && p->paths[i].type == '5') {
@@ -134,17 +152,7 @@ static int preflightPath(Payload *p, const InstallTarEntry *entry)
         p->paths[i].type = entry->type;
         return 0;
     }
-    if (p->path_count == p->path_capacity) {
-        unsigned capacity = p->path_capacity ? p->path_capacity * 2 : 128;
-        PreflightPath *grown = realloc(p->paths, capacity * sizeof(*grown));
-        if (!grown) return -ENOMEM;
-        p->paths = grown; p->path_capacity = capacity;
-    }
-    p->paths[p->path_count].name = malloc(strlen(entry->name) + 1);
-    if (!p->paths[p->path_count].name) return -ENOMEM;
-    strcpy(p->paths[p->path_count].name, entry->name);
-    p->paths[p->path_count++].type = entry->type;
-    return 0;
+    return preflightPathAdd(p, entry->name, entry->type);
 }
 
 static int begin(void *context, const InstallTarEntry *entry)
@@ -174,8 +182,14 @@ static int begin(void *context, const InstallTarEntry *entry)
             "__linux.4/bn/script/utility/sysconf.xml"
         };
         if (p->archive == HI_PS2LINUX) {
-            if (!strcmp(entry->name, "sbin/init") && entry->type == '0' && entry->size) p->linux_required |= 1;
-            if (!strcmp(entry->name, "bin/sh") && (entry->type == '0' || entry->type == '2')) p->linux_required |= 2;
+            if (!strcmp(entry->name, "sbin/init")) {
+                if (entry->type == '0' && entry->size) p->linux_required |= 1;
+                else p->linux_required &= ~1u;
+            }
+            if (!strcmp(entry->name, "bin/sh")) {
+                if ((entry->type == '0' && entry->size) || (entry->type == '2' && *entry->link)) p->linux_required |= 2;
+                else p->linux_required &= ~2u;
+            }
         }
         for (unsigned i = 0; i < 6; i++) if (p->archive != HI_PS2LINUX && !strcmp(entry->name, required[i])) {
             int valid = (entry->type == '0' && entry->size) || (i == 3 && entry->type == '2' && *entry->link);

@@ -121,9 +121,10 @@ static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,i
 }
 """
 code += function(orbs, "static void osdTime(")
+code += buttons[:buttons.index("{")] + ";\n"
 code += r"""
-static int modalButtons(const char *,const char *,const char *,int,DashColor,
-                        const char *,const char *,int,u64,const DashTableRow *,int);
+static int modalButtonsCall(const char *,const char *,const char *,int,DashColor,
+                            const char *,const char *,int,u64);
 static int dash_start_menu_blocked,blocked_polls,open_polls;
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
@@ -145,7 +146,7 @@ static void dashInputPoll(DashInput *in) {
     }
     if(nested && depth==0 && f==2) {
         depth=1;
-        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0,NULL,0));
+        assert(!modalButtonsCall("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0));
         depth=0;
     }
 }
@@ -155,6 +156,12 @@ if "static int modalEnabledEdge(" in ui:
 # Older revisions given as an argument predate include/list_scroll.h.
 scroll_header = read("include/list_scroll.h") if "listCenteredTop(" in menu + buttons else ""
 code += scroll_header + menu + buttons
+code += r"""
+static int modalButtonsCall(const char *title,const char *body,const char *detail,int icon,DashColor icon_col,
+                            const char *ok_label,const char *cancel_label,int default_sel,u64 deadline) {
+    return modalButtons(title,body,detail,icon,icon_col,ok_label,cancel_label,default_sel,deadline"""
+code += ",NULL,0" if "const DashTableRow *table" in buttons else ""
+code += ");\n}\n"
 code += r"""
 static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
@@ -250,18 +257,18 @@ int main(void) {
     reset();nav_scenario=4;
     assert(dashModalMenu("interrupted",NULL,items,2,0)==-1 && !renders);
     reset();nav_scenario=4;
-    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0,NULL,0) && !renders);
+    assert(!modalButtonsCall("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0) && !renders);
     /* Untimed dialogs leave START's Dashboard popup available. */
     assert(open_polls && !blocked_polls);
     reset();nav_scenario=5;blocked_polls=open_polls=0;
-    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000,NULL,0));
+    assert(!modalButtonsCall("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
     assert(now_ms>=11000 && now_ms<11100);
     /* Timed previews block it, so the revert deadline keeps running. */
     assert(blocked_polls && !open_polls && !dash_start_menu_blocked);
     reset();nav_scenario=6;
-    assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000,NULL,0));
+    assert(modalButtonsCall("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
     reset();nav_scenario=7;
-    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000,NULL,0));
+    assert(!modalButtonsCall("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000));
     /* Square marks enabled rows whose mark is 0 or 1; other values and disabled rows stay. */
     DashMenuItem markable[]={{0,"a",NULL,0},{0,"b",NULL,1},{0,"c",NULL,0}};
     unsigned char marks[3]={0,0,2};
@@ -287,9 +294,6 @@ int main(void) {
 """
 if "const DashTableRow *table" in buttons:
     code = 'typedef struct { const char *label,*value; } DashTableRow;\n#define dashText(...) ((void)0)\n' + code
-    code = code.replace("const char *,const char *,u64);", "const char *,const char *,u64,const DashTableRow *,int);")
-    for arguments in ('"OK","Cancel",0', '"Keep","Revert",7000', '"Keep","Revert",1032'):
-        code = code.replace(arguments + ")", arguments + ",NULL,0)")
 compiler = shutil.which("gcc") or shutil.which("clang")
 if not compiler:
     raise SystemExit("Host gcc or clang required")
