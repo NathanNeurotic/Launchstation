@@ -23,6 +23,9 @@ for sid in ("S_SMBED_PICK", "S_SMBED_NAME", "S_SMBED_KIND", "S_SMBED_IP", "S_SMB
     assert sid in page, sid
 assert "[P_SMB] = PAGE(" in settings
 assert "sh->proto_version" in settings  # VERSION = 3 round-trips cleanly without downgrading to SMB2
+assert '"Automatic", "SMB2", "SMB3", "SMB1"' in settings
+assert "smbed.kind = smbed.nfs ? SMBED_NFS : 0;" in settings
+assert "smbed.kind = v == 3 ? 1 : v == 2 ? 2 : v == 1 ? 3 : 0;" in settings
 
 # opening the page refreshes the draft from the file
 enter = settings.split('it->type == ST_PAGE && (in->pressed & DASH_IN_OK)', 1)[1]

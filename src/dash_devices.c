@@ -428,6 +428,25 @@ int dashDevicesMultitapChanged(const DashDevice *devs, int count)
 	return listed != present;
 }
 
+#ifdef SMB
+static const char *smbProtocolLabel(void)
+{
+	int v1 = smbSharesConnectedCount(SMB_PATH_V1) > 0;
+	int v2 = smbSharesConnectedCount(SMB_PATH_V2) > 0;
+
+	if (v1 && v2) return "SMB1 + SMB2/3 Enabled";
+	if (v1) return "SMB1 Enabled";
+	if (v2) return "SMB2/3 Enabled";
+	return "No SMB Enabled";
+}
+
+static void smbProtocolStatus(DashDevice *d)
+{
+	if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_READY)
+		dashStrCopy(d->status, smbProtocolLabel(), sizeof(d->status));
+}
+#endif
+
 int dashDevicesList(DashDevice *out, int max)
 {
 	int n = 0, port, i;
@@ -566,9 +585,13 @@ int dashDevicesList(DashDevice *out, int max)
 			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V1));
 		else if (v2_cfg == 0 && v1_cfg == 0 && !isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0])
 			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V2));
-		snprintf(smb_ready, sizeof(smb_ready), "%d share(s) connected",
-		         smbSharesConnectedCount(SMB_PATH_V2) + smbSharesConnectedCount(SMB_PATH_V1));
-		addStorage(out, &n, max, DI_SHARE, "Network", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
+		snprintf(smb_ready, sizeof(smb_ready), "%s", smbProtocolLabel());
+		{
+			int before = n;
+			addStorage(out, &n, max, DI_SHARE, "Network", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
+			if (n > before)
+				smbProtocolStatus(&out[n - 1]);
+		}
 	}
 	/* NFS exports, listed once one is saved (the config is read at boot). */
 	if (smbSharesKnown(SMB_PATH_NFS) > 0) {

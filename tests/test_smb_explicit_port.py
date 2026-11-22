@@ -27,6 +27,7 @@ code = r'''
 #include "smb2man.h"
 
 static char sent_url[512];
+static int expected_protocol;
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
 {
@@ -34,18 +35,20 @@ static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int ar
     (void)buf; (void)buflen;
     assert(!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_CONNECT);
     assert(arglen == sizeof(*in) && memchr(in->url, 0, sizeof(in->url)));
+    assert(in->protocol == expected_protocol);
     strcpy(sent_url, in->url);
     return 0;
 }
 '''
 code += function("static int connectSmb2(SmbShare *sh)\n{")
 code += r'''
-static const char *sent(const char *text)
+static const char *sent(const char *text, int protocol)
 {
     static char buf[1024];
     SmbConfig cfg;
     snprintf(buf, sizeof(buf), "%s", text);
     assert(smbConfigParse(buf, &cfg) == 1);
+    expected_protocol = protocol;
     sent_url[0] = '\0';
     assert(connectSmb2(&cfg.share[0]) == 0);
     return sent_url;
@@ -53,10 +56,12 @@ static const char *sent(const char *text)
 
 int main(void)
 {
-    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1/games\n"), "smb://192.168.1.1:445/games"));
-    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1:445/games\n"), "smb://192.168.1.1:445/games"));
-    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1:1445/games/sub\n"), "smb://192.168.1.1:1445/games"));
-    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1/games"), "smb://192.168.1.1:445/games"));
+    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1/games\n", 0), "smb://192.168.1.1:445/games"));
+    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1:445/games\n", 0), "smb://192.168.1.1:445/games"));
+    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1:1445/games/sub\n", 0), "smb://192.168.1.1:1445/games"));
+    assert(!strcmp(sent("NAME = A\nURL = smb://192.168.1.1/games", 0), "smb://192.168.1.1:445/games"));
+    sent("NAME = A\nVERSION = 2\nURL = smb://192.168.1.1/games\n", 2);
+    sent("NAME = A\nVERSION = 3\nURL = smb://192.168.1.1/games\n", 3);
     puts("PASS: SMB2 shares reach the driver with an explicit port");
     return 0;
 }

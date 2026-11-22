@@ -23,6 +23,8 @@
 </tbody></table>
 <p>&ldquo;No&rdquo; means Launchstation has no route for that combination, not that the hardware is unusable: a Neutrino ISO cannot be started straight from the APA HDD or a memory card because Launchstation passes Neutrino only the backends it names (<code>usb</code>, <code>mx4sio</code>, <code>mmce</code>, <code>ilink</code>, <code>ata</code>, <code>udpfs</code>, <code>smb</code>). Ember and POPStarter rows describe what Launchstation prepares; both still need the external core, and Ember needs your own BIOS.</p>
 
+<p>The Network (smb:/) row names the connected protocol family: <em>No SMB Enabled</em>, <em>SMB1 Enabled</em>, <em>SMB2/3 Enabled</em>, or <em>SMB1 + SMB2/3 Enabled</em>.</p>
+
 <h2 id="states">Device states: Ready, Not checked, Absent, Busy</h2>
 <p>A demand-loaded driver cannot know whether hardware is attached until it runs, so Launchstation does not guess.</p>
 <ul>

@@ -164,7 +164,7 @@ static int parseVersionEx(const char *value, int *proto_version)
 		*proto_version = 3;
 		return 2;
 	}
-	*proto_version = 2;
+	*proto_version = 0;
 	return 0;
 }
 
@@ -378,7 +378,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 	memset(cfg, 0, sizeof(*cfg));
 	memset(&cur, 0, sizeof(cur));
 	cur.version = 2;
-	cur.proto_version = 2;
+	cur.proto_version = 0;
 	if (text == NULL)
 		return 0;
 	/* a UTF-8 BOM, as Windows Notepad may write */
@@ -420,7 +420,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			cur.version = parseVersionEx(value, &cur.proto_version);
 			if (cur.version == 0) {
 				cur.version = 2;
-				cur.proto_version = 2;
+				cur.proto_version = 0;
 				if (problem == NULL)
 					problem = "VERSION must be 1 (SMB1), 2 (SMB2), or 3 (SMB3)";
 			}
@@ -440,7 +440,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			closeShare(cfg, &cur, problem);
 			memset(&cur, 0, sizeof(cur));
 			cur.version = 2;
-			cur.proto_version = 2;
+			cur.proto_version = 0;
 			problem = NULL;
 			has_keys = 0;
 			continue;
@@ -507,7 +507,7 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 
 	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN)
 		return -1;
-	if (kind != 1 && kind != 2 && kind != 3)
+	if (kind != 0 && kind != 1 && kind != 2 && kind != 3)
 		return -1;
 	if (ip == NULL || !isIpv4(ip))
 		return -1;
@@ -526,7 +526,7 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 	if (url_len < 0 || url_len >= out_size)
 		return -1;
 	n = url_len;
-	if (kind != 2) {
+	if (kind != 0) {
 		url_len = snprintf(out + n, out_size - n, "VERSION = %d\n", kind);
 		if (url_len < 0 || url_len >= out_size - n)
 			return -1;

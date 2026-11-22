@@ -26,6 +26,7 @@
  * logon that worked and a share that did not open. */
 #define SMB1_ERR_OPENSHARE (-(SMB_DEVCTL_LOGON_ERR_LOGON + 1))
 #define SMB1_ERR_HASH (-(SMB_DEVCTL_LOGON_ERR_LOGON + 2))
+#define SMB1_ERR_BUSY (-(SMB_DEVCTL_LOGON_ERR_LOGON + 3))
 
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded = 0;
@@ -237,6 +238,7 @@ static int connectSmb2(SmbShare *sh)
 	/* Always name the port: smb://server:port/share, 445 when SMB2.CNF has none. */
 	if (snprintf(in.url, sizeof(in.url), "smb://%s:%d/%s", sh->server, sh->port, sh->share) >= (int)sizeof(in.url))
 		return -SMB2_CONNECT_ERR_URL;
+	in.protocol = sh->proto_version;
 	ret = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_CONNECT, &in, sizeof(in), &out, sizeof(out));
 	memset(&in, 0, sizeof(in)); /* no password left on the stack */
 	/* -EEXIST: the driver already has it, from before a reset of our state */
@@ -339,6 +341,7 @@ static const char *smb1Problem(int ret)
 		case -SMB_DEVCTL_LOGON_ERR_LOGON: return "User name or password refused (or the server wants a clear-text password: PLAINTEXT = 1)";
 		case SMB1_ERR_OPENSHARE: return "Share refused or not found";
 		case SMB1_ERR_HASH: return "Could not prepare the password";
+		case SMB1_ERR_BUSY: return "Another SMB1 share is already connected";
 		default: return "Could not connect";
 	}
 }
@@ -379,23 +382,43 @@ void smbSharesConnect(int version, int retry_failed)
 		smbReadConfig();
 	for (i = 0; i < smb_cfg.count; i++) {
 		SmbShare *sh = &smb_cfg.share[i];
+		int used_v1 = version == 1;
 
 		if (sh->version != version || sh->state == SMB_STATE_INVALID || sh->state == SMB_STATE_CONNECTED)
 			continue;
 		if (sh->state == SMB_STATE_FAILED && !retry_failed)
 			continue;
 		ret = version == 1 ? connectSmb1(sh) : version == SMB_PATH_NFS ? connectNfs(sh) : connectSmb2(sh);
+		if (version == SMB_PATH_V2 && sh->proto_version == 0 && ret == -SMB2_CONNECT_ERR_PROT) {
+			/* smb2man discards a session that failed negotiation. smbman has one
+			 * session: never displace a different SMB1 share for a fallback. */
+			if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
+				ret = SMB1_ERR_BUSY;
+			else if (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)) {
+				/* Loading smbman also connects its explicitly configured share. */
+				if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
+					ret = SMB1_ERR_BUSY;
+				else {
+					used_v1 = 1;
+					ret = connectSmb1(sh);
+				}
+			}
+			if (ret >= 0)
+				sh->active_version = SMB_PATH_V1;
+		}
 		sh->error = ret;
 		if (ret >= 0) {
 			sh->state = SMB_STATE_CONNECTED;
+			sh->active_version = sh->active_version ? sh->active_version : version;
 			sh->problem = NULL;
 		} else {
 			sh->state = SMB_STATE_FAILED;
-			sh->problem = version == 1 ? smb1Problem(ret) : version == SMB_PATH_NFS ? nfsProblem(ret) : smb2Problem(ret);
+			sh->active_version = 0;
+			sh->problem = ret == SMB1_ERR_BUSY || used_v1 ? smb1Problem(ret) : version == SMB_PATH_NFS ? nfsProblem(ret) : smb2Problem(ret);
 		}
-		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", version, sh->url,
-		        version == 1 ? SMB_DEVICE_V1 "/" : version == SMB_PATH_NFS ? SMB_DEVICE_NFS "/" : SMB_DEVICE_V2 "/",
-		        version == 1 ? "" : sh->name, ret);
+		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", used_v1 ? 1 : version, sh->url,
+		        used_v1 ? SMB_DEVICE_V1 "/" : version == SMB_PATH_NFS ? SMB_DEVICE_NFS "/" : SMB_DEVICE_V2 "/",
+		        used_v1 ? "" : sh->name, ret);
 	}
 }
 
@@ -404,7 +427,8 @@ const char *smbSharesV1Name(void)
 	int i;
 
 	for (i = 0; smb_cfg_loaded && i < smb_cfg.count; i++)
-		if (smb_cfg.share[i].version == 1 && smb_cfg.share[i].state != SMB_STATE_INVALID)
+		if (smb_cfg.share[i].state != SMB_STATE_INVALID &&
+		    (smb_cfg.share[i].version == 1 || smb_cfg.share[i].active_version == 1))
 			return smb_cfg.share[i].name;
 	return NULL;
 }
@@ -414,7 +438,7 @@ int smbSharesConnectedCount(int version)
 	int i, n = 0;
 
 	for (i = 0; i < smb_cfg.count; i++)
-		if (smb_cfg.share[i].version == version && smb_cfg.share[i].state == SMB_STATE_CONNECTED)
+		if (smb_cfg.share[i].active_version == version && smb_cfg.share[i].state == SMB_STATE_CONNECTED)
 			n++;
 	return n;
 }
@@ -487,6 +511,7 @@ void smbSharesForget(void)
 		if (sh->state == SMB_STATE_INVALID)
 			continue;
 		sh->state = SMB_STATE_UNTRIED;
+		sh->active_version = 0;
 		sh->error = 0;
 		sh->problem = NULL;
 	}

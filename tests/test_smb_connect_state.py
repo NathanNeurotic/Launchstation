@@ -30,6 +30,7 @@ code = r'''
 #define MAX_PATH 1024
 #define SMB_RETRY_MS 30000
 #define SMB_DEVCTL_LOGOFF 0xC0DE0003
+#define SMB1_ERR_BUSY (-6)
 #define DPRINTF(...) ((void)0)
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded, smb_cfg_mc1_pending;
@@ -41,6 +42,8 @@ static unsigned int now;
 static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
 static int disconnect_calls, disconnect_result;
+static int separate_results, result1, result2, calls1, calls2;
+static int driver1_loaded = 1, load_connects_v1;
 
 static char *smbReadConfigText(int *refused)
 {
@@ -51,8 +54,8 @@ static char *smbReadConfigText(int *refused)
     return config_text != NULL ? strdup(config_text) : NULL;
 }
 
-static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
-static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
+static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; calls1++; return separate_results ? result1 : connect_result; }
+static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; calls2++; return separate_results ? result2 : connect_result; }
 static int connectNfs(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
@@ -63,7 +66,17 @@ static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int ar
     return disconnect_result;
 }
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
-static int isSmbDriverLoaded(int version) { (void)version; return 1; }
+static int isSmbDriverLoaded(int version) { return version == 1 ? driver1_loaded : 1; }
+static __attribute__((unused)) int load_smb(int version) {
+    if (version == 1) {
+        driver1_loaded = 1;
+        if (load_connects_v1) {
+            smb_cfg.share[0].state = SMB_STATE_CONNECTED;
+            smb_cfg.share[0].active_version = 1;
+        }
+    }
+    return 1;
+}
 static const char *smb2Problem(int ret) { (void)ret; return "mock SMB2 failure"; }
 static const char *nfsProblem(int ret) { (void)ret; return "mock NFS failure"; }
 static unsigned int Timer(void) { return now; }
@@ -72,6 +85,7 @@ code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.ind
 code += function("static void smbReadConfig(void)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
 code += function("int smbSharesConnectedCount(int version)\n{")
+code += function("const char *smbSharesV1Name(void)\n{")
 code += function("static int versionInMask(int version, int mask)\n{")
 code += function("static void smbStatusForMask(int version_mask, const char *none_label, const char *missing_group,\n                             char *out, int out_size)\n{")
 code += function("void smbSharesStatus(int version, char *out, int out_size)\n{")
@@ -91,6 +105,10 @@ static void reset_case(void)
     connect_result = 0;
     disconnect_calls = 0;
     disconnect_result = 0;
+    separate_results = 0;
+    result1 = result2 = calls1 = calls2 = 0;
+    driver1_loaded = 1;
+    load_connects_v1 = 0;
 }
 
 int main(void)
@@ -171,6 +189,57 @@ int main(void)
         smbSharesCombinedStatus(status, sizeof(status));
         assert(strstr(status, "has no SMB share") != NULL && strstr(status, "SMB2/SMB3") == NULL);
     }
+
+    /* Automatic shares try SMB1 only for protocol failure and then use it for reads. */
+    reset_case();
+    config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_PROT; result1 = 0;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 1 && calls2 == 1 && disconnect_calls == 0);
+    assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED && smb_cfg.share[0].active_version == 1);
+    assert(smbSharesConnectedCount(1) == 1 && smbSharesConnectedCount(2) == 0);
+    assert(smbSharesV1Name() != NULL && !strcmp(smbSharesV1Name(), "AUTO"));
+
+    /* Network and explicit-version failures never fall back. */
+    reset_case();
+    config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_CONN; result1 = 0;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 0 && calls2 == 1 && smb_cfg.share[0].state == SMB_STATE_FAILED);
+    assert(smb_cfg.share[0].active_version == 0 && smb_cfg.share[0].error == -SMB2_CONNECT_ERR_CONN);
+
+    reset_case();
+    config_text = "NAME=TWO\nVERSION=2\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_PROT; result1 = 0;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 0 && calls2 == 1 && smb_cfg.share[0].state == SMB_STATE_FAILED);
+
+    /* An existing SMB1 session survives; another share cannot displace it. */
+    reset_case();
+    config_text = "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\nNAME=NEW\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result1 = 0; result2 = -SMB2_CONNECT_ERR_PROT;
+    smbSharesConnect(1, 1);
+    assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED && smb_cfg.share[0].active_version == 1);
+    smbSharesConnect(2, 1);
+    assert(calls1 == 1 && calls2 == 1 && smb_cfg.share[0].active_version == 1);
+    assert(smb_cfg.share[1].state == SMB_STATE_FAILED && smb_cfg.share[1].active_version == 0);
+
+    /* Loading SMB1 can connect its explicit share: fallback rechecks that session. */
+    reset_case();
+    config_text = "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\nNAME=NEW\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result1 = 0; result2 = -SMB2_CONNECT_ERR_PROT;
+    driver1_loaded = 0; load_connects_v1 = 1;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 0 && calls2 == 1 && smb_cfg.share[0].active_version == 1);
+    assert(smb_cfg.share[1].state == SMB_STATE_FAILED && smb_cfg.share[1].active_version == 0);
+
+    /* A failed fallback reports the SMB1 error, not a generic SMB2 one. */
+    reset_case();
+    config_text = "NAME=AUTO\nURL=smb://10.0.0.6/s\n";
+    separate_results = 1; result2 = -SMB2_CONNECT_ERR_PROT; result1 = -123;
+    smbSharesConnect(2, 1);
+    assert(calls1 == 1 && calls2 == 1 && smb_cfg.share[0].state == SMB_STATE_FAILED);
+    assert(smb_cfg.share[0].problem != NULL && !strcmp(smb_cfg.share[0].problem, "mock SMB1 failure"));
 
     puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
     return 0;
