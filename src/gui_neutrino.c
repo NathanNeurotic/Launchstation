@@ -300,6 +300,8 @@ static int profileReadLatest(const char *id, NEUTRINO_LAUNCH_OPTIONS *out,
 }
 
 /* ---- OPL-style KEY=value file (same $Key=value lines as RiptOPL's per-game .cfg) ---- */
+#define NEUTRINO_PROFILE_MAX_SIZE 2048
+
 /* $Compatibility is RiptOPL's bit mask: 0x02 sync reads (-gc 2), 0x04 unhook syscalls (3),
  * 0x10 dual-layer DVD (5), 0x40 buffer overrun fix (7). Fast reads (-gc 0) has no OPL bit. */
 static unsigned int profileCompatBit(int mode)
@@ -323,7 +325,7 @@ static int profileIntValue(const char *v, int max, int *out)
 
 /* Parses a NEUT-<ID>.cfg text. Unknown keys and # lines are ignored; a bad
  * value, or a missing last line `$End=1`, rejects the whole file (the caller then falls back to the old profile). */
-static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
+static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out, char *comments, size_t *comments_len)
 {
 	NEUTRINO_LAUNCH_OPTIONS o;
 	char *line = text, *next, *eq, *val, *end, *tok, *save;
@@ -332,6 +334,16 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 	memset(&o, 0, sizeof(o));
 	while (line != NULL && *line) {
 		next = strchr(line, '\n');
+		if (!complete && line[strspn(line, " \t")] == '#') {
+			/* Keep full comment lines verbatim for tools sharing this file. */
+			if (comments != NULL && next != NULL) {
+				size_t len = next + 1 - line;
+				memcpy(comments + *comments_len, line, len);
+				*comments_len += len;
+			}
+			line = next != NULL ? next + 1 : NULL;
+			continue;
+		}
 		if (next)
 			*next++ = '\0';
 		end = line + strlen(line);
@@ -395,17 +407,20 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 	return 1;
 }
 
-static int profileReadAt(const char *path, NEUTRINO_LAUNCH_OPTIONS *out)
+/* 1: valid settings, 0: absent, -1: invalid or unreadable. */
+static int profileReadAt(const char *path, NEUTRINO_LAUNCH_OPTIONS *out, char *comments, size_t *comments_len)
 {
 	char *text;
 	int len, ok;
 
-	text = dashLoadTextFile(path, 2048, &len);
-	if (text == NULL)
-		return 0;
-	ok = profileParseText(text, out);
+	text = dashLoadTextFile(path, NEUTRINO_PROFILE_MAX_SIZE, &len);
+	if (text == NULL) {
+		iox_stat_t stat;
+		return genGetStat(path, &stat) == -ENOENT ? 0 : -1;
+	}
+	ok = strlen(text) == (size_t)len && profileParseText(text, out, comments, comments_len);
 	free(text);
-	return ok;
+	return ok ? 1 : -1;
 }
 
 /* The game device's file first, then the app config folder's. */
@@ -413,35 +428,22 @@ static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 {
 	char path[MAX_PATH], dir[MAX_PATH];
 
-	if (profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)) && profileReadAt(path, out))
+	if (profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)) && profileReadAt(path, out, NULL, NULL) > 0)
 		return 1;
 	if (!profileStorageSafe() || !profilePath(id, 2, path, sizeof(path)))
 		return 0;
-	return profileReadAt(path, out);
+	return profileReadAt(path, out, NULL, NULL) > 0;
 }
 
 /* 1 supplies valid settings, 0 permits creation, -1 refuses to overwrite an
  * existing invalid, unreadable, or erroring file. The settings are read once. */
 static int profileReadActiveFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 {
-	NEUTRINO_LAUNCH_OPTIONS parsed;
-	iox_stat_t stat;
-	char path[MAX_PATH], dir[MAX_PATH], *text;
-	int result;
+	char path[MAX_PATH], dir[MAX_PATH];
 
 	if (!profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)))
 		return 0;
-	text = dashLoadTextFile(path, 2048, NULL);
-	if (text != NULL) {
-		result = profileParseText(text, &parsed);
-		free(text);
-		if (result) {
-			*out = parsed;
-			return 1;
-		}
-		return -1;
-	}
-	return genGetStat(path, &stat) == -ENOENT ? 0 : -1;
+	return profileReadAt(path, out, NULL, NULL);
 }
 
 /* The saved settings for a game: the KEY=value file if it is valid, else the
@@ -458,24 +460,11 @@ static int profileLoad(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 {
 	NEUTRINO_LAUNCH_OPTIONS read_back;
-	char path[MAX_PATH], dir[MAX_PATH], text[512];
-	int n, i;
+	char path[MAX_PATH], dir[MAX_PATH], *text;
+	size_t comments_len = 0, available;
+	int i, n, mask = 0, saved = 0, wrote;
 
 	if (!profileGameIdValid(id) || !profileOptionsValid(options) || !dashWorkerAwaitAll("Finishing up"))
-		return 0;
-	{
-		int mask = 0;
-		for (i = 0; i < NEUTRINO_COMPAT_COUNT; i++)
-			if (options->game_compatibility & (1u << compatibility_options[i].mode))
-				mask |= (int)profileCompatBit(compatibility_options[i].mode);
-		n = snprintf(text, sizeof(text),
-		             "$Compatibility=%d\n$NeutrinoFastReads=%d\n$NeutrinoVideo=%d\n$NeutrinoGsmComp=%d\n"
-		             "$NeutrinoArgs=%s%s%s\n$VMC_0=%s\n$VMC_1=%s\n$End=1\n",
-		             mask, (int)(options->game_compatibility & 1u), options->video_mode, options->video_compatibility,
-		             options->debug_colors ? "-dbc" : "", options->debug_colors && options->logo ? " " : "",
-		             options->logo ? "-logo" : "", options->vmc[0], options->vmc[1]);
-	}
-	if (n <= 0 || n >= (int)sizeof(text))
 		return 0;
 	/* The game's own device only: one file in CFG/, created if it is missing (the
 	 * folder RiptOPL uses). A failed or cut-short write leaves a file without $End=1,
@@ -485,12 +474,33 @@ static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 		return 0;
 	if (!strncmp(path, "udpfs", 5) && !setting->HOSTwrite)
 		return 0; /* network writing is off, as in the File Browser */
-	{
-		int wrote = dashWriteFile(path, text, n);
-		if (wrote < 0 && genMkdir(dir, fileMode) >= 0)
-			wrote = dashWriteFile(path, text, n);
-		return wrote >= 0 && profileReadAt(path, &read_back) && memcmp(&read_back, options, sizeof(*options)) == 0;
-	}
+	text = malloc(NEUTRINO_PROFILE_MAX_SIZE + 1);
+	if (text == NULL)
+		return 0;
+	/* Read the current comments at save time in case another tool added them while the menu was open. */
+	if (profileReadAt(path, &read_back, text, &comments_len) < 0)
+		goto done;
+	for (i = 0; i < NEUTRINO_COMPAT_COUNT; i++)
+		if (options->game_compatibility & (1u << compatibility_options[i].mode))
+			mask |= (int)profileCompatBit(compatibility_options[i].mode);
+	available = NEUTRINO_PROFILE_MAX_SIZE + 1 - comments_len;
+	n = snprintf(text + comments_len, available,
+	             "$Compatibility=%d\n$NeutrinoFastReads=%d\n$NeutrinoVideo=%d\n$NeutrinoGsmComp=%d\n"
+	             "$NeutrinoArgs=%s%s%s\n$VMC_0=%s\n$VMC_1=%s\n$End=1\n",
+	             mask, (int)(options->game_compatibility & 1u), options->video_mode, options->video_compatibility,
+	             options->debug_colors ? "-dbc" : "", options->debug_colors && options->logo ? " " : "",
+	             options->logo ? "-logo" : "", options->vmc[0], options->vmc[1]);
+	if (n <= 0 || (size_t)n >= available)
+		goto done;
+	n += (int)comments_len;
+	wrote = dashWriteFile(path, text, n);
+	if (wrote < 0 && genMkdir(dir, fileMode) >= 0)
+		wrote = dashWriteFile(path, text, n);
+	saved = wrote >= 0 && profileReadAt(path, &read_back, NULL, NULL) > 0 &&
+	        memcmp(&read_back, options, sizeof(*options)) == 0;
+done:
+	free(text);
+	return saved;
 }
 
 
