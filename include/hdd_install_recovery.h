@@ -1,5 +1,6 @@
 #ifndef HDD_INSTALL_RECOVERY_H
 #define HDD_INSTALL_RECOVERY_H
+#include <stdint.h>
 
 /* One serialized installer worker. Keep its RPC buffers alive until the UI
  * acknowledges that the old IOP has stopped; never kill a thread mid-RPC. */
@@ -15,5 +16,8 @@ void hddInstallRecoveryRequestReset(void);
 int hddInstallRecoveryResetRequested(void);
 void hddInstallRecoveryResetComplete(void);
 int hddInstallRecoveryWasReset(void);
+void hddInstallPadRpcBegin(uint64_t deadline);
+int hddInstallPadRpcReady(void);
+void hddInstallPadRpcEnd(void);
 
 #endif

@@ -812,7 +812,7 @@ int hddDread(iomanX_iop_file_t *f, iox_dirent_t *dirent)
 int hddReName(iomanX_iop_file_t *f, const char *oldname, const char *newname)
 {
     int rv;
-    char oldId[APA_IDMAX] = {0}, newId[APA_IDMAX] = {0};
+    char oldId[APA_IDMAX + 1] = {0}, newId[APA_IDMAX] = {0};
 
     if (strlen(oldname) >= sizeof(oldId) || strlen(newname) >= sizeof(newId))
         return -ENAMETOOLONG;

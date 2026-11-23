@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include "launchelf.h"
 #include "dash.h"
+#include "hdd_install_recovery.h"
 #include <kernel.h>
 #include <timer.h>
 #include <time.h>
@@ -480,7 +481,7 @@ static int setupPadUntil(u64 deadline)
 {
 	int ret, i, port, state, modes;
 
-	padInit(0);
+	if (padInit(0) < 0 && deadline) return 0;
 	padRumbleReset();
 	int usb_ready = ds34usb_init(deadline);
 	int bt_ready = ds34bt_init(deadline);
@@ -517,6 +518,7 @@ static int setupPadUntil(u64 deadline)
 
 	padtype_t[2] = 2;
 	padtype_t[3] = 2;
+	if (deadline && !hddInstallPadRpcReady()) return 0;
 	padPollingInit();
 	return 1;
 }
@@ -528,7 +530,11 @@ int setupPad(void)
 
 int setupPadForRecovery(void)
 {
-	return setupPadUntil(Timer() + 5000);
+	u64 deadline = Timer() + 5000;
+	hddInstallPadRpcBegin(deadline);
+	int ready = setupPadUntil(deadline);
+	hddInstallPadRpcEnd();
+	return ready;
 }
 //---------------------------------------------------------------------------
 // DS3/DS4 builds also have a pad polling thread. Stop it before tearing down

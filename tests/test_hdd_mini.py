@@ -137,3 +137,40 @@ with tempfile.TemporaryDirectory(prefix="apa-mini-") as tmp:
                     "-I", str(root / "include"), "-I", str(root / "iop/ps2hdd_osd"), str(tmp / "test.c"),
                     str(root / "src/hdd_apa_boundary.c"), "-o", str(tmp / "test")], check=True)
     subprocess.run([str(tmp / "test")], check=True, timeout=20)
+
+    rename_code = r'''
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include "hdd-ioctl.h"
+typedef struct {int unit;} iomanX_iop_file_t;
+static int fioSema, locked;
+static char source_id[APA_IDMAX], target_id[APA_IDMAX];
+static void WaitSema(int sema){assert(!sema&&!locked);locked=1;}
+static void SignalSema(int sema){assert(!sema&&locked);locked=0;}
+static int apaRename(int device,const char *source,const char *target){
+    assert(!device&&locked);
+    memcpy(source_id,source,sizeof(source_id));
+    memcpy(target_id,target,sizeof(target_id));
+    return 0;
+}
+'''
+    fio = (root / "iop/ps2hdd_osd/hdd_fio.c").read_text()
+    rename_code += function(fio, "int hddReName(")
+    rename_code += r'''
+int main(void){
+    iomanX_iop_file_t drive={0};
+    const char full[]="12345678901234567890123456789012";
+    assert(sizeof(full)==APA_IDMAX+1);
+    assert(!hddReName(&drive,full,"new")&&!locked);
+    assert(!memcmp(source_id,full,APA_IDMAX)&&!strcmp(target_id,"new"));
+    assert(hddReName(&drive,"old",full)==-ENAMETOOLONG);
+    assert(hddReName(&drive,"012345678901234567890123456789012","new")==-ENAMETOOLONG);
+    assert(!hddReName(&drive,"old","new"));
+    assert(!strcmp(source_id,"old")&&!strcmp(target_id,"new")&&!locked);
+}
+'''
+    (tmp / "rename.c").write_text(rename_code)
+    subprocess.run(["gcc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-I", str(tmp),
+                    str(tmp / "rename.c"), "-o", str(tmp / "rename")], check=True)
+    subprocess.run([str(tmp / "rename")], check=True, timeout=10)

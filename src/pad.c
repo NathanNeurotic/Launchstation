@@ -2,6 +2,7 @@
 // File name:   pad.c
 //---------------------------------------------------------------------------
 #include "launchelf.h"
+#include "hdd_install_recovery.h"
 
 static char padBuf_t[2][256] __attribute__((aligned(64)));
 struct padButtonStatus buttons_t[2];
@@ -390,7 +391,7 @@ static int setupPadUntil(u64 deadline)
 {
 	int ret, i, port, state, modes;
 
-	padInit(0);
+	if (padInit(0) < 0 && deadline) return 0;
 	padRumbleReset();
 
 	for (port = 0; port < 2; port++) {
@@ -436,7 +437,11 @@ int setupPad(void)
 
 int setupPadForRecovery(void)
 {
-	return setupPadUntil(Timer() + 5000);
+	u64 deadline = Timer() + 5000;
+	hddInstallPadRpcBegin(deadline);
+	int ready = setupPadUntil(deadline) && hddInstallPadRpcReady();
+	hddInstallPadRpcEnd();
+	return ready;
 }
 //---------------------------------------------------------------------------
 // Fully rebind the EE libpad client after a runtime USB/IOP topology change.

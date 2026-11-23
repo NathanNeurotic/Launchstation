@@ -19,21 +19,23 @@ dash_header = r'''
 #include "sifrpc.h"
 u64 Timer(void);
 int dashWorkerOnThread(void);
+int GetThreadId(void);
 '''
 code = r'''
 #include "dash_internal.h"
 #include "hdd_install_recovery.h"
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 extern int __wrap_sceSifCallRpc(SifRpcClientData_t*,int,int,void*,int,void*,int,SifRpcEndFunc_t,void*);
 extern int __wrap_sceSifBindRpc(SifRpcClientData_t*,int,int);
 static u64 now;
-static int polls,calls,binds,resets,scenario,worker=1;
+static int polls,calls,binds,resets,scenario,worker=1,thread=2;
 static int *live_buffer;
 static SifRpcClientData_t *waiting;
 u64 Timer(void){return now;}
-int GetThreadId(void){return 2;}
+int GetThreadId(void){return thread;}
 int dashWorkerOnThread(void){return worker;}
 int DashIsActive(void){return 0;}
 int dashGfxCanYield(void){return 1;}
@@ -79,6 +81,25 @@ int main(void){
  hddInstallRecoveryObserve(-502);assert(!hddInstallRecoveryFault());
  assert(!__wrap_sceSifCallRpc(&cd,1,0,NULL,0,&output,4,NULL,NULL));
  puts("PASS: returned ATA faults suppress cleanup RPCs; stalled calls/bindings retain buffers until UI reset; non-installer paths stay unchanged");
+ worker=0;now=calls=binds=resets=0;scenario=4;
+ hddInstallPadRpcBegin(50000);
+ assert(!__wrap_sceSifBindRpc(&cd,123,0)&&!cd.server&&waiting!=&cd);
+ scenario=0;assert(!__wrap_sceSifBindRpc(&cd,123,0)&&cd.server&&waiting!=&cd&&binds==2);
+ assert(!__wrap_sceSifCallRpc(&cd,1,0,NULL,0,&output,4,NULL,NULL)&&hddInstallPadRpcReady());
+ thread=3;scenario=1;
+ assert(!__wrap_sceSifCallRpc(&cd,1,0,NULL,0,&output,4,NULL,NULL)&&now==0);
+ thread=2;
+ assert(__wrap_sceSifCallRpc(&cd,1,0,NULL,0,&output,4,NULL,NULL)==-ETIMEDOUT&&now==50000);
+ assert(!hddInstallPadRpcReady()&&!resets&&calls==3);
+ assert(__wrap_sceSifCallRpc(&cd,1,0,NULL,0,&output,4,NULL,NULL)==-ETIMEDOUT&&calls==3);
+ assert(__wrap_sceSifBindRpc(&cd,123,0)==-ETIMEDOUT&&binds==2);
+ hddInstallPadRpcEnd();
+ now=0;scenario=3;
+ hddInstallPadRpcBegin(20000);
+ assert(__wrap_sceSifBindRpc(&cd,123,0)==-ETIMEDOUT&&now==20000&&waiting!=&cd);
+ assert(!hddInstallPadRpcReady()&&!resets);
+ hddInstallPadRpcEnd();
+ puts("PASS: recovery PAD bind and calls are bounded on the UI thread, with no late DMA to the caller's stack");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='hdd-installer-recovery-') as directory:
