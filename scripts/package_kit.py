@@ -14,7 +14,8 @@ POPS/ and EMBER/ are not stored in this repository. ship/kit-externals.json pins
 them to one commit of NathanNeurotic/RiptOPL, with the SHA-256 of every file;
 `fetch` downloads (or copies from a local RiptOPL checkout) and refuses any byte
 that differs from the pin, and `refresh-pin` re-derives the manifest for a newer
-RiptOPL commit. Neutrino comes from the ps2max32/neutrino "latest" release .7z,
+RiptOPL commit (.github/workflows/ember-watch.yml does that by itself, daily, when a
+new official Ember reaches RiptOPL). Neutrino comes from the ps2max32/neutrino "latest" release .7z,
 exactly as RiptOPL bundles it. Nothing here is embedded in the ELF; the ordinary
 APP_LAUNCHSTATION packages and the updater's PSUs are unchanged.
 """
