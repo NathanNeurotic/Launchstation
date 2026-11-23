@@ -234,7 +234,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-") as temp:
             # the boundary even though the aggregate free space looks sufficient.
             assert lib.hddApaCanAllocate(image.one, None, sectors, 512 * MB) == 0
             assert lib.hddApaCanAllocate(image.one, None, sectors, 1024 * MB) == -errno.ENOSPC
-            assert lib.hddApaCanAllocate(image.one, None, sectors, 8 * MB) == -errno.EINVAL
+            assert lib.hddApaCanAllocate(image.one, None, sectors, 8 * MB) == 0
             common = bytearray(image.bytes(1024 * MB, 2))
             original_common = bytes(common)
             # Reuse an eligible free block before considering an append.
@@ -255,8 +255,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-") as temp:
             assert lib.hddApaLimit(image.one, None, sectors, c.byref(limit)) == -errno.EIO
             assert limit.value == 0
             os.pwrite(image.fd, mbr, 0)
-            # Existing 8 MiB partitions can be inspected, but a stock-driver
-            # append after a mini tail must not enter its unsafe padding loop.
+            # The mini allocator can pad a mini tail before a larger append.
             mini_start = 2048 * MB
             mini_mbr = bytearray(mbr)
             set32(mini_mbr, 12, mini_start)
@@ -267,7 +266,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-") as temp:
             fix_apa(common)
             os.pwrite(image.fd, common, 1024 * MB * 512)
             os.pwrite(image.fd, apa_header(mini_start, 8 * MB, 0, 1024 * MB), mini_start * 512)
-            assert lib.hddApaCanAllocate(image.one, None, sectors, 128 * MB) == -errno.ENOTSUP
+            assert lib.hddApaCanAllocate(image.one, None, sectors, 128 * MB) == 0
             struct.pack_into("<H", common, 72, 0)
             fix_apa(common)
             os.pwrite(image.fd, common, 1024 * MB * 512)

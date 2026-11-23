@@ -1,3 +1,4 @@
+#include "../../ds34_bind.h"
 #include <kernel.h>
 #include <sifrpc.h>
 #include <string.h>
@@ -19,20 +20,10 @@ static u8 rpcbuf[64] __attribute__((aligned(64)));
 
 static u8 ds34usb_inited = 0;
 
-int ds34usb_init()
+int ds34usb_init(u64 deadline)
 {
-    ds34usb.server = NULL;
-
-    do {
-        if (SifBindRpc(&ds34usb, DS34USB_BIND_RPC_ID, 0) < 0)
-            return 0;
-
-        nopdelay();
-    } while (!ds34usb.server);
-
-    ds34usb_inited = 1;
-
-    return 1;
+    ds34usb_inited = ds34BindUntil(&ds34usb, DS34USB_BIND_RPC_ID, deadline);
+    return ds34usb_inited;
 }
 
 int ds34usb_deinit()

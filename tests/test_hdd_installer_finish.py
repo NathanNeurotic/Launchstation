@@ -18,6 +18,7 @@ code = r'''
 #include "hdd_format.h"
 #include "save_sign.h"
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
 typedef int64_t s64;
 typedef struct { uint32_t start, size; } hddSetOsdMBR_t;
 #define FIO_O_RDONLY 1

@@ -31,6 +31,9 @@ code = r'''
 #include <string.h>
 #include <unistd.h>
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
+void hddInstallRecoveryObserve(int rc){(void)rc;}
+#define FIO_O_TRUNC O_TRUNC
 #include "cloud_http.h"
 #include "save_sign.h"
 #define MAX_PATH 1025

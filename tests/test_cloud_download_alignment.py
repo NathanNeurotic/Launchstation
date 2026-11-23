@@ -16,6 +16,8 @@ code = r"""
 #include <string.h>
 
 #define CLOUD_HTTP_IO 16384
+#define HDD_INSTALL_ATA_TIMEOUT (-502)
+static void hddInstallRecoveryObserve(int result) { (void)result; assert(0); }
 #define PAYLOAD_SIZE (CLOUD_HTTP_IO * 3 + 509)
 static _Alignas(64) unsigned char scratch[CLOUD_HTTP_IO];
 static unsigned char payload[PAYLOAD_SIZE + 3], stored[PAYLOAD_SIZE];

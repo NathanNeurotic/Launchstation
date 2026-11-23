@@ -23,7 +23,7 @@ typedef struct
     u16 rev;
 } __attribute__((packed)) hci_information_t;
 
-int ds34bt_init();
+int ds34bt_init(u64 deadline);
 int ds34bt_deinit();
 int ds34bt_reinit_ports(u8 ports);
 int ds34bt_init_charging();

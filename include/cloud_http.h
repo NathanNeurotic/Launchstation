@@ -39,6 +39,10 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
  * snapshot across an IOP reset. Clear the snapshot and observer after use. */
 void cloudHttpSetCaBundle(const unsigned char *pem, unsigned size);
 void cloudHttpSetStatusCallback(void (*callback)(const char *, void *), void *context);
+/* Scoped connection reuse for aligned downloads with a borrowed CA snapshot. */
+void cloudHttpDownloadBatchBegin(void);
+void cloudHttpDownloadBatchEnd(void);
+/* HTTP 404 returns -ENOENT. Other download errors remain failures. */
 int cloudHttpDownloadAlignedFd(const char *url, int fd, const char *ca_path,
                                int max_bytes, int *out_size, unsigned char digest[32],
                                void (*progress)(int, int, void *), void *context,

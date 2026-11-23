@@ -17,6 +17,9 @@ code = r'''
 #include <string.h>
 #include "hdd_install.h"
 #include "cloud_http.h"
+static int batch;
+void cloudHttpDownloadBatchBegin(void){assert(!batch);batch=1;}
+void cloudHttpDownloadBatchEnd(void){assert(batch);batch=0;}
 static void (*observer)(const char *, void *);
 void hddInstallLog(const char *format,...) { (void)format; }
 void hddInstallLogFlush(HddInstall *in) { (void)in; }
@@ -29,7 +32,7 @@ void cloudHttpSetStatusCallback(void (*callback)(const char *, void *),void *con
 void hddInstallProgress(const char *s,int done,int total){assert(!done&&!total);snprintf(text,sizeof(text),"%s",s);}
 void hddInstallPhase(unsigned phase){assert(phase==HDD_INSTALL_PHASE_DOWNLOAD);}
 static int downloadInstaller(HddInstall *in,const char **phase){
-    assert(in&&observer&&observer_context&&ca_snapshot==in->ca_data);
+    assert(batch&&in&&observer&&observer_context&&ca_snapshot==in->ca_data);
     observer("Resolving server address",observer_context);assert(strstr(text,"PSBBN DP repository")&&strstr(text,"Resolving"));
     *phase="system.tar.gz";observer("Verifying secure connection",observer_context);assert(strstr(text,"system.tar.gz")&&strstr(text,"Verifying"));
     observer("Receiving download headers",observer_context);assert(strstr(text,"Receiving download headers"));
@@ -38,8 +41,8 @@ static int downloadInstaller(HddInstall *in,const char **phase){
 '''
 code += function('static void installerHttpsStatus(')+function('int hddInstallDownload(')
 code += r'''
-int main(void){unsigned char ca[]={0};HddInstall in={.ca_data=ca,.ca_size=1};assert(!hddInstallDownload(&in)&&!observer&&!observer_context&&!ca_snapshot&&changes==2);
- failure=-EIO;assert(hddInstallDownload(&in)==-EIO&&!observer&&!observer_context&&!ca_snapshot&&changes==4);
+int main(void){unsigned char ca[]={0};HddInstall in={.ca_data=ca,.ca_size=1};assert(!hddInstallDownload(&in)&&!observer&&!observer_context&&!ca_snapshot&&!batch&&changes==2);
+ failure=-EIO;assert(hddInstallDownload(&in)==-EIO&&!observer&&!observer_context&&!ca_snapshot&&!batch&&changes==4);
  puts("PASS: installer displays DNS/TLS/header phases and clears the observer after success/failure");}
 '''
 with tempfile.TemporaryDirectory(prefix='hdd-installer-transport-') as directory:

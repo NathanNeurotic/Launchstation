@@ -16,6 +16,7 @@ code=r'''
 #include <string.h>
 #include <unistd.h>
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
 typedef uint64_t u64;
 typedef struct {int init_count,max_count;} ee_sema_t;
 static u64 now=1000;

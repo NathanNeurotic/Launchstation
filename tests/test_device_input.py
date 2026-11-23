@@ -230,7 +230,7 @@ static int mcUnitAvailable(int u) { return u >= 0 && u < 2; }
 static void mcMultitapRefresh(void) {}
 static char LaunchElfBootDir[256], LaunchElfDir[256], netConfig[32];
 static struct { int dev_auto; int show_unavailable_devices; } dashCfg = {0,1};
-static int mc_present[2], usb_mask, usb_loaded, resident, media, loads, opens, closes;
+static int mc_present[MC_UNITS], usb_mask, usb_loaded, resident, media, loads, opens, closes;
 static int failed_load, reset_on_load, reset_on_type, usb_snapshot_valid=1;
 static u64 delayed_ata;
 enum { S_HDD=1, S_ATA=2, S_MX=4, S_MMCE0=8, S_MMCE1=16, S_UDPFS=32 };
@@ -427,11 +427,12 @@ static int padGetState(int p,int s) {
     if(!pad_reopen_active && states[p]==3 && ++legacy_reads>=4) return PAD_STATE_STABLE;
     return settle && now_ms>=1500 ? PAD_STATE_STABLE : states[p];
 }
-static void padStateInt2String(int s,char *out) { (void)s; out[0]=0; }
 static void DelayThread(int us) { now_ms+=us/1000; }
 static void DashPause(unsigned us) { DelayThread((int)us); }
 """
-waitcode += function(pad, "void waitPadReady(") + function(pad, "void waitAnyPadReady(")
+waitcode += (function(pad, "static int waitPadReadyUntil(")
+             + function(pad, "void waitPadReady(")
+             + function(pad, "void waitAnyPadReady("))
 waitcode += r"""
 int main(void) {
     waitPadReady(0,0); assert(now_ms==2000);

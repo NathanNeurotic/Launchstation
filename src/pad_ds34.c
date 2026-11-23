@@ -3,6 +3,8 @@
 // description: variation of pad.c with support for the PlayStation 3 and 4 dualshock drivers by Alex Parrado
 //---------------------------------------------------------------------------
 #include "launchelf.h"
+#include "dash.h"
+#include "hdd_install_recovery.h"
 #include <kernel.h>
 #include <timer.h>
 #include <time.h>
@@ -23,6 +25,8 @@ static int test_joy = 0;
 
 int semPoll,semRunning,semFinish;
 int isRunning;
+static int recovery_poll_tid = -1, recovery_alarm_sem = -1;
+static volatile int recovery_alarm_id = -1;
 
 void clearPadPressState(void)
 {
@@ -40,6 +44,7 @@ void clearPadPressState(void)
 static void alrmHandler(s32 alarm_id, u16 time, void *arg2)
 {
 	s32 *pSema = (s32 *)arg2;
+	recovery_alarm_id = -1;
 	iSignalSema(*pSema);
 	ExitHandler();
 }
@@ -51,7 +56,7 @@ void padPollingThread(void *args)
 {
 	int state;
 	ee_sema_t semData;
-	int semAlrm,iIsRunning;
+	int iIsRunning;
 
 	semData.option = semData.attr = 0;
 	semData.init_count = 0;
@@ -104,14 +109,37 @@ void padPollingThread(void *args)
 		SignalSema(semPoll);
 
 		// nanosleep from the scratch
-		semAlrm = CreateSema(&semData);
-		SetAlarm(POLLING_TIME, alrmHandler, &semAlrm);
-		WaitSema(semAlrm);
-		DeleteSema(semAlrm);
+		recovery_alarm_sem = CreateSema(&semData);
+		recovery_alarm_id = SetAlarm(POLLING_TIME, alrmHandler, &recovery_alarm_sem);
+		WaitSema(recovery_alarm_sem);
+		DeleteSema(recovery_alarm_sem);
+		recovery_alarm_sem = -1;
 	}
 	
+	recovery_poll_tid = -1;
 	SignalSema(semFinish);
 	ExitDeleteThread();
+}
+
+void padSuspendForRecovery(void)
+{
+	if (recovery_poll_tid >= 0) SuspendThread(recovery_poll_tid);
+}
+void padForgetAfterRecovery(void)
+{
+	/* Old IOP/DMA is stopped before releasing any EE polling resources. */
+	if (recovery_poll_tid >= 0) {
+		TerminateThread(recovery_poll_tid); DeleteThread(recovery_poll_tid);
+		recovery_poll_tid = -1;
+	}
+	if (recovery_alarm_id >= 0) ReleaseAlarm(recovery_alarm_id);
+	recovery_alarm_id = -1;
+	if (recovery_alarm_sem >= 0) DeleteSema(recovery_alarm_sem);
+	recovery_alarm_sem = -1;
+	DeleteSema(semPoll); DeleteSema(semRunning); DeleteSema(semFinish);
+	isRunning = 0;
+	ds34usb_reset(); ds34bt_reset();
+	clearPadPressState();
 }
 
 // Init polling thread
@@ -141,6 +169,7 @@ void padPollingInit(void)
 	
 	isRunning=1;
 	pad_thr_id = CreateThread(&th_attr);
+	recovery_poll_tid = pad_thr_id;
 	StartThread(pad_thr_id, NULL);
 }
 
@@ -159,7 +188,8 @@ int readpad_noKBnoRepeat(void)
 {
 	int port;
 
-	WaitSema(semPoll);
+	if (dashWorkerIoBusy()) { if (PollSema(semPoll) < 0) return 0; }
+	else WaitSema(semPoll);
 
 	for (port = 0; port < 4; port++) {
 
@@ -184,7 +214,8 @@ int readpad_no_KB(void)
 	static int rpt_count[4] = {0, 0, 0, 0};
 	int port;
 
-	WaitSema(semPoll);
+	if (dashWorkerIoBusy()) { if (PollSema(semPoll) < 0) return 0; }
+	else WaitSema(semPoll);
 
 	for (port = 0; port < 4; port++) {
 		if (ret[port] != 0) {
@@ -414,19 +445,22 @@ int readpad_noRepeat(void)
 // endfunc readpad_noRepeat
 //---------------------------------------------------------------------------
 // Wait for specific PAD, but also accept disconnected state
+static int waitPadReadyUntil(int port, int slot, u64 deadline)
+{
+	for (;;) {
+		int state = padGetState(port, slot);
+		if (state == PAD_STATE_DISCONN || state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
+			return 1;
+		if (deadline) {
+			if (Timer() >= deadline) return 0;
+			DelayThread(1000);
+		}
+	}
+}
+
 void waitPadReady(int port, int slot)
 {
-	int state, lastState;
-	char stateString[16];
-
-	state = padGetState(port, slot);
-	lastState = -1;
-	while ((state != PAD_STATE_DISCONN) && (state != PAD_STATE_STABLE) && (state != PAD_STATE_FINDCTP1)) {
-		if (state != lastState)
-			padStateInt2String(state, stateString);
-		lastState = state;
-		state = padGetState(port, slot);
-	}
+	waitPadReadyUntil(port, slot, 0);
 }
 //---------------------------------------------------------------------------
 // Wait for any PAD, but also accept disconnected states
@@ -443,20 +477,21 @@ void waitAnyPadReady(void)
 }
 //---------------------------------------------------------------------------
 // setup PAD
-int setupPad(void)
+static int setupPadUntil(u64 deadline)
 {
 	int ret, i, port, state, modes;
 
-	padInit(0);
+	if (padInit(0) < 0 && deadline) return 0;
 	padRumbleReset();
-	ds34usb_init();
-	ds34bt_init();
+	int usb_ready = ds34usb_init(deadline);
+	int bt_ready = ds34bt_init(deadline);
+	if (deadline && (!usb_ready || !bt_ready)) return 0;
 
 	for (port = 0; port < 2; port++) {
 		padtype_t[port] = 0;  // Assume that we don't have a proper PS2 controller
 		if ((ret = padPortOpen(port, 0, &padBuf_t[port][0])) == 0)
 			return 0;
-		waitPadReady(port, 0);
+		if (!waitPadReadyUntil(port, 0, deadline)) return 0;
 		state = padGetState(port, 0);
 		if (state != PAD_STATE_DISCONN) {  // if anything connected to this port
 			modes = padInfoMode(port, 0, PAD_MODETABLE, -1);
@@ -474,17 +509,32 @@ int setupPad(void)
 				padSetMainMode(port, 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);  // Set DualShock
 			else                                                               // else
 				padSetMainMode(port, 0, PAD_MMODE_DIGITAL, PAD_MMODE_UNLOCK);  // Set Digital
-			waitPadReady(port, 0);                                             // Await completion
+			if (!waitPadReadyUntil(port, 0, deadline)) return 0;
 		} else {                                                               // Nothing is connected to this port
 			padSetMainMode(port, 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);      // Fake DualShock
-			waitPadReady(port, 0);                                             // Await completion
+			if (!waitPadReadyUntil(port, 0, deadline)) return 0;
 		}
 	}  // ends for (port)
 
 	padtype_t[2] = 2;
 	padtype_t[3] = 2;
+	if (deadline && !hddInstallPadRpcReady()) return 0;
 	padPollingInit();
 	return 1;
+}
+
+int setupPad(void)
+{
+	return setupPadUntil(0);
+}
+
+int setupPadForRecovery(void)
+{
+	u64 deadline = Timer() + 5000;
+	hddInstallPadRpcBegin(deadline);
+	int ready = setupPadUntil(deadline);
+	hddInstallPadRpcEnd();
+	return ready;
 }
 //---------------------------------------------------------------------------
 // DS3/DS4 builds also have a pad polling thread. Stop it before tearing down

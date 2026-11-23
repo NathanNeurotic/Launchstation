@@ -26,8 +26,9 @@ PSX/DESR internal-drive formatting remains unavailable.
 
 ## Driver lifetime
 
-The HDD and ATA driver sources and ABIs are unchanged. The small, separately
-loaded `iop/hdd_format` service provides checked raw transfers in 32 KiB chunks.
+The HDD driver enables its existing 8 MiB allocation mode with the OSD access
+policy. The HDD and ATA driver ABIs are unchanged. The separate
+`iop/hdd_format` service provides checked raw transfers in 32 KiB chunks.
 Before writing, Launchstation stops audio, checks VMC/PFS unmount results,
 refuses an active FTP server, and detaches the ATA0 BDM root and its mounted
 volumes. The normal runtime IOP reset reloads controllers and the storage stack
@@ -45,7 +46,7 @@ they never produce a success notification.
 
 `src/hdd_apa_boundary.c` reads and validates the root APA header and MBR ranges.
 The shared EE HDD library checks each main/subpartition allocation against the
-APA boundary before asking the unmodified driver to allocate it. It follows
+APA boundary before asking the driver to allocate it. It follows
 the driver's first eligible free-size slot, then its aligned append policy.
 Both build systems use that library. Reported APA free space excludes recovery
 and exFAT space. Unknown or damaged hybrid maps disable allocations rather
@@ -57,12 +58,30 @@ drivers can still allocate beyond the reserved APA area. The
 describes the same risk of overwriting exFAT when APA allocations exceed their
 reserved space.
 
-New partitions retain the **128 MiB minimum**. The boundary reader can inspect
-existing 8 MiB partitions; it does not enable their creation. An append after
-a tail that is not aligned to 128 MiB is refused because the stock allocator
-cannot safely pad it. A suitably aligned existing free block can still be
-reused. Supporting new mini partitions would also need a review of the
-allocator, PFS overhead and compatibility with other PS2 software.
+New PFS partitions can be as small as **8 MiB**. Each extent uses a power-of-two
+size and is aligned to that size. The allocator reuses eligible free extents
+or pads the end of the chain before a larger append. APA Jail reservations and
+system partitions still use 128 MiB alignment. Use an allocator that supports
+mixed mini extents before creating or resizing partitions on these disks from
+another PS2 utility.
+
+## Install an app from a PSU
+
+On an APA Jail HDD with HOSDMenu, choose **Install app from PSU…** in HDD Manager
+or **Install app to HDD…** on a PSU in File Browser. Launchstation inspects the
+package for a PS2 ELF, reads its title and boot filename from `title.cfg` when
+present, and prompts if more than one ELF can be used. Internet access is
+required for HDD icons and artwork. A missing asset can use generic artwork.
+HTTP and TLS failures stop installation.
+
+The app is published under `ata0:/APPS/` with an 8 MiB HOSDMenu launcher
+partition. The review shows the chosen ELF and assets before publishing.
+Updates only replace a managed app and preserve user files outside the PSU.
+After an interruption, selecting the original PSU or the cached `PACKAGE.PSU`
+continues the transaction. Launchstation retains the cache and the previous
+app until publication completes. If an interruption leaves a pending launcher
+without its ownership marker, the installer leaves that partition untouched
+and reports its name.
 
 ## Recovery volume
 
@@ -152,13 +171,13 @@ confirmation remains.
 
 Japanese also installs DP's Japanese PSBBN kernel and latest Japanese channel
 archive into `__linux.9`. Its download can approach 1 GiB and is included in
-overall/file progress and archive preflight. OSDMenu uses DP's corresponding
+overall/file progress and has a 1 GiB compressed input limit. OSDMenu uses DP's corresponding
 supported language code (Japanese maps to `jap`; unsupported OSD languages use
 English). OPL selects the matching installed language file when available.
 
 Enabling PS2 Linux downloads `PS2Linux.tar.gz` from the same Archive.org item,
-checks its metadata size and preflights it along with
-the PSBBN and language archives. Both Linux kernels come from the pinned DP
+verifies its published size and hash and validates its contents during extraction
+with the PSBBN and language archives. Both Linux kernels come from the pinned DP
 Git revision. Permissions, links and device nodes are preserved; the home
 filesystem is prepared for first boot. Holding Circle boots the installed NTSC
 Linux kernel, matching DP's default configuration. Linux requires a USB keyboard.
@@ -195,18 +214,43 @@ HDD-OSD-only installs
 fetch DP's referenced `extras.zip`. PSBBN installations fetch the newest
 complete system and selected language versions from DP's
 [Archive.org collection](https://archive.org/details/psbbn-definitive-patch-v4.1),
-using its published sizes and SHA-1 hashes. Archive decompression, CRCs, paths,
-required boot files and capacity bounds are checked after downloading and before
-installing the software. Staged file sizes and hashes are checked before
-applying the payload. Downloads and verification report file progress; DNS,
-connection, TLS and response-header stages are also shown so connection setup
-does not appear as an unexplained static download screen. The HTTP client reports connection, TLS and response-header stages while waiting for data.
+using its published sizes and SHA-1 hashes. Staged files are verified before
+applying the payload. Archives are decompressed once. CRC, path, filesystem
+capacity and required-file checks run during extraction, before the filesystem
+is marked clean or the MBR is activated. A failed extraction can leave a
+partially populated filesystem.
+
+Aligned installer downloads reuse a TLS connection for fully framed responses
+from the same host within a download batch. If a reused connection fails before
+the response body, it gets one fresh attempt. The ext2 writer batches adjacent data
+blocks into 32 KiB writes and flushes them before publishing completed inodes.
+Downloads and verification show DNS, connection, TLS, HTTP headers, and file
+progress.
 
 An ownership marker protects cleanup. Successful installation removes the
 temporary files; a failed download or install leaves the folder for inspection.
 Because formatting now happens first, download/verification failure leaves a
 formatted HDD with an incomplete software installation. The UI reports this
 explicitly. Network setup and CA readability are checked before the erase prompts.
+
+### Recovering an interrupted installer
+
+An ATA timeout or installer RPC stalled for 60 seconds triggers a bounded IOP
+reset. The worker keeps its old buffers until the IOP acknowledges reboot.
+Launchstation then restores controller and storage services and retries the
+interrupted stage up to twice. It retains verified downloads and restarts
+partial files. An interrupted filesystem population is rebuilt from the cached
+archives. The drive format is never repeated.
+
+HDD Manager's **Resume installation…** can also continue after a console restart.
+It reads the owned installation folder and validates the saved layout against
+the actual disk before showing a confirmation. Alternating, checksummed
+checkpoints record completed stages. Cached downloads are checked against the
+saved digests, and HTTPS uses the CA bundle from the running installation or its
+settings device. Resume verifies the start sectors of PFS partitions created by
+this installation. If a timeout interrupts the first staging-folder claim,
+retry uses a separate folder and leaves the original untouched. Older
+checkpoints without the partition identity fields cannot be resumed.
 
 The installer activates the downloaded MBR only after files/configuration
 succeed, after flushing the payload and verifying its readback. APA-Jail recovery metadata remains the creation-time snapshot.

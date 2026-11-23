@@ -44,7 +44,8 @@ static const int pfsFormatArg[1] = { PFS_ZONE_SIZE };
 #define _OMIT_SYSTEM_PARTITION
 //#define DEBUG
 
-static char *sizesString[9] = {
+static char *sizesString[] = {
+		"8M", "16M", "32M", "64M",
 		"128M",
 		"256M",
 		"512M",
@@ -56,7 +57,8 @@ static char *sizesString[9] = {
 		"32G"
 };
 
-static int sizesMB[9] = {
+static int sizesMB[] = {
+		8, 16, 32, 64,
 		128,
 		256,
 		512,
@@ -298,6 +300,25 @@ static void hddUpdateInfo()
 	hddStatusCurrent = 1;
 }
 
+int hddCreatePfsExtent(unsigned sizeMB, const char *name)
+{
+	char path[64];
+	for (unsigned i = 0; i < sizeof(sizesMB) / sizeof(sizesMB[0]); i++) {
+		if (sizeMB != (unsigned)sizesMB[i]) continue;
+		int ret = hddCheckAllocation(sizeMB * 2048u);
+		if (ret < 0) return ret;
+		snprintf(path, sizeof(path), "hdd0:%s,,,%s,PFS", name, sizesString[i]);
+		int fd = fileXioOpen(path, FIO_O_RDWR | FIO_O_CREAT | FIO_O_EXCL, 0);
+		return fd < 0 ? fd : fileXioClose(fd);
+	}
+	return -EINVAL;
+}
+
+int hddFormatPfs(const char *path)
+{
+	return fileXioFormat("pfs:", path, (const char *)&pfsFormatArg, sizeof(pfsFormatArg));
+}
+
 int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 {
 	int maxIndex;
@@ -312,7 +333,7 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	if(!hddStatusCurrent)
 		hddUpdateInfo();
 
-	if(fsSizeMB < 128 || fsSizeMB % 128)
+	if(fsSizeMB < 8 || fsSizeMB % 8)
 		return -EINVAL;
 
 	switch(type)
@@ -338,7 +359,7 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	}
 
 	// Get index for max partition size
-	for(maxIndex = 8; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
+	for(maxIndex = (int)(sizeof(sizesMB) / sizeof(sizesMB[0])) - 1; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
 
 	// Get index of size we will use to create main partition
 	for(useIndex = maxIndex; sizesMB[useIndex] > fsSizeMB; useIndex--);
@@ -454,7 +475,7 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	fileXioClose(partFd);
 
 	snprintf(openString, sizeof(openString), "hdd0:%.*s", (int)(sizeof(fsName) - 1), fsName);
-	retVal = fileXioFormat("pfs:", openString, (const char*)&pfsFormatArg, sizeof(pfsFormatArg));
+	retVal = hddFormatPfs(openString);
 	if(retVal < 0)
 	{
 #ifdef DEBUG
@@ -494,11 +515,11 @@ int hddExpandFilesystem(t_hddFilesystem *fs, int extraMB)
 	if(!hddStatusCurrent)
 		hddUpdateInfo();
 
-	if(extraMB < 128 || extraMB % 128)
+	if(extraMB < 8 || extraMB % 8)
 		return -EINVAL;
 
 	// Get index for max partition size
-	for(maxIndex = 8; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
+	for(maxIndex = (int)(sizeof(sizesMB) / sizeof(sizesMB[0])) - 1; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
 
 	// Get index of size we will use to create new subs
 	for(useIndex = maxIndex; sizesMB[useIndex] > extraMB; useIndex--);

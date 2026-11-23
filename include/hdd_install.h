@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "hdd_format.h"
+#include "hdd_install_recovery.h"
 
 #define HDD_INSTALL_REPOSITORY "CosmicScale/PSBBN-Definitive-Project"
 #define HDD_INSTALL_API "/repos/" HDD_INSTALL_REPOSITORY
@@ -15,6 +16,8 @@
 #define HDD_INSTALL_LAUNCHER_FILES 160
 
 enum { HDD_GAME_OPL, HDD_GAME_NEUTRINO };
+enum { HDD_INSTALL_PFS_CONTENTS, HDD_INSTALL_PFS_APP, HDD_INSTALL_PFS_CONFIG,
+       HDD_INSTALL_PFS_GAME, HDD_INSTALL_PFS_COUNT };
 typedef struct {
     char path[192], hash[41];
     uint32_t size;
@@ -48,6 +51,13 @@ typedef struct {
     char archive_item[96], channels[128];
     uint64_t download_bytes;
     unsigned cleanup_pending;
+    /* EE checkpoints survive an IOP reset. Never repeat whole-drive format. */
+    unsigned recovery_attempts, stage_ready, manifest_ready, downloaded_assets, downloaded_launchers;
+    unsigned applied, populated, committed;
+    unsigned apa_sectors;
+    unsigned resumed;
+    uint32_t pfs_start[HDD_INSTALL_PFS_COUNT];
+    unsigned pfs_intent;
 } HddInstall;
 
 unsigned hddInstallPartitionMb(const HddInstall *install, unsigned index);
@@ -65,7 +75,6 @@ int hddInstallLanguages(const char *script, const char *english, HddInstallLangu
 int hddInstallArchiveItem(const char *script, char item[96]);
 int hddInstallLanguageChoices(HddInstall *install, HddInstallLanguage *languages, unsigned capacity);
 int hddInstallHex(const char *text, unsigned length);
-int hddInstallCheckAsset(HddInstall *install, unsigned asset);
 /* Strict, bounded JSON readers for authenticated upstream manifests. */
 int hddInstallCommit(const char *json, char commit[41]);
 int hddInstallAssetMetadata(const char *json, const char *name,
@@ -98,11 +107,11 @@ int hddInstallApply(HddInstall *install);
 /* Call only after successful software/MBR commit. Preserves unrelated console
  * configuration and verifies the persistent HDD boot setting; HOSD only. */
 int hddInstallEnableBoot(HddInstall *install);
-int hddInstallPsbbnPreflight(HddInstall *install);
 int hddInstallPsbbnPartitions(HddInstall *install);
 int hddInstallPsbbnPayload(void *install, const HddFormatIo *io);
 int hddInstallClaimStage(HddInstall *install);
 int hddInstallFindStage(HddInstall *install);
+int hddInstallPfsPartition(HddInstall *install, unsigned mb, const char *name, unsigned slot);
 int hddInstallCleanup(HddInstall *install);
 
 /* Installer progress/log: one serialized writer, UI snapshots, no
@@ -138,5 +147,6 @@ void hddInstallLogFlush(HddInstall *install);
 void dashHddInstallDebugBegin(HddInstall *install, const HddFormatPlan *plan);
 void dashHddInstallDebugEnd(HddInstall *install, int result);
 int dashHddInstallAwait(int id, const char *title);
+void dashHddInstallRecoveryFailed(void) __attribute__((noreturn));
 
 #endif

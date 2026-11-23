@@ -1,4 +1,5 @@
 #include "hdd_install.h"
+#include "install_tar.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -484,7 +485,8 @@ int hddInstallArchiveMetadata(const char *json, const char *prefix,
         if (!h || !v || !string(h, hash, 41) || !hddInstallHex(hash, 40) ||
             !string(v, count, sizeof(count)) || !isdigit((unsigned char)count[0])) return 0;
         bytes = strtoul(count, &stop, 10);
-        if (*stop || !bytes || bytes > (!strcmp(prefix, "channels-jpn-v") ? 1024u : 256u) * 1024 * 1024) return 0;
+        if (*stop || !bytes ||
+            bytes > (!strcmp(prefix, "channels-jpn-v") ? INSTALL_TAR_MAX_COMPRESSED : 256u * 1024 * 1024)) return 0;
         *size = bytes;
     }
     return 1;

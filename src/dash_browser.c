@@ -14,6 +14,7 @@
 //  follows the classic rules (filerMenuEnables).
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "hdd_app.h"
 #include "filer_size_cache.h"
 #include "dash_sound.h"
 #include "filer_shared.h"
@@ -2859,6 +2860,16 @@ static void opBookmark(void)
 	}
 }
 
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+static int hddAppTarget(char *path, int size)
+{
+	int idx[2];
+	if (targets(idx, 2) != 1) return 0;
+	const FILEINFO *file = &fb.files[idx[0]];
+	return !isDir(file) && fullPath(file, path, size) && genCmpFileExt(path, "PSU");
+}
+#endif
+
 static void actionsMenu(void)
 {
 	FILEINFO *f = (fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) ? &fb.files[fb.sel] : NULL;
@@ -2926,7 +2937,8 @@ static void actionsMenu(void)
 		F_SORT,
 		F_BOOKMARK,
 		F_HOME,
-		F_REFRESH
+		F_REFRESH,
+		F_HDD_APP
 	};
 	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details", "Game titles"};
 	static const char *const sort_names[FB_SORT_COUNT] = {"As stored", "Name", "Game title", "Size", "Date-Time", "Kind", "Type"};
@@ -3008,6 +3020,10 @@ static void actionsMenu(void)
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
 		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+		if (hddAppTarget(path, sizeof(path)))
+			ADD(DI_HDD, "Install app to HDD...", "APA Jail; Internet required", 0, F_HDD_APP);
+#endif
 		/* any file, .elf/.icn/.sys too; not the built-in commands or an offline PC card */
 		if (f != NULL && !isDir(f) && !isMisc(fb.dir) && (!isPcCardCfPath(fb.dir) || isPcCardCfOnline()))
 			ADD(DI_EDIT, "Open in Hex Editor", "change bytes, up to 512 KB", 0, F_HEX);
@@ -3353,6 +3369,12 @@ static void actionsMenu(void)
 				openDir(dir, NULL);
 			break;
 		}
+		case F_HDD_APP:
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+			if (hddAppTarget(path, sizeof(path))) dashHddInstallApp(path);
+#endif
+			refresh();
+			break;
 		case F_REFRESH:
 			refresh();
 			break;

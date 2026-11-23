@@ -23,4 +23,9 @@ int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
 int InjectHddAppLauncherWithArg(const char *partition_name, const char *elf_path,
                                 const char *title, const void *icon, unsigned icon_size, const char *argument);
 
+/* HDD PS2X metadata and separate list/delete models, supplied by the DP asset
+ * pipeline. Memory-card icon.sys is a different format and is rejected. */
+int InjectHddAppAssets(const char *partition_name, const char *cnf, const char *settings,
+                       const void *list, unsigned list_size, const void *del, unsigned del_size);
+
 #endif

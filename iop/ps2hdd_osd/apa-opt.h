@@ -4,6 +4,9 @@
 #define APA_PRINTF(format, ...) printf(format, ##__VA_ARGS__)
 #define APA_DRV_NAME            "hdd"
 
+/* Keep OSD semantics while allowing aligned 8/16/32/64 MiB extents. */
+#define APA_8MB_PARTITION_SIZE 1
+
 #ifdef APA_POSIX_VER
 #define APA_ALLOW_REMOVE_PARTITION_WITH_LEADING_UNDERSCORE 1
 #define APA_FORMAT_LOCK_MBR                                1
@@ -13,7 +16,6 @@
 #define APA_SUPPORT_IOCTL_GETPARTSTART                     1
 #define APA_SUPPORT_MBR                                    1
 #define APA_WORKAROUND_LESS_THAN_40GB_CAPACITY             1
-#define APA_8MB_PARTITION_SIZE                             1
 #else
 /*  Define APA_OSD_VER in your Makefile to build an OSD version, which will:
     1. (currently disabled) When formatting, do not create any partitions other than __mbr.

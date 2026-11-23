@@ -146,13 +146,19 @@ jobs:
           python3 tests/test_folder_date_arithmetic.py
           python3 tests/test_folder_date_popup.py
           python3 tests/test_hdd_format.py
+          python3 tests/test_hdd_mini.py
+          python3 tests/test_hdd_app.py
+          python3 tests/test_hdd_app_install.py
           python3 tests/test_hdd_format_ui.py
           python3 tests/test_hdd_installer.py
           python3 tests/test_hdd_installer_finish.py
           python3 tests/test_hdd_installer_boot.py
           python3 tests/test_hdd_installer_stage.py
           python3 tests/test_hdd_installer_apply.py
-          python3 tests/test_hdd_installer_preflight.py
+          python3 tests/test_hdd_installer_streaming.py
+          python3 tests/test_hdd_installer_recovery.py
+          python3 tests/test_hdd_installer_retry.py
+          python3 tests/test_hdd_installer_resume.py
           python3 tests/test_hdd_installer_partitions.py
           python3 tests/test_save_archive_review.py
           python3 tests/test_hdd_installer_launchers.py

@@ -4,6 +4,7 @@
 #include "filer_shared.h"
 #include "main_startup.h"
 #include "dash_sound.h"
+#include "hdd_install.h"
 #include "pccf_control.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
@@ -129,6 +130,7 @@ IMPORT_BIN2C(allowdvdv_irx);
 //State of module collections
 static u8 have_HDD_modules = 0;
 static u8 have_basic_modules = 0;
+static u8 have_filexio_module = 0;
 static u8 have_filexio_ready = 0;
 static u8 have_mc_rpc_ready = 0;
 #ifdef HOMEBREW_SIO2MAN
@@ -377,7 +379,7 @@ static void waitForUsbMassEnumerate(void);
 static void loadKbdModules(void);
 static int pathUsesUsbMass(const char *path);
 void loadUsbModules(void);
-void ensureCoreIoStackReady(void);
+int ensureCoreIoStackReady(void);
 void setupPowerOff(void);
 void startKbd(void);
 void Reset(void);
@@ -1243,6 +1245,7 @@ static void loadBasicModules(void)
 	id = SifExecModuleBuffer(iomanx_irx, size_iomanx_irx, 0, NULL, &ret);
 	DPRINTF(" [IOMANX]: id=%d ret=%d\n", id, ret);
 	id = SifExecModuleBuffer(filexio_irx, size_filexio_irx, 0, NULL, &ret);
+	have_filexio_module = (id >= 0 && ret == 0);
 	DPRINTF(" [FILEXIO]: id=%d ret=%d\n", id, ret);
 
 	id = SifExecModuleBuffer(allowdvdv_irx, size_allowdvdv_irx, 0, NULL, &ret);  //unlocks cdvd for reading on psx dvr
@@ -1310,12 +1313,13 @@ int setFileXioTransferWide(int wide)
 	return -1;
 }
 
-void ensureCoreIoStackReady(void)
+int ensureCoreIoStackReady(void)
 {
 	loadBasicModules();
 
 	if (!have_filexio_ready) {
-		fileXioInit();
+		if (!have_filexio_module || fileXioInit() < 0)
+			return 0;
 		/* Keep the SDK transfer buffer here: network, USB and BDM services
 		 * share the IOP heap. A paste widens it only while it copies. */
 		have_filexio_ready = 1;
@@ -1340,6 +1344,7 @@ void ensureCoreIoStackReady(void)
 	}
 
 	load_vmcman_module();
+	return 1;
 }
 //------------------------------
 //endfunc ensureCoreIoStackReady
@@ -2177,6 +2182,75 @@ static void stopDs34Input(void)
 	ds34bt_reset();
 }
 #endif
+
+/* Fault-only reset. No calls to dead storage, PAD, audio or card servers.
+ * The UI can run this while the installer keeps an outstanding RPC's buffers
+ * pinned. Its EE clients are rebuilt only after that worker has unwound. */
+static const char *installer_recovery_error = "IOP recovery failed. Restart the console.";
+const char *installerIopRecoveryError(void) { return installer_recovery_error; }
+static void installerResetTrace(const char *phase)
+{
+	hddInstallLog("IOP %s: SMFLAG=0x%08x MSFLAG=0x%08x SUBADDR=0x%08x", phase,
+	              (unsigned)SifGetReg(SIF_REG_SMFLAG), (unsigned)SifGetReg(SIF_REG_MSFLAG),
+	              (unsigned)SifGetReg(SIF_SYSREG_SUBADDR));
+}
+int resetInstallerIopTransport(void)
+{
+#ifdef NO_IOP_RESET
+	installer_recovery_error = "IOP reset is disabled in this build. Restart the console.";
+	return 0;
+#else
+	u64 started;
+	installer_recovery_error = "IOP reset request could not be queued. Restart the console.";
+	installerResetTrace("reset starting");
+	padSuspendForRecovery();
+	resetUsbHostControllerBeforeIopReset();
+	SifInitRpc(0);
+	/* Match the SDK's full reboot preparation: stop EE RPC reception before
+	 * sending the reset command. This only touches EE state; old client/DMA
+	 * buffers remain alive until the IOP acknowledges its new boot. */
+	SifExitRpc();
+	started = Timer();
+	while (!SifIopReset("", 0)) {
+		if (Timer() - started >= 15000) { installerResetTrace("reset queue timeout"); return 0; }
+	}
+	installerResetTrace("reset queued");
+	installer_recovery_error = "IOP boot completion did not arrive. Restart the console.";
+	hddInstallProgress("IOP reset sent; waiting for reboot completion", 0, 0);
+	started = Timer();
+	while (!SifIopSync()) {
+		if (Timer() - started >= 15000) { installerResetTrace("boot timeout"); return 0; }
+	}
+	installerResetTrace("boot acknowledged");
+	SifInitRpc(0);
+	pccf_bus_owned = pccf_loaded = 0;
+	iop_reset_generation++;
+	padForgetAfterRecovery();
+	clearPadPressState();
+	return 1;
+#endif
+}
+int reloadInstallerCoreAfterReset(void)
+{
+	/* Worker is finished; its old library mutexes and RPC buffers are free. */
+	installer_recovery_error = "IOP core services could not be loaded. Restart the console.";
+	hddInstallLog("IOP recovery: rebuilding EE file and heap clients");
+	fileXioExit(); SifLoadFileExit(); clearIopModuleState();
+	if (SifLoadFileInit() < 0 || SifInitIopHeap() < 0) return 0;
+	initsbv_patches();
+	if (!ensureCoreIoStackReady()) return 0;
+	dashSoundShutdown(); /* generation changed: discard EE audio state only */
+#ifdef DS34
+	hddInstallLog("IOP recovery: loading DS34 input modules");
+	loadDs34InputModules();
+#endif
+	installer_recovery_error = "Controller initialization failed after IOP reset. Restart the console.";
+	hddInstallLog("IOP recovery: opening controller ports");
+	if (!setupPadForRecovery()) return 0;
+	clearPadPressState(); startKbd();
+	hddInstallLog("IOP recovery: core services and controller restored");
+	return 1;
+}
 
 int (*iopResetBlocked)(void) = NULL;
 
@@ -3051,6 +3125,7 @@ int ensureUsbKeyboardReady(void)
 static void clearIopModuleState(void)
 {
 	have_basic_modules = 0;
+	have_filexio_module = 0;
 	have_filexio_ready = 0;
 	have_mc_rpc_ready = 0;
 #ifdef HOMEBREW_SIO2MAN

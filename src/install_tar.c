@@ -144,7 +144,7 @@ int installTarGzip(const InstallArchiveIo *io, uint32_t bytes, const InstallTarS
     char *extra, longname[INSTALL_TAR_PATH] = "", longlink[INSTALL_TAR_PATH] = "";
     unsigned paxsize = 0, entries = 0;
     int ret = -EINVAL, initialized = 0;
-    if (!io || !io->read || !sink || !sink->begin || !sink->data || !sink->end || !bytes || bytes > 512u * 1024 * 1024) return -EINVAL;
+    if (!io || !io->read || !sink || !sink->begin || !sink->data || !sink->end || !bytes || bytes > INSTALL_TAR_MAX_COMPRESSED) return -EINVAL;
     r = calloc(1, sizeof(*r)); e = calloc(1, sizeof(*e)); extra = malloc(8193);
     if (!r || !e || !extra) { ret = -ENOMEM; goto done; }
     r->io = io; r->size = bytes;

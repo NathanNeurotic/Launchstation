@@ -64,34 +64,37 @@ int hddApaCanAllocate(HddFsReadSector read, void *ctx, uint32_t sectors, uint32_
     uint32_t limit, lba = 0, prev = 0, next, length, bins[32] = {0};
     uint64_t end = 0, candidate;
     unsigned steps = 0, i;
+    uint32_t tail = 0;
     int ret = hddApaLimit(read, ctx, sectors, &limit);
     if (ret < 0) return ret;
-    if (size < APA_MIN_SECTORS || (size & (size - 1))) return -EINVAL;
+    if (size < APA_EXISTING_MIN_SECTORS || (size & (size - 1))) return -EINVAL;
     do {
         if (++steps > sectors / APA_EXISTING_MIN_SECTORS || lba >= limit || lba + 1 >= sectors) return -EIO;
         ret = header(read, ctx, lba, b);
         if (ret < 0) return ret;
         length = get32(b + 68);
         next = get32(b + 8);
-        /* Existing mini partitions may be read; requests to create them are
-         * still rejected above. This does not enable mini APA allocation. */
+        if (!lba) {
+            tail = get32(b + 12);
+            if (length < APA_MIN_SECTORS || b[72] != 1 || b[73] || b[74] || b[75]) return -EIO;
+        }
         if (length < APA_EXISTING_MIN_SECTORS || (length & (length - 1)) || lba % length ||
             (uint64_t)lba + length > limit || (lba && get32(b + 12) != prev)) return -EIO;
         if (b[72] == 0 && b[73] == 0) {
-            for (i = 18; i < 32; i++)
+            for (i = 14; i < 32; i++)
                 if (length == (1u << i) && !bins[i]) bins[i] = lba;
         }
         end = (uint64_t)lba + length;
-        if (next && (next < end || next % APA_EXISTING_MIN_SECTORS)) return -EIO;
+        if (next && (next != end || next % APA_EXISTING_MIN_SECTORS)) return -EIO;
         prev = lba;
         lba = next;
     } while (next);
-    for (i = 18; i < 32; i++)
+    if (prev != tail) return -EIO;
+    for (i = 14; i < 32; i++)
         if ((1u << i) >= size && bins[i])
             return (uint64_t)bins[i] + size <= limit ? 0 : -ENOSPC;
-    /* The stock 128 MiB allocator cannot pad a mini-partition tail safely.
-     * Reusing a properly aligned free block above is still possible. */
-    if (end % APA_MIN_SECTORS) return -ENOTSUP;
+    /* The mini allocator pads the tail with aligned power-of-two free
+     * extents down to 8 MiB before appending a larger partition. */
     candidate = (end + size - 1) & ~((uint64_t)size - 1);
     return candidate + size <= limit ? 0 : -ENOSPC;
 }

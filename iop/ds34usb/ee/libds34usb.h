@@ -11,7 +11,7 @@ enum eDS34USBStatus {
     DS34USB_STATE_RUNNING = 0x08,
 };
 
-int ds34usb_init();
+int ds34usb_init(u64 deadline);
 int ds34usb_deinit();
 int ds34usb_reinit_ports(u8 ports);
 int ds34usb_get_status(int port);
