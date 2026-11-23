@@ -261,7 +261,7 @@ msg = kind(lines, "MESSAGE|1|Not all created|")
 assert msg and "0 of 2 created" in msg[0] and "First: NESTED: A save folder holds files only" in msg[0], lines
 assert sorted(p.name for p in host("mass:/arch").iterdir()) == before       # nothing half-written is left
 browser_src = (root / "src/dash_browser.c").read_text(encoding="utf-8")
-assert 'ADD(DI_MC, "Create archive...",' in browser_src and "dashCardArchiveFolders(clipPath, names, nclipFiles, fb.dir)" in browser_src
+assert 'ADD(DI_ARCHIVE_CREATE, "Create archive...",' in browser_src and "dashCardArchiveFolders(clipPath, names, nclipFiles, fb.dir)" in browser_src
 assert "if (en[PASTE] && clipFoldersOnly() && strncmp(fb.dir, \"mc\", 2)" in browser_src
 host("mass:/conv").mkdir()
 shutil.copy(psu, host("mass:/conv/BESLES-12345GAME.psu"))
