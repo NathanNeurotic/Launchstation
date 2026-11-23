@@ -824,32 +824,62 @@ static int copyAsset(HddInstall *in, unsigned asset, const char *destination)
     if (ret < 0) return ret;
     return copyFile(in, hddInstallAssetName(asset), in->sizes[asset], destination, in->recovery_attempts || in->resumed);
 }
+static int pfsExtentMatches(const HddInstall *in, const iox_stat_t *st, unsigned mb)
+{
+    return st->mode == 0x100 && !st->attr && !st->private_0 && st->size == mb * 2048u &&
+           st->size <= in->apa_sectors && st->private_5 >= 2048 &&
+           st->private_5 <= in->apa_sectors - st->size;
+}
 int hddInstallPfsPartition(HddInstall *in, unsigned mb, const char *name, unsigned slot)
 {
-    char path[96];
+    char path[64], pending[32], private_path[64];
     iox_stat_t st;
     if (slot >= HDD_INSTALL_PFS_COUNT || !mb || mb > UINT32_MAX / 2048u) return -EINVAL;
     snprintf(path, sizeof(path), "hdd0:%s", name);
     int ret = fileXioGetStat(path, &st);
-    if (in->pfs_start[slot]) {
-        if (ret < 0) return ret;
-        if (st.private_5 != in->pfs_start[slot]) return -EEXIST;
-    } else {
-        if (ret != -ENOENT) return ret < 0 ? ret : -EEXIST;
-        ret = hddMakeFilesystem(mb, (char *)name, FS_GROUP_APPLICATION);
-        if (ret != (int)mb) return ret < 0 ? ret : -ENOSPC;
-        ret = fileXioGetStat(path, &st);
-        if (ret < 0) return ret;
+    if (ret >= 0) {
+        if (!in->pfs_start[slot] || st.private_5 != in->pfs_start[slot]) return -EEXIST;
+        return pfsExtentMatches(in, &st, mb) ? (int)mb : -EINVAL;
     }
-    if (st.mode != 0x100 || st.size != mb * 2048u || st.attr || st.private_0 ||
-        in->apa_sectors < st.size || st.private_5 < 2048 ||
-        st.private_5 > in->apa_sectors - st.size) return -EINVAL;
+    if (ret != -ENOENT) return ret;
+
+    unsigned intent = 1u << slot;
+    hddInstallPendingPfsName(in, slot, pending);
+    snprintf(private_path, sizeof(private_path), "hdd0:%s", pending);
+    ret = fileXioGetStat(private_path, &st);
+    if (ret < 0 && ret != -ENOENT) return ret;
+    if (!(in->pfs_intent & intent)) {
+        if (ret >= 0) return -EEXIST;
+        if (in->pfs_start[slot]) return -ENOENT;
+        in->pfs_intent |= intent;
+        ret = hddInstallResumeSave(in);
+        if (ret < 0) {
+            in->pfs_intent &= ~intent;
+            return ret;
+        }
+        ret = -ENOENT;
+    }
+    if (ret == -ENOENT && !in->pfs_start[slot]) {
+        ret = hddCreatePfsExtent(mb, pending);
+        if (ret < 0) return ret;
+        ret = fileXioGetStat(private_path, &st);
+    }
+    if (ret < 0) return ret;
+    if (!pfsExtentMatches(in, &st, mb)) return -EINVAL;
+    if (in->pfs_start[slot] && st.private_5 != in->pfs_start[slot]) return -EEXIST;
     if (!in->pfs_start[slot]) {
+        /* Only an unpublished extent reserved by this checkpoint can be formatted. */
+        ret = hddFormatPfs(private_path);
+        if (ret < 0) return ret;
         in->pfs_start[slot] = st.private_5;
         ret = hddInstallResumeSave(in);
-        if (ret < 0) return ret;
+        if (ret < 0) {
+            in->pfs_start[slot] = 0;
+            return ret;
+        }
     }
-    return mb;
+    ret = fileXioRename(private_path, path);
+    return ret < 0 ? ret : (int)mb;
 }
 static int installApps(HddInstall *in)
 {

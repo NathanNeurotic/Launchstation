@@ -300,6 +300,25 @@ static void hddUpdateInfo()
 	hddStatusCurrent = 1;
 }
 
+int hddCreatePfsExtent(unsigned sizeMB, const char *name)
+{
+	char path[64];
+	for (unsigned i = 0; i < sizeof(sizesMB) / sizeof(sizesMB[0]); i++) {
+		if (sizeMB != (unsigned)sizesMB[i]) continue;
+		int ret = hddCheckAllocation(sizeMB * 2048u);
+		if (ret < 0) return ret;
+		snprintf(path, sizeof(path), "hdd0:%s,,,%s,PFS", name, sizesString[i]);
+		int fd = fileXioOpen(path, FIO_O_RDWR | FIO_O_CREAT | FIO_O_EXCL);
+		return fd < 0 ? fd : fileXioClose(fd);
+	}
+	return -EINVAL;
+}
+
+int hddFormatPfs(const char *path)
+{
+	return fileXioFormat("pfs:", path, (const char *)&pfsFormatArg, sizeof(pfsFormatArg));
+}
+
 int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 {
 	int maxIndex;
@@ -456,7 +475,7 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	fileXioClose(partFd);
 
 	snprintf(openString, sizeof(openString), "hdd0:%.*s", (int)(sizeof(fsName) - 1), fsName);
-	retVal = fileXioFormat("pfs:", openString, (const char*)&pfsFormatArg, sizeof(pfsFormatArg));
+	retVal = hddFormatPfs(openString);
 	if(retVal < 0)
 	{
 #ifdef DEBUG

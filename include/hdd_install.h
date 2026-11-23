@@ -57,6 +57,7 @@ typedef struct {
     unsigned apa_sectors;
     unsigned resumed;
     uint32_t pfs_start[HDD_INSTALL_PFS_COUNT];
+    unsigned pfs_intent;
 } HddInstall;
 
 unsigned hddInstallPartitionMb(const HddInstall *install, unsigned index);

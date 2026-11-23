@@ -32,6 +32,7 @@ code = r'''
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include <zlib.h>
 #include "hdd_app.h"
@@ -50,7 +51,6 @@ code = r'''
 #define FIO_S_ISDIR S_ISDIR
 #define FIO_S_ISREG S_ISREG
 #define HDIOC_FLUSH 1
-#define FS_GROUP_APPLICATION 2
 typedef int64_t s64;
 typedef struct {unsigned mode,attr,size,private_5,private_0;} iox_stat_t;
 typedef struct {iox_stat_t stat;char name[256];} iox_dirent_t;
@@ -84,7 +84,14 @@ static int fileXioGetStat(const char*p,iox_stat_t*s){char path[256];partPath(pat
 static int fileXioMount(const char*mount,const char*part,int mode){char path[256];(void)mode;assert(!strcmp(mount,"pfs3:"));partPath(path,part);if(access(path,F_OK))return -ENOENT;assert(!symlink(path,"pfs3:"));return 0;}
 static int fileXioUmount(const char*p){assert(!strcmp(p,"pfs3:"));return result(unlink(p));}
 static int fileXioRename(const char*from,const char*to){char a[256],b[256];if(!strncmp(from,"hdd0:",5)){partPath(a,from);partPath(b,to);from=a;to=b;}int r=result(rename(from,to));crashpoint();return r;}
-static int hddMakeFilesystem(int mb,char*name,int type){char path[256];assert(mb==8&&type==FS_GROUP_APPLICATION&&!strncmp(name,"+LSAPP.",7));snprintf(path,sizeof(path),"part/%s",name);assert(!mkdir(path,0700));create_count++;crashpoint();return 0;}
+static uint64_t GetTimerSystemTime(void){return 0x12345678;}
+static int hddCreatePfsExtent(unsigned mb,const char*name){char path[256];assert(mb==8&&!strncmp(name,"+LSAPP.",7));snprintf(path,sizeof(path),"part/%s",name);assert(!mkdir(path,0700));create_count++;crashpoint();return 0;}
+static int hddFormatPfs(const char *p){
+    char path[256], marker[300], res[300];partPath(path,p);
+    snprintf(marker,sizeof(marker),"%s/res/LSAPP.ID",path);unlink(marker);
+    snprintf(res,sizeof(res),"%s/res",path);rmdir(res);
+    format_count++;crashpoint();return 0;
+}
 int hddCheckAllocation(uint32_t sectors){assert(sectors==8*2048);allocation_checks++;return 0;}
 int InjectHddAppAssets(const char*part,const char*cnf,const char*settings,const void*list,unsigned ls,const void*del,unsigned ds){assert(part&&strstr(cnf,"ata0:/APPS/APP_TEST/BOOT.ELF")&&!strncmp(settings,"PS2X\n",5)&&list&&ls&&del&&ds);header_count++;crashpoint();return 0;}
 static const char commit[]="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -119,7 +126,7 @@ for signature in ("static int join(", "static int flush(", "static int finish(",
                   "static int writeFile(", "static int readFile(", "static int verifyPackage(", "static int cachePackage(",
                   "static int exists(", "static int mkdirChecked(",
                   "static int releasePfs(", "static int identity(", "static int checkOwner(", "static int writeOwner(",
-                  "static int readJournal(", "static int checkpoint(", "static int mountPartition(",
+                  "static void pendingName(", "static int readJournal(", "static int checkpoint(", "static int mountPartition(",
                   "static int unmountPartition(", "static int partitionOwner(",
                   "static int validateTarget(",
                   "static int apiCommit(", "static void progress(", "static int download(", "static int assets(", "static int copyFile(",
@@ -150,7 +157,7 @@ static void verify(AppInstall*in,int update){
     assert(!checkOwner(in,in->target,1));unsigned char *data=NULL;unsigned n=0;
     assert(!readFile("ata0:/APPS/APP_TEST/BOOT.ELF",&data,&n,100)&&n==sizeof(payload)&&!memcmp(data,payload,n));free(data);
     if(update){assert(access("ata0:/APPS/APP_TEST/USER.CFG",F_OK)==0&&access("ata0:/APPS/APP_TEST/config/extra.cfg",F_OK)==0);assert(!create_count&&!format_count);}
-    else assert(create_count==1);
+    else assert(create_count==1&&format_count>=1);
     assert(!access("part/PP.APP_TEST/res/LSAPP.ID",F_OK)&&access("part/+LSAPP.12345678",F_OK)<0);
     assert(header_count>=1);
 }
@@ -221,11 +228,8 @@ int main(int argc,char**argv){
         for(int i=0;i<32;i++)if(directories[i]){closedir(directories[i]);directories[i]=NULL;}
         for(int fd=3;fd<256;fd++)close(fd);
         unlink("pfs3:");in->mounted=0;memset(&in->journal,0,sizeof(in->journal));
+        strcpy(in->pending,"+LSAPP.12345678");
         assert(!readJournal(in));in->resumed=1;apply(in);
-        if(!update&&in->result<0&&in->journal.phase==HA_CREATE){
-            assert(access("part/+LSAPP.12345678",F_OK)==0&&access(in->target,F_OK)<0&&!header_count);
-            free(in);return 0;
-        }
     }
     verify(in,update);printf("PASS operations=%d crash=%d update=%d\n",operation,crash,update);free(in);
 }

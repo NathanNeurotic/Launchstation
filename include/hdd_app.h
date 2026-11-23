@@ -22,6 +22,7 @@ enum { HA_STAGED, HA_FILES, HA_CREATE, HA_PARTITION, HA_MOVE_OLD, HA_PUBLISH, HA
 typedef struct {
     uint32_t sequence, phase, update, package_crc, package_size;
     char boot[33];
+    uint64_t pending_id;
 } HddAppJournal;
 int hddAppJournalEncode(const HddAppJournal *journal, unsigned char bytes[HDD_APP_JOURNAL_SIZE]);
 int hddAppJournalDecode(HddAppJournal *journal, const unsigned char bytes[HDD_APP_JOURNAL_SIZE]);

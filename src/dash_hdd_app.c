@@ -13,6 +13,8 @@
 #include <libhdd.h>
 #include <ctype.h>
 #include <malloc.h>
+#include <time.h>
+#include <timer.h>
 #include <zlib.h>
 
 #define APP_TEMP "ata0:/LAUNCHSTATION_APP_TEMP"
@@ -159,6 +161,10 @@ static int writeOwner(AppInstall *in, const char *parent, int package)
     int n = identity(in, text, package), ret = join(path, parent, "LSAPP.ID");
     return ret < 0 ? ret : writeFile(path, text, n);
 }
+static void pendingName(const AppInstall *in, uint64_t id, char name[33])
+{
+    snprintf(name, 33, "+LSAPP.%06x.%016llx", in->crc & 0xffffffu, (unsigned long long)id);
+}
 static int readJournal(AppInstall *in)
 {
     HddAppJournal best = {0};
@@ -173,6 +179,7 @@ static int readJournal(AppInstall *in)
     }
     if (!best.sequence || best.package_crc != in->crc || best.package_size != in->package_size) return -EINVAL;
     in->journal = best;
+    if (best.pending_id) pendingName(in, best.pending_id, in->pending);
     for (unsigned i = 0; i < in->app.elf_count; i++)
         if (!strcmp(in->save.files[in->app.elf[i]].name, best.boot)) return hddAppChooseBoot(&in->save, &in->app, i);
     return -EINVAL;
@@ -469,15 +476,41 @@ static int pendingPartition(AppInstall *in)
     char path[64]; iox_stat_t stat;
     snprintf(path, sizeof(path), "hdd0:%s", in->pending);
     int ret = fileXioGetStat(path, &stat);
-    if (ret >= 0) {
+    if (!in->journal.pending_id && ret >= 0) {
         if (stat.mode != 0x100 || stat.attr || stat.private_0 || stat.size != 8u * 2048 || stat.private_5 < 262144) return -EEXIST;
+        /* Existing journals without a creation intent still require the marker. */
         ret = partitionOwner(in, in->pending, 1);
         if (ret < 0 && !hddInstallRecoveryFault())
             snprintf(in->network.error, sizeof(in->network.error), "Ownership of %s could not be verified. The partition was left untouched.", in->pending);
         return ret;
     }
-    if (ret != -ENOENT) return ret;
-    ret = hddMakeFilesystem(8, in->pending, FS_GROUP_APPLICATION);
+    if (ret < 0 && ret != -ENOENT) return ret;
+    if (!in->journal.pending_id) {
+        uint64_t id = ((uint64_t)time(NULL) << 32) ^ GetTimerSystemTime();
+        if (!id) id = 1;
+        char pending[33];
+        pendingName(in, id, pending);
+        snprintf(path, sizeof(path), "hdd0:%s", pending);
+        ret = fileXioGetStat(path, &stat);
+        if (ret != -ENOENT) return ret < 0 ? ret : -EEXIST;
+        in->journal.pending_id = id;
+        ret = checkpoint(in, HA_CREATE);
+        if (ret < 0) {
+            in->journal.pending_id = 0;
+            return ret;
+        }
+        strcpy(in->pending, pending);
+        ret = -ENOENT;
+    }
+    if (ret == -ENOENT) {
+        ret = hddCreatePfsExtent(8, in->pending);
+        if (ret < 0) return ret;
+        ret = fileXioGetStat(path, &stat);
+    }
+    if (ret < 0) return ret;
+    if (stat.mode != 0x100 || stat.attr || stat.private_0 || stat.size != 8u * 2048 || stat.private_5 < 262144) return -EEXIST;
+    /* No app files or launcher header are published until after HA_PARTITION. */
+    ret = hddFormatPfs(path);
     if (ret >= 0) ret = mountPartition(in, in->pending);
     if (ret >= 0) ret = mkdirChecked("pfs3:/res");
     if (ret >= 0) ret = writeOwner(in, "pfs3:/res", 1);

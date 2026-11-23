@@ -482,8 +482,9 @@ static int setupPadUntil(u64 deadline)
 
 	padInit(0);
 	padRumbleReset();
-	ds34usb_init();
-	ds34bt_init();
+	int usb_ready = ds34usb_init(deadline);
+	int bt_ready = ds34bt_init(deadline);
+	if (deadline && (!usb_ready || !bt_ready)) return 0;
 
 	for (port = 0; port < 2; port++) {
 		padtype_t[port] = 0;  // Assume that we don't have a proper PS2 controller

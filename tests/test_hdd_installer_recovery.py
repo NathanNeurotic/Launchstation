@@ -250,3 +250,42 @@ int main(void){
         subprocess.run(['gcc', '-std=c99', '-Wall', '-Wextra', '-Werror', str(d / 'pad.c'),
                         '-o', str(d / 'pad')], check=True)
         subprocess.run([str(d / 'pad')], check=True, timeout=10)
+
+    bind_code = r'''
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+typedef uint64_t u64;
+typedef struct {void *server;u64 ready_at;} SifRpcClientData_t;
+enum { SIF_RPC_M_NOWAIT=1 };
+static u64 now;
+static unsigned calls,scenario;
+u64 Timer(void){return now;}
+static void DelayThread(int us){assert(us==1000);now++;}
+static int SifBindRpc(SifRpcClientData_t *client,int server,int mode){
+    assert(mode==SIF_RPC_M_NOWAIT&&server>=1);
+    calls++;client->ready_at=now+2;return 0;
+}
+static int SifCheckStatRpc(SifRpcClientData_t *client){
+    if(scenario==2||now<client->ready_at)return 1;
+    if(scenario==1)client->server=client;
+    return 0;
+}
+'''
+    bind_source = (root / 'iop/ds34_bind.h').read_text()
+    bind_code += function(bind_source, 'static inline int ds34BindUntil(')
+    bind_code += r'''
+int main(void){
+    SifRpcClientData_t usb={0},bt={0};
+    scenario=0;assert(!ds34BindUntil(&usb,1,5)&&now==5&&calls==2);
+    now=calls=0;scenario=2;assert(!ds34BindUntil(&usb,1,5)&&now==5&&calls==1);
+    now=calls=0;scenario=1;assert(ds34BindUntil(&usb,1,5)&&now==2&&calls==1);
+    scenario=2;assert(!ds34BindUntil(&bt,2,5)&&now==5&&calls==2);
+    assert(!ds34BindUntil(&usb,1,5)&&calls==2);
+    puts("PASS: missing and stalled DS34 servers share the recovery deadline");
+}
+'''
+    (d / 'bind.c').write_text('#include <stdio.h>\n' + bind_code)
+    subprocess.run(['gcc', '-std=c99', '-Wall', '-Wextra', '-Werror', str(d / 'bind.c'),
+                    '-o', str(d / 'bind')], check=True)
+    subprocess.run([str(d / 'bind')], check=True, timeout=10)

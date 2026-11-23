@@ -152,10 +152,12 @@ static uint32_t get32(const unsigned char *p)
 int hddAppJournalEncode(const HddAppJournal *j, unsigned char b[HDD_APP_JOURNAL_SIZE])
 {
     if (!j || !j->sequence || j->phase > HA_DONE || j->update > 1 || !j->package_size ||
-        j->package_size > SAVE_ARCHIVE_LIMIT || !hddAppLeaf(j->boot)) return -EINVAL;
+        j->package_size > SAVE_ARCHIVE_LIMIT || !hddAppLeaf(j->boot) ||
+        (j->pending_id && (j->update || j->phase < HA_CREATE))) return -EINVAL;
     memset(b, 0, HDD_APP_JOURNAL_SIZE); memcpy(b, "LSAPPJ1", 8);
     put32(b + 8, j->sequence); put32(b + 12, j->phase); put32(b + 16, j->update);
     put32(b + 20, j->package_crc); put32(b + 24, j->package_size); strcpy((char *)b + 32, j->boot);
+    put32(b + 68, (uint32_t)j->pending_id); put32(b + 72, j->pending_id >> 32);
     put32(b + 124, crc32(0, b, 124)); return 0;
 }
 int hddAppJournalDecode(HddAppJournal *j, const unsigned char b[HDD_APP_JOURNAL_SIZE])
@@ -165,5 +167,6 @@ int hddAppJournalDecode(HddAppJournal *j, const unsigned char b[HDD_APP_JOURNAL_
     memset(j, 0, sizeof(*j));
     j->sequence = get32(b + 8); j->phase = get32(b + 12); j->update = get32(b + 16);
     j->package_crc = get32(b + 20); j->package_size = get32(b + 24); memcpy(j->boot, b + 32, 33);
+    j->pending_id = get32(b + 68) | (uint64_t)get32(b + 72) << 32;
     return hddAppJournalEncode(j, checked) < 0 || memcmp(checked, b, sizeof(checked)) ? -EINVAL : 0;
 }

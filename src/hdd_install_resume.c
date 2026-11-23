@@ -63,6 +63,7 @@ static int valid(const HddInstall *in, const HddFormatPlan *p)
         in->ready > 1 || in->applied > 1 || in->populated > 1 || in->committed > 1 ||
         (in->downloaded_assets >> HDD_INSTALL_ASSETS) || in->launcher_count > HDD_INSTALL_LAUNCHER_FILES ||
         in->downloaded_launchers > in->launcher_count || (in->launcher_count && !in->launcher_files) ||
+        (in->pfs_intent >> HDD_INSTALL_PFS_COUNT) || (in->pfs_intent && !in->jail) ||
         (in->populated && !in->applied) || (in->committed && !in->applied) ||
         ((in->applied || in->ready) && !in->manifest_ready)) return 0;
     if (!text(in->commit, sizeof(in->commit), "0123456789abcdefABCDEF", !in->manifest_ready) ||
@@ -89,7 +90,7 @@ static int valid(const HddInstall *in, const HddFormatPlan *p)
     return 1;
 }
 /* The explicit order is the on-disk format; additions require a new version. */
-static void body(Wire *w, HddInstall *in, HddFormatPlan *p, int reading)
+static void body(Wire *w, HddInstall *in, HddFormatPlan *p, int reading, unsigned version)
 {
 #define N(value) do { uint32_t v = (value); number(w, &v, reading); if (reading) (value) = v; } while (0)
 #define B(value) do { if (reading) get(w, value, sizeof(value)); else put(w, value, sizeof(value)); } while (0)
@@ -107,6 +108,7 @@ static void body(Wire *w, HddInstall *in, HddFormatPlan *p, int reading)
         if (!in->launcher_files) { w->error = 1; return; }
     }
     for (unsigned i = 0; i < in->launcher_count; i++) { B(in->launcher_files[i].path); B(in->launcher_files[i].hash); N(in->launcher_files[i].size); }
+    if (version >= 3) N(in->pfs_intent);
 #undef N
 #undef B
 }
@@ -114,10 +116,11 @@ int hddInstallResumeEncode(const HddInstall *in, const HddFormatPlan *p, unsigne
 {
     Wire w = {bytes, 24, capacity, 0};
     if (!in || !p || !bytes || capacity < 24 || capacity > HDD_INSTALL_RESUME_MAX || !seq || seq >= 0x7fffffff || !valid(in, p)) return -EINVAL;
-    body(&w, (HddInstall *)in, (HddFormatPlan *)p, 0);
+    uint32_t version = 3;
+    body(&w, (HddInstall *)in, (HddFormatPlan *)p, 0, version);
     if (w.error) return -ENOSPC;
     Wire header = {bytes, 0, 24, 0};
-    uint32_t version = 2, size = w.offset, crc = 0, sequence_value = seq;
+    uint32_t size = w.offset, crc = 0, sequence_value = seq;
     put(&header, "LSINST2", 8); number(&header, &version, 0); number(&header, &sequence_value, 0); number(&header, &size, 0); number(&header, &crc, 0);
     header.offset = 20; crc = checksum(bytes, size); number(&header, &crc, 0);
     return size;
@@ -128,10 +131,10 @@ int hddInstallResumeDecode(HddInstall *in, HddFormatPlan *plan, unsigned *sequen
     if (!in || !plan || !sequence || !bytes || size < 24 || size > HDD_INSTALL_RESUME_MAX || memcmp(bytes, "LSINST2", 8)) return -EINVAL;
     Wire w = {(unsigned char *)bytes, 8, size, 0};
     number(&w, &version, 1); number(&w, &seq, 1); number(&w, &length, 1); number(&w, &crc, 1);
-    if (version != 2 || length != size || !seq || seq >= 0x7fffffff || checksum(bytes, size) != crc) return -EINVAL;
+    if ((version != 2 && version != 3) || length != size || !seq || seq >= 0x7fffffff || checksum(bytes, size) != crc) return -EINVAL;
     HddInstall *decoded = calloc(1, sizeof(*decoded)); HddFormatPlan p = {0};
     if (!decoded) return -ENOMEM;
-    body(&w, decoded, &p, 1);
+    body(&w, decoded, &p, 1, version);
     int ret = w.error || w.offset != size || !valid(decoded, &p) ? -EINVAL : 0;
     if (!ret) { *in = *decoded; *plan = p; *sequence = seq; }
     else free(decoded->launcher_files);

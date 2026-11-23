@@ -31,6 +31,8 @@ typedef struct { unsigned mode,attr,private_0,private_5,size; } iox_stat_t;
 typedef struct {uint32_t lba,size;} hddAtaTransfer_t;
 static const char *directory;
 static int mounted,fail_after=-1,written,wrong_owner,wrong_disk,wrong_serial,flushes;
+static unsigned pfs_lba;
+static char pfs_path[64];
 static HddFormatPlan actual;
 static int genOpen(const char *path,int flags){
  char local[2048];const char *p=strrchr(path,'/');assert(p&&p[1]);
@@ -62,7 +64,10 @@ static int fileXioDevctl(const char *dev,int cmd,void *arg,unsigned n,void *out,
  unsigned char *p=out;memset(p,0,512);memcpy(p+3,"EXFAT   ",8);
  put32(p+64,actual.exfat_start);put32(p+72,actual.exfat_sectors);put32(p+100,actual.serial+wrong_serial);return 0;
 }
-static int fileXioGetStat(const char *path,iox_stat_t*st){(void)path;(void)st;return -ENOENT;}
+static int fileXioGetStat(const char *path,iox_stat_t*st){
+ if(strcmp(path,pfs_path))return -ENOENT;
+ *st=(iox_stat_t){.mode=0x100,.size=128u*2048,.private_5=pfs_lba};return 0;
+}
 int hddGetApaCapacity(uint32_t *limit){*limit=actual.kind==HDD_FORMAT_APA_JAIL?actual.apa_sectors:actual.sectors;return 0;}
 int hddInstallFindStage(HddInstall *in){return in->owned&&!wrong_owner?0:-ENOENT;}
 void hddInstallRelease(HddInstall *in){free(in->ca_data);free(in->launcher_files);in->ca_data=NULL;in->launcher_files=NULL;in->launcher_count=in->ca_size=0;}
@@ -94,6 +99,18 @@ int main(int argc,char **argv){
   wrong_disk=1;assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-EINVAL&&!loaded.ca_data);wrong_disk=0;
   wrong_owner=1;assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-EINVAL);wrong_owner=0;
   if(jail){wrong_serial=1;assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-EINVAL);wrong_serial=0;}
+  if(jail){
+   char name[32];hddInstallPendingPfsName(&in,HDD_INSTALL_PFS_GAME,name);
+   snprintf(pfs_path,sizeof(pfs_path),"hdd0:%s",name);
+   pfs_lba=in.pfs_start[HDD_INSTALL_PFS_GAME]=524288;
+   in.pfs_intent=1u<<HDD_INSTALL_PFS_GAME;
+   hddInstallResumeBegin(&in,&actual,sequence);
+   assert(!hddInstallResumeSave(&in));hddInstallResumeEnd();
+   assert(!hddInstallResumeLoad(&loaded,&plan,&sequence)&&loaded.pfs_intent==in.pfs_intent);
+   pfs_lba+=2048;assert(verifyDisk(&loaded,&plan)==-EINVAL);pfs_lba-=2048;
+   strcpy(pfs_path,"hdd0:PP.LAUNCHER");assert(!verifyDisk(&loaded,&plan));
+   hddInstallRelease(&loaded);memset(&loaded,0,sizeof(loaded));
+  }
   mounted=!jail;assert(!hddInstallResumeRemove(&in));mounted=0;
   assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-ENOENT);hddInstallRelease(&loaded);
  }
@@ -105,6 +122,10 @@ int main(int argc,char **argv){
  int size=hddInstallResumeEncode(&in,&actual,22,buffer,sizeof(buffer));assert(size>24);
  assert(!hddInstallResumeDecode(&out,&p,&seq,buffer,size)&&seq==22&&out.launcher_count==1);
  assert(!strcmp(out.launcher_files[0].path,in.launcher_files[0].path));hddInstallRelease(&out);memset(&out,0,sizeof(out));
+ memcpy(copy,buffer,size-4);
+ put32(copy+8,2);put32(copy+16,size-4);put32(copy+20,checksum(copy,size-4));
+ assert(!hddInstallResumeDecode(&out,&p,&seq,copy,size-4)&&!out.pfs_intent&&seq==22);
+ hddInstallRelease(&out);memset(&out,0,sizeof(out));
  for(int n=0;n<size;n++)assert(hddInstallResumeDecode(&out,&p,&seq,buffer,n)<0&&!out.launcher_files);
  for(int n=0;n<size;n++){
   memcpy(copy,buffer,size);copy[n]^=1;

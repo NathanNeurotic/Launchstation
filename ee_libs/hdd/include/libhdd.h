@@ -74,6 +74,8 @@ extern int hddFormat();
 extern int hddGetFilesystemList(t_hddFilesystem hddFs[], int maxEntries);
 extern void hddGetInfo(t_hddInfo *info);
 extern int hddMakeFilesystem(int fsSizeMB, char *name, int type);
+extern int hddCreatePfsExtent(unsigned sizeMB, const char *name);
+extern int hddFormatPfs(const char *path);
 extern int hddRemoveFilesystem(t_hddFilesystem *fs);
 extern int hddExpandFilesystem(t_hddFilesystem *fs, int extraMB);
 

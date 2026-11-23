@@ -14,7 +14,7 @@ static int journalPath(char *path, unsigned size, const HddInstall *in, unsigned
 int hddInstallResumeSave(HddInstall *in)
 {
     char path[MAX_PATH]; int ret, fd;
-    if (current != in || !in->stage_ready || !in->owned) return 0;
+    if (current != in || !in->stage_ready || !in->owned) return -EINVAL;
     if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
     unsigned char *bytes = malloc(HDD_INSTALL_RESUME_MAX);
     if (!bytes) return -ENOMEM;
@@ -94,11 +94,18 @@ static int verifyDisk(HddInstall *in, const HddFormatPlan *plan)
     for (unsigned i = 0; i < HDD_INSTALL_PFS_COUNT; i++) {
         char path[64];
         iox_stat_t st;
-        unsigned mb = i == HDD_INSTALL_PFS_CONTENTS ? in->contents_mb : 128;
+        unsigned mb = i == HDD_INSTALL_PFS_CONTENTS ? (in->contents_mb ? in->contents_mb : 1024) : 128;
         int needed = in->applied && (in->flags & HDD_INSTALL_PSBBN);
         if (!in->pfs_start[i] && !needed) continue;
         snprintf(path, sizeof(path), "hdd0:%s", pfs[i]);
-        if (fileXioGetStat(path, &st) < 0 || st.mode != 0x100 || st.attr || st.private_0 || st.size != mb * 2048u ||
+        int ret = fileXioGetStat(path, &st);
+        if (ret == -ENOENT && !in->applied && (in->pfs_intent & (1u << i))) {
+            char pending[32];
+            hddInstallPendingPfsName(in, i, pending);
+            snprintf(path, sizeof(path), "hdd0:%s", pending);
+            ret = fileXioGetStat(path, &st);
+        }
+        if (ret < 0 || st.mode != 0x100 || st.attr || st.private_0 || st.size != mb * 2048u ||
             st.private_5 != in->pfs_start[i] || st.size > limit || st.private_5 < 2048 ||
             st.private_5 > limit - st.size) return -EINVAL;
     }

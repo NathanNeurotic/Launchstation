@@ -1,3 +1,4 @@
+#include "../../ds34_bind.h"
 #include <kernel.h>
 #include <sifrpc.h>
 #include <string.h>
@@ -22,20 +23,10 @@ static u8 rpcbuf[64] __attribute__((aligned(64)));
 
 static u8 ds34bt_inited = 0;
 
-int ds34bt_init()
+int ds34bt_init(u64 deadline)
 {
-    ds34bt.server = NULL;
-
-    do {
-        if (SifBindRpc(&ds34bt, DS34BT_BIND_RPC_ID, 0) < 0)
-            return 0;
-
-        nopdelay();
-    } while (!ds34bt.server);
-
-    ds34bt_inited = 1;
-
-    return 1;
+    ds34bt_inited = ds34BindUntil(&ds34bt, DS34BT_BIND_RPC_ID, deadline);
+    return ds34bt_inited;
 }
 
 int ds34bt_deinit()

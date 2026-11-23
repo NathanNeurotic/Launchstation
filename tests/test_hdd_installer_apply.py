@@ -21,6 +21,7 @@ code = r'''
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +32,16 @@ code = r'''
 #include "hdd_install.h"
 int hddInstallRecoveryFault(void){return 0;}
 void hddInstallRecoveryObserve(int rc){(void)rc;}
-int hddInstallResumeSave(HddInstall *in){assert(in);return 0;}
+static unsigned saved_intent, saved_start, operation, crash_at;
+static jmp_buf crashed;
+static void crashpoint(void){if(++operation==crash_at)longjmp(crashed,1);}
+int hddInstallResumeSave(HddInstall *in){
+    assert(in);
+    crashpoint();
+    saved_intent=in->pfs_intent;saved_start=in->pfs_start[HDD_INSTALL_PFS_GAME];
+    crashpoint();
+    return 0;
+}
 int hddInstallResumeRemove(HddInstall *in){assert(in);return 0;}
 #define MAX_PATH 1025
 #define FIO_O_RDONLY O_RDONLY
@@ -43,14 +53,13 @@ int hddInstallResumeRemove(HddInstall *in){assert(in);return 0;}
 #define FIO_CST_ATTR 1
 #define FIO_S_ISDIR S_ISDIR
 #define stricmp strcasecmp
-#define FS_GROUP_APPLICATION 1
 #define HDIOC_FLUSH 1
 typedef uint64_t u64;
 typedef int64_t s64;
 typedef struct { unsigned mode,attr,size,private_5,private_0; } iox_stat_t;
 static char work[1024];
 static const char *mounted[4];
-static unsigned mounts,attrcalls,partitions,injected,psbbn_parts;
+static unsigned mounts,attrcalls,partitions,formats,injected,psbbn_parts;
 static int attr_error;
 static u64 Timer(void){return 1;}
 static void dashWorkerStatus(const char*s,unsigned n,unsigned total){assert(s);(void)n;(void)total;}
@@ -86,7 +95,23 @@ static int fileXioGetStat(const char*p,iox_stat_t*s){
 static int fileXioChStat(const char*p,const iox_stat_t*s,int flags){assert(strstr(p,"pfs2:/APPS") && s->attr==0xc4a7 && flags==FIO_CST_ATTR);attrcalls++;return attr_error;}
 static int fileXioMount(const char*m,const char*p,int flags){unsigned i=m[3]-'0';assert(i<4&&!mounted[i]&&flags==FIO_MT_RDWR);mounted[i]=p+5;mounts++;return 0;}
 static int fileXioUmount(const char*m){unsigned i=m[3]-'0';assert(i<4&&mounted[i]);mounted[i]=NULL;mounts--;return 0;}
-static int hddMakeFilesystem(int mb,char*name,int group){char path[4096];assert(mb==128&&group==FS_GROUP_APPLICATION);partitions++;snprintf(path,sizeof(path),"%s/%s",work,name);assert(!mkdir(path,0700));return mb;}
+static int hddCreatePfsExtent(unsigned mb,const char*name){
+    char path[4096];assert(mb==128&&!strncmp(name,"+LSIN",5));
+    snprintf(path,sizeof(path),"%s/%s",work,name);
+    if(mkdir(path,0700)<0)return -errno;
+    partitions++;crashpoint();return 0;
+}
+static int hddFormatPfs(const char*path){
+    iox_stat_t st;assert(!strncmp(path,"hdd0:+LSIN",10)&&!fileXioGetStat(path,&st));
+    formats++;crashpoint();return 0;
+}
+static int fileXioRename(const char*from,const char*to){
+    char a[2048],b[2048];assert(!strncmp(from,"hdd0:+LSIN",10)&&!strncmp(to,"hdd0:",5));
+    snprintf(a,sizeof(a),"%s/%s",work,from+5);snprintf(b,sizeof(b),"%s/%s",work,to+5);
+    if(!access(b,F_OK))return -EEXIST;
+    if(rename(a,b)<0)return -errno;
+    crashpoint();return 0;
+}
 static int InjectHddAppLauncher(const char*p,const char*elf,const char*title,const void*icon,unsigned size){assert(p&&title&&icon&&size&&strstr(elf,"ata0:/APPS/")&&partitions==injected+1);injected++;return 0;}
 static int InjectHddAppLauncherWithArg(const char*p,const char*elf,const char*title,const void*icon,unsigned size,const char*arg){
     assert(!strcmp(p,"PP.LAUNCHER")&&title&&icon&&size&&partitions==injected+1);
@@ -109,9 +134,36 @@ void hddInstallPhase(unsigned phase) { assert(phase==HDD_INSTALL_PHASE_INSTALL);
 '''
 code += native
 code += r'''
+static void testCreate(unsigned cut){
+    static HddInstall in;
+    in.apa_sectors=1048576;
+    memset(in.owner,0x38,sizeof(in.owner));
+    crash_at=cut;
+    if(!setjmp(crashed)){
+        assert(hddInstallPfsPartition(&in,128,"PP.LAUNCHER",HDD_INSTALL_PFS_GAME)==128);
+        assert(!cut);
+    }else{
+        crash_at=0;
+        in.pfs_intent=saved_intent;in.pfs_start[HDD_INSTALL_PFS_GAME]=saved_start;
+        assert(hddInstallPfsPartition(&in,128,"PP.LAUNCHER",HDD_INSTALL_PFS_GAME)==128);
+    }
+    assert(partitions==1&&formats==(cut==4||cut==5?2:1));
+    assert(in.pfs_start[HDD_INSTALL_PFS_GAME]==262144);
+    iox_stat_t st;
+    assert(!fileXioGetStat("hdd0:PP.LAUNCHER",&st));
+    in.pfs_start[HDD_INSTALL_PFS_GAME]=0;
+    assert(hddInstallPfsPartition(&in,128,"PP.LAUNCHER",HDD_INSTALL_PFS_GAME)==-EEXIST);
+    char name[32],path[4096];
+    hddInstallPendingPfsName(&in,HDD_INSTALL_PFS_APP,name);
+    snprintf(path,sizeof(path),"%s/%s",work,name);assert(!mkdir(path,0700));
+    assert(hddInstallPfsPartition(&in,128,"PP.UNRELATED",HDD_INSTALL_PFS_APP)==-EEXIST);
+    assert(!access(path,F_OK)&&partitions==1);
+}
 int main(int argc,char**argv){
     HddInstall in={.apa_sectors=128*1024*2048u};FILE*f;char path[4096],hash[41];unsigned i,size;int ret;
-    assert(argc==5);snprintf(work,sizeof(work),"%s",argv[1]);in.flags=atoi(argv[2]);in.jail=!!(in.flags&4);in.game_launcher=atoi(argv[4]);
+    assert(argc==3||argc==5);snprintf(work,sizeof(work),"%s",argv[1]);
+    if(argc==3){testCreate(atoi(argv[2]));return 0;}
+    in.flags=atoi(argv[2]);in.jail=!!(in.flags&4);in.game_launcher=atoi(argv[4]);
     in.ready=in.owned=1;strcpy(in.stage,in.jail?"ata0:/PSBBN_DP_TEMP":"pfs2:/PSBBN_DP_TEMP");memset(in.commit,'a',40);
     if(in.jail)strcpy(in.language.code,"jpn");
     snprintf(path,sizeof(path),"%s/manifest",work);f=fopen(path,"r");assert(f);
@@ -169,6 +221,9 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
                     '-I', str(root / 'include'), str(d / 'test.c'),
                     *[str(root / 'src' / (n + '.c')) for n in ('hdd_install_plan','install_archive','save_archive','save_lzari','save_sign')],
                     '-lz', '-o', str(d / 'test')], check=True)
+    for cut in range(8):
+        with tempfile.TemporaryDirectory(dir=d) as work:
+            subprocess.run([str(d / 'test'), work, str(cut)], check=True, timeout=10)
     extra = io.BytesIO()
     with zipfile.ZipFile(extra, 'w', zipfile.ZIP_DEFLATED) as z:
         for name in ('OSDSYS_A.XLF','FNTOSD','ICOIMAGE','JISUCS','SKBIMAGE','SNDIMAGE','TEXIMAGE'):

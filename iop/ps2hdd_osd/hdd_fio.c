@@ -452,6 +452,11 @@ static int apaOpen(s32 device, hdd_file_slot_t *fileSlot, apa_params_t *params, 
         return rv;
     rv = -ENOENT;
 
+    if (clink && (mode & (FIO_O_CREAT | FIO_O_EXCL)) == (FIO_O_CREAT | FIO_O_EXCL)) {
+        apaCacheFree(clink);
+        return -EEXIST;
+    }
+
     if (clink == NULL && (mode & FIO_O_CREAT)) {
         if ((rv = hddCheckPartitionMax(device, params->size)) >= 0) {
             if ((clink = hddAddPartitionHere(device, params, emptyBlocks, sector, &rv)) != NULL) {
@@ -536,16 +541,16 @@ static int apaRename(s32 device, const char *oldId, const char *newId)
     // look to see if can make(newname) or not...
     if ((clink = apaFindPartition(device, newId, &rv)) != NULL) {
         apaCacheFree(clink);
-        SignalSema(fioSema);
         return -EEXIST; // File exists
     }
+    if (rv != -ENOENT)
+        return rv ? rv : -EIO;
 
     // look to see if open(oldname)
     for (i = 0; i < apaMaxOpen; i++) {
         if (hddFileSlots[i].f != NULL) {
             if (hddFileSlots[i].device == (u32)device &&
                 memcmp(hddFileSlots[i].id, oldId, APA_IDMAX) == 0) {
-                SignalSema(fioSema);
                 return -EBUSY;
             }
         }
@@ -553,15 +558,11 @@ static int apaRename(s32 device, const char *oldId, const char *newId)
 
     // Do not allow system partitions (__*) to be renamed.
 #ifndef APA_ALLOW_REMOVE_PARTITION_WITH_LEADING_UNDERSCORE
-    if (oldId[0] == '_' && oldId[1] == '_')
-        return -EACCES;
+    if (oldId[0] == '_' && oldId[1] == '_') return -EACCES;
 #endif
 
     // find :)
-    if ((clink = apaFindPartition(device, oldId, &rv)) == NULL) {
-        SignalSema(fioSema);
-        return rv;
-    }
+    if ((clink = apaFindPartition(device, oldId, &rv)) == NULL) return rv ? rv : -EIO;
 
     // do the renaming :) note: subs have no names!!
     memset(clink->header->id, 0, APA_IDMAX);
@@ -573,10 +574,10 @@ static int apaRename(s32 device, const char *oldId, const char *newId)
 
     clink->flags |= APA_CACHE_FLAG_DIRTY;
 
-    apaCacheFlushAllDirty(device);
+    rv = apaCacheFlushAllDirty(device);
     apaCacheFree(clink);
 
-    return 0;
+    return rv;
 }
 
 int hddRemove(iomanX_iop_file_t *f, const char *name)
@@ -747,6 +748,8 @@ int hddGetStat(iomanX_iop_file_t *f, const char *name, iox_stat_t *stat)
         if ((rv = apaPassCmp(clink->header->fpwd, params.fpwd)) == 0 || (rv = apaPassCmp(clink->header->rpwd, params.rpwd)) == 0)
             fioGetStatFiller(clink, stat);
         apaCacheFree(clink);
+    } else if (!rv) {
+        rv = -EIO;
     }
     SignalSema(fioSema);
     return rv;
@@ -809,9 +812,14 @@ int hddDread(iomanX_iop_file_t *f, iox_dirent_t *dirent)
 int hddReName(iomanX_iop_file_t *f, const char *oldname, const char *newname)
 {
     int rv;
+    char oldId[APA_IDMAX] = {0}, newId[APA_IDMAX] = {0};
 
+    if (strlen(oldname) >= sizeof(oldId) || strlen(newname) >= sizeof(newId))
+        return -ENAMETOOLONG;
+    strcpy(oldId, oldname);
+    strcpy(newId, newname);
     WaitSema(fioSema);
-    rv = apaRename(f->unit, oldname, newname);
+    rv = apaRename(f->unit, oldId, newId);
     SignalSema(fioSema);
 
     return rv;
