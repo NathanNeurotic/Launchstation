@@ -9,8 +9,10 @@ name: Ember Watch
 # pin for RiptOPL's current rebuild/main (scripts/package_kit.py refresh-pin) -- but only when that commit's
 # ember.elf IS the official one; if RiptOPL has not caught up yet it waits for the next run. The new pin is
 # fetched and checked (scripts/package_kit.py fetch), the kit tests run, it is committed to master and
-# Automated-Build is started (a GITHUB_TOKEN push starts no workflow on its own). Anything unexpected fails
-# the run without touching the repository. It never opens issues.
+# Automated-Build is started (a GITHUB_TOKEN push starts no workflow on its own). Anything unexpected before
+# the push fails the run without touching the repository. If starting Automated-Build fails after the push,
+# the new pin stays on master and the next run starts the build (it checks that a build ran after the last
+# pin change before saying there is nothing to do). It never opens issues.
 #
 # Neutrino needs no pin: Automated-Build downloads the latest official Neutrino itself, and Neutrino Watch
 # rebuilds the kit when upstream publishes a newer one.
@@ -60,6 +62,14 @@ jobs:
           echo "upstream $TAG ember.elf = [$UP_SHA]"
           echo "kit pin  ember.elf        = [$OURS]"
           if [ "$UP_SHA" = "$OURS" ]; then
+            # A pin pushed by an earlier run whose build dispatch failed: start that build now.
+            PINNED_AT="$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=master&path=ship/kit-externals.json&per_page=1" --jq '.[0].commit.committer.date // ""' || true)"
+            BUILT_AT="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow compile.yml --branch master --limit 1 --json createdAt --jq '.[0].createdAt // ""' || echo unknown)"
+            if [ -n "$PINNED_AT" ] && [ "$BUILT_AT" != unknown ] && [[ "$BUILT_AT" < "$PINNED_AT" ]]; then
+              echo "The pin changed at $PINNED_AT but the last master build started at [$BUILT_AT]; starting Automated-Build."
+              gh workflow run compile.yml --repo "$GITHUB_REPOSITORY" --ref master
+              exit 0
+            fi
             echo "The kit already pins the latest Ember. Nothing to do."
             exit 0
           fi
