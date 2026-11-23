@@ -236,7 +236,7 @@ for name, data in psu_files(psu_bytes).items():
 host("mass:/arch").mkdir()
 lines = run("archive:mass:/sv/|BESLES-12345GAME", "k0", "c1")
 assert kind(lines, "CHOICE|Create archive|4|0") and kind(lines, "CONFIRM|Create a .psu of BESLES-12345GAME?|"), lines
-assert kind(lines, "MESSAGE|4|Archive created|1 of 1 created and read back."), lines
+assert kind(lines, "MESSAGE|8|Archive created|1 of 1 created and read back."), lines
 made = host("mass:/arch/BESLES-12345GAME.psu").read_bytes()
 assert psu_files(made) == psu_files(psu_bytes)
 J2 = "mass:/J2.mcd"
@@ -246,7 +246,7 @@ assert kind(lines, "TOAST|1|Save imported and verified") and saves(J2) == saves(
 lines = run("archive:mass:/sv/|BESLES-12345GAME", "k0", "c1")                # taken: -2, never replaced
 assert host("mass:/arch/BESLES-12345GAME-2.psu").read_bytes() == made and host("mass:/arch/BESLES-12345GAME.psu").read_bytes() == made
 lines = run("archive:mass:/sv/|BESLES-12345GAME", "k1", "c1")
-assert kind(lines, "MESSAGE|4|Archive created|"), lines
+assert kind(lines, "MESSAGE|8|Archive created|"), lines
 J3 = "mass:/J3.mcd"
 blank(J3)
 lines = run(J3, "m0", "pmass:/arch/" + PSV2, "c1")
