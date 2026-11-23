@@ -227,10 +227,13 @@ int main(int argc,char**argv){
     }
     if(update==2){
         AppInstall*in=calloc(1,sizeof(*in));setup(in,0);asset_case=crash;
+        if(asset_case==6)assert(!mkdir("ata0:/stage/DP-TEMPLATE.TXT",0700));
         int ret=assets(in);
         if(asset_case==2||asset_case==3)assert(ret<0&&downloads==2&&metadata_requests==1);
         else if(asset_case==4)assert(ret<0&&downloads==1);
         else if(asset_case==5)assert(ret<0&&downloads==4);
+        else if(asset_case==6)assert(ret==-EISDIR&&!downloads&&metadata_requests==1&&
+                                     !strcmp(in->location,"ata0:/stage/DP-TEMPLATE.TXT"));
         else {assert(ret==0&&!strncmp(in->settings,"PS2X\n",5));assert(downloads==(asset_case==1?9u:4u));assert(metadata_requests==(asset_case==1?2u:1u));}
         assert(!create_count&&!format_count&&!header_count);free(in);return 0;
     }
@@ -255,7 +258,7 @@ with tempfile.TemporaryDirectory(prefix="hdd-app-install-") as tmp:
     subprocess.run(["gcc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-I", str(root / "include"),
                     str(root / "src/hdd_app.c"), str(root / "src/save_archive.c"), str(root / "src/save_lzari.c"),
                     str(root / "src/save_sign.c"), str(tmp / "test.c"), "-lz", "-o", str(tmp / "test")], check=True)
-    for case in range(6):
+    for case in range(7):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             subprocess.run([str(tmp / "test"), "2", str(case)], cwd=work, check=True)
     for case in (3, 4, 5, 6, 8):

@@ -121,6 +121,51 @@ ui += 'static int runJob(HddJob*j,const char*t,int cancelable){char in[48],out[4
 for sig in ("static void renamePartition(", "static void actRename(", "static int partitionHidden(", "static void actVisibility("):
     ui += function(manager, sig)
 ui += r'''
+#define ETH
+#define WLE_NATIVE_CLOUD
+#define EXFAT
+#define HP_PFS 0
+#define HP_HDL 1
+#define HDD_FS_EXFAT 1
+#define HDD_FS_FAT32 2
+enum {DI_PLUS, DI_ARCHIVE_EXTRACT, DI_CLOSE, DI_EDIT, DI_HIDE, DI_DISC, DI_TEXT, DI_SETTINGS, DI_INFO, DI_REFRESH};
+typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
+static struct { HddPart *parts; int n,formatted,filesystem,seen,status,present,resume_checked; } hm;
+static int console_is_PSX, hosd_result, resume_result;
+static int systemAppStatus(void){return hosd_result;}
+static int resumeStatus(void){return resume_result;}
+static int dashWorkerAwaitAll(const char *title){assert(title);return 1;}
+static int HddPartitionHeaderSystemCnfExists(const char *name){assert(name);return 0;}
+static const char *hddFilesystemName(int fs){assert(fs==HDD_FS_EXFAT);return "exFAT";}
+static const char *hddStatusShortText(int status){(void)status;return "";}
+static const char *localizeDashboardText(const char *text){return text;}
+static void actCreate(void){assert(0);}
+static void actRemove(HddPart *p){(void)p;assert(0);}
+static void actRenameGame(HddPart *p){(void)p;assert(0);}
+static void actInject(HddPart *p){(void)p;assert(0);}
+static void actSystemCnf(HddPart *p){(void)p;assert(0);}
+static void actStatus(void){assert(0);}
+static void scan(void){assert(0);}
+static void actResume(void){assert(0);}
+static void actFormat(void){assert(0);}
+static void dashHddInstallApp(const char *path){(void)path;assert(0);}
+static int dashModalMenu(const char *title,const char *subtitle,const DashMenuItem *items,int n,int initial){
+    assert(title&&subtitle&&!initial);
+    for(int i=0;i<n;i++){
+        int bit=0,result=0;
+        if(!strcmp(items[i].label,"Install app from PSU...")){bit=1;result=hosd_result;}
+        if(!strcmp(items[i].label,"Hide in HOSDMenu HDD Browser")){bit=2;result=hosd_result;}
+        if(!strcmp(items[i].label,"Resume installation...")){bit=4;result=resume_result;}
+        if(!bit)continue;
+        assert(result&&items[i].disabled==(result<0));
+        if(result<0)assert(items[i].detail&&strstr(items[i].detail,"Reopen Options"));
+        hm.seen|=bit;
+    }
+    return -1;
+}
+'''
+ui += function(manager, "static void partitionMenu(")
+ui += r'''
 static void setup(void){memset(mountedParty,0,sizeof(mountedParty));for(unsigned i=0;i<4;i++){Party_vmcIndex[i]=-1;unmounts[i]=0;}refuse_unmount=submits=driver_calls=driver_error=errors=confirmed=cancel=refreshed=0;last_name[0]=0;}
 int main(void){HddPart p={.name="PP.APP",.type=0};
  setup();strcpy(mountedParty[0],"hdd0:unrelated");strcpy(mountedParty[2],"hdd0:PP.APP");actVisibility(&p);
@@ -138,7 +183,14 @@ int main(void){HddPart p={.name="PP.APP",.type=0};
  setup();strcpy(p.name,"PP.APP");strcpy(keyboard_name,"12345678901234567890123456789012");actRename(&p);assert(driver_calls==1&&strlen(driver_name)==32);
  setup();strcpy(keyboard_name,"bad,name");actRename(&p);assert(errors==1&&!submits);
  setup();strcpy(p.name,"__system");strcpy(keyboard_name,"new");actRename(&p);assert(!submits);
+ strcpy(p.name,"PP.APP");sel=0;hm.parts=&p;hm.n=hm.formatted=hm.present=1;hm.filesystem=HDD_FS_EXFAT;
+ const int results[]={-EBUSY,0,1};
+ for(unsigned i=0;i<3;i++)for(unsigned j=0;j<3;j++){
+    hosd_result=results[i];resume_result=results[j];hm.seen=0;partitionMenu();
+    assert(hm.seen==((hosd_result?3:0)|(resume_result?4:0)));
+ }
  puts("PASS: exact rename IDs, full keyboard length, HOSDMenu hide/show, long-name refusal, retained mounts, VMC protection and useful error results");
+ puts("PASS: unavailable menu probes show disabled actions and a retry hint");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="hdd-rename-") as tmp:

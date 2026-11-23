@@ -304,13 +304,14 @@ static void progress(int done, int total, void *arg)
 static int download(AppInstall *in, const char *repository, const char *commit, const char *remote, const char *leaf)
 {
     char url[384], path[MAX_PATH]; int size = 0;
-    join(path, in->stage, leaf);
+    int ret = join(path, in->stage, leaf);
+    if (ret < 0) return ret;
     snprintf(url, sizeof(url), "https://raw.githubusercontent.com/%s/%s/%s", repository, commit, remote);
-    context(in, "Downloading HDD app asset", remote);
+    context(in, "Downloading HDD app asset", path);
     dashWorkerStatus(remote, 0, 0);
     int fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
     if (fd < 0) return fd;
-    int ret = cloudHttpDownloadAlignedFd(url, fd, in->network.ca_path, APP_MAX_ASSET, &size, NULL,
+    ret = cloudHttpDownloadAlignedFd(url, fd, in->network.ca_path, APP_MAX_ASSET, &size, NULL,
                                progress, (void *)remote, in->network.error, sizeof(in->network.error));
     ret = finish(fd, ret < 0 ? ret : size > 0 ? 0 : -EIO);
     if (ret == -ENOENT) genRemove(path);
@@ -372,7 +373,7 @@ static int assets(AppInstall *in)
 static int existingPartition(AppInstall *in, iox_stat_t *stat)
 {
     char path[40];
-    strcpy(in->installed_partition, in->app.partition);
+    memcpy(in->installed_partition, in->app.partition, sizeof(in->installed_partition));
     snprintf(path, sizeof(path), "hdd0:%s", in->installed_partition);
     int ret = fileXioGetStat(path, stat);
     if (ret == -ENOENT && strlen(in->app.partition) <= 25) {

@@ -383,7 +383,7 @@ static int pfsProbeMount(const char *partition, char device[16], int *temporary)
     snprintf(device, 16, "pfs%d:", free_slot);
     int ret = fileXioMount(device, partition, FIO_MT_RDONLY);
     if (ret < 0) return ret;
-    strcpy(mountedParty[free_slot], partition);
+    dashStrCopy(mountedParty[free_slot], partition, sizeof(mountedParty[free_slot]));
     *temporary = free_slot;
     return 0;
 }
@@ -1618,7 +1618,7 @@ static void actSystemCnf(HddPart *p)
 
 /* Cache the read-only probe until refresh or an installer/disk action. The
  * selected partition has no bearing on whether the drive can resume. */
-static int resumeAvailable(void)
+static int resumeStatus(void)
 {
 #ifndef NO_IOP_RESET
 	HddInstall probe = {0};
@@ -1629,37 +1629,37 @@ static int resumeAvailable(void)
 	if (isFtpServerRunning()) return 0;
 #endif
 	if (hm.resume_checked) return hm.resume_available;
-	if (!dashWorkerAwaitAll("Checking installer status")) return 0;
+	if (!dashWorkerAwaitAll("Checking installer status")) return -EBUSY;
 #ifdef EXFAT
-	if (jail && !loadAtaModules()) return 0;
+	if (jail && !loadAtaModules()) return -EIO;
 #else
 	if (jail) return 0;
 #endif
 	j = jobNew(HOP_RESUME_AVAILABLE);
-	if (!j) return 0;
+	if (!j) return -ENOMEM;
 	j->installer = &probe; j->nsub = jail;
-	if (!runJob(j, "Checking installer status", 0)) return 0;
+	if (!runJob(j, "Checking installer status", 0)) return -EAGAIN;
 	int ret = j->ret;
 	hddJobFree(j); hddInstallRelease(&probe);
 	if (ret == HDD_INSTALL_ATA_TIMEOUT) loadHddModules();
 	hm.resume_checked = ret >= 0;
-	hm.resume_available = ret > 0;
-	return hm.resume_available;
+	if (hm.resume_checked) hm.resume_available = ret;
+	return ret;
 #else
 	return 0;
 #endif
 }
 
 /* Check on opening Options so removing/replacing the ELF takes effect. */
-static int systemAppAvailable(void)
+static int systemAppStatus(void)
 {
-    if (!dashWorkerAwaitAll("Checking HDD software")) return 0;
+    if (!dashWorkerAwaitAll("Checking HDD software")) return -EBUSY;
     HddJob *j = jobNew(HOP_SYSTEM_APP);
-    if (!j) return 0;
-    if (!runJob(j, "Checking HDD software", 0)) return 0;
-    int available = j->ret > 0;
+    if (!j) return -ENOMEM;
+    if (!runJob(j, "Checking HDD software", 0)) return -EAGAIN;
+    int ret = j->ret;
     hddJobFree(j);
-    return available;
+    return ret;
 }
 
 static void partitionMenu(void)
@@ -1691,20 +1691,24 @@ static void partitionMenu(void)
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
 	can_install = !console_is_PSX && hm.formatted && (hm.filesystem & (HDD_FS_EXFAT | HDD_FS_FAT32));
 #endif
-	int have_hosdmenu = (can_hide || can_install) && systemAppAvailable();
+	int hosdmenu = (can_hide || can_install) ? systemAppStatus() : 0;
+	const char *retry_detail = "Check failed. Reopen Options.";
+	const char *hosd_detail = hosdmenu < 0 ? retry_detail : NULL;
 #define ADD(ic, lab, det, dis, id) \
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	if (hm.formatted)
 		ADD(DI_PLUS, "Create partition...", NULL, 0, A_CREATE);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
-	if (can_install && have_hosdmenu)
-		ADD(DI_ARCHIVE_EXTRACT, "Install app from PSU...", "8 MiB launcher; Internet required", 0, A_INSTALL_APP);
+	if (can_install && hosdmenu)
+		ADD(DI_ARCHIVE_EXTRACT, "Install app from PSU...", hosd_detail ? hosd_detail : "8 MiB launcher; Internet required",
+		    hosdmenu < 0, A_INSTALL_APP);
 #endif
 	if (p != NULL) {
 		ADD(DI_CLOSE, "Remove partition...", reserved ? "system" : NULL, system || reserved, A_REMOVE);
 		ADD(DI_EDIT, "Rename partition...", NULL, system || reserved, A_RENAME);
-		if (can_hide && have_hosdmenu)
-			ADD(DI_HIDE, partitionHidden(p->name) ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser", NULL, 0, A_VISIBILITY);
+		if (can_hide && hosdmenu)
+			ADD(DI_HIDE, partitionHidden(p->name) ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser",
+			    hosd_detail, hosdmenu < 0, A_VISIBILITY);
 		if (p->type == HP_HDL)
 			ADD(DI_DISC, "Rename game...", NULL, 0, A_RENAME_GAME);
 		ADD(DI_TEXT, "Inject APA header...", NULL, p->type != HP_PFS, A_INJECT);
@@ -1715,8 +1719,10 @@ static void partitionMenu(void)
 	ADD(DI_REFRESH, "Refresh", NULL, 0, A_REFRESH);
 	if (!console_is_PSX && hm.present)
 		ADD(DI_WARNING, "Format HDD...", NULL, 0, A_FORMAT);
-	if (resumeAvailable())
-		ADD(DI_REFRESH, "Resume installation...", NULL, 0, A_RESUME);
+	int resume = resumeStatus();
+	if (resume)
+		ADD(DI_REFRESH, "Resume installation...", resume < 0 ? retry_detail : NULL,
+		    resume < 0, A_RESUME);
 #undef ADD
 	r = dashModalMenu(localizeDashboardText("HDD Manager"), p ? p->name : "hdd0:", items, n, 0);
 	if (r < 0)
