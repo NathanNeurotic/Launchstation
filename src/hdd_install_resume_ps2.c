@@ -56,7 +56,11 @@ static int readJournal(HddInstall *in, HddFormatPlan *plan, unsigned *sequence, 
         if (n <= 0 || (unsigned)n > (unsigned)size - done) { ret = n < 0 ? n : -EIO; break; }
         done += n;
     }
-    { int closed = genClose(fd); if (ret >= 0 && closed < 0) ret = closed; }
+    if (hddInstallRecoveryFault()) ret = HDD_INSTALL_ATA_TIMEOUT;
+    else {
+        int closed = genClose(fd);
+        if (ret >= 0 && closed < 0) ret = closed;
+    }
     if (ret >= 0) ret = hddInstallResumeDecode(in, plan, sequence, data, size);
     free(data); return ret;
 }
@@ -111,11 +115,51 @@ static int verifyDisk(HddInstall *in, const HddFormatPlan *plan)
     }
     return 0;
 }
-int hddInstallResumeLoad(HddInstall *in, HddFormatPlan *plan, unsigned *sequence)
+static int findResume(HddInstall *in, HddFormatPlan *plan, unsigned *sequence,
+                      const char *device, int jail, int found)
 {
     HddInstall *candidate = calloc(1, sizeof(*candidate));
     if (!candidate) return -ENOMEM;
-    int found = 0, ret = -ENOENT;
+    int ret = found ? 0 : -ENOENT;
+    for (unsigned dir = 0; dir <= HDD_INSTALL_RECOVERY_LIMIT; dir++) {
+        char stage[40];
+        if (dir) snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP_%u", device, dir);
+        else snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP", device);
+        for (unsigned slot = 0; slot < 2; slot++) {
+            HddFormatPlan p;
+            unsigned seq;
+            memset(candidate, 0, sizeof(*candidate));
+            int read = readJournal(candidate, &p, &seq, stage, slot);
+            if (read >= 0 && candidate->jail == jail) {
+                candidate->owned = 1;
+                snprintf(candidate->stage, sizeof(candidate->stage), "%s", stage);
+                if (hddInstallFindStage(candidate) >= 0 && verifyDisk(candidate, &p) >= 0) {
+                    if (!found || seq > *sequence) {
+                        hddInstallRelease(in); *in = *candidate; candidate->launcher_files = NULL;
+                        *plan = p; *sequence = seq; found = 1;
+                    }
+                } else if (!found) ret = -EINVAL;
+            } else if (!found && read != -ENOENT) ret = -EINVAL;
+            hddInstallRelease(candidate);
+            if (hddInstallRecoveryFault()) {
+                free(candidate);
+                return HDD_INSTALL_ATA_TIMEOUT;
+            }
+        }
+    }
+    free(candidate);
+    return found ? 0 : ret;
+}
+int hddInstallResumeAvailable(HddInstall *in, const char *device, int jail)
+{
+    HddFormatPlan plan;
+    unsigned sequence;
+    int ret = findResume(in, &plan, &sequence, device, jail, 0);
+    return ret >= 0 ? 1 : ret == -ENOENT ? 0 : ret;
+}
+int hddInstallResumeLoad(HddInstall *in, HddFormatPlan *plan, unsigned *sequence)
+{
+    int ret = -ENOENT;
     /* Drivers are started on the UI thread. No network switch or write here. */
     for (unsigned jail = 0; jail < 2; jail++) {
 #ifndef EXFAT
@@ -123,32 +167,12 @@ int hddInstallResumeLoad(HddInstall *in, HddFormatPlan *plan, unsigned *sequence
 #endif
         int mounted = !jail && fileXioMount("pfs2:", "hdd0:__common", FIO_MT_RDONLY) >= 0;
         if (!jail && !mounted) continue;
-        char stage[40];
-        for (unsigned dir = 0; dir <= HDD_INSTALL_RECOVERY_LIMIT; dir++) {
-            const char *device = jail ? "ata0:" : "pfs2:";
-            if (dir) snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP_%u", device, dir);
-            else snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP", device);
-            for (unsigned slot = 0; slot < 2; slot++) {
-                HddFormatPlan p;
-                unsigned seq;
-                memset(candidate, 0, sizeof(*candidate));
-                int read = readJournal(candidate, &p, &seq, stage, slot);
-                if (read >= 0 && candidate->jail == (int)jail) {
-                    candidate->owned = 1;
-                    snprintf(candidate->stage, sizeof(candidate->stage), "%s", stage);
-                    if (hddInstallFindStage(candidate) < 0 || verifyDisk(candidate, &p) < 0) ret = -EINVAL;
-                    else if (!found || seq > *sequence) {
-                        hddInstallRelease(in); *in = *candidate; candidate->launcher_files = NULL;
-                        *plan = p; *sequence = seq; found = 1;
-                    }
-                } else if (read != -ENOENT) ret = -EINVAL;
-                hddInstallRelease(candidate);
-            }
-        }
+        int read = findResume(in, plan, sequence, jail ? "ata0:" : "pfs2:", jail, ret == 0);
+        if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
         if (mounted) fileXioUmount("pfs2:");
+        if (read != -ENOENT) ret = read;
     }
-    free(candidate);
-    if (!found) return ret;
+    if (ret < 0) return ret;
     in->resumed = 1; in->recovery_attempts = 0;
     in->apa_sectors = in->jail ? plan->apa_sectors : plan->sectors;
     return 0;

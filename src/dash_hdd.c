@@ -20,6 +20,7 @@
 #include "hdd_filesystem.h"
 #include "hdd_app.h"
 #include "hdd_format.h"
+#include "hdd_partition_size.h"
 #include "hdd_install.h"
 #include "hdd_install_recovery.h"
 #include "hdd_install_resume.h"
@@ -113,6 +114,7 @@ static struct
 	int filesystem_error;
 	u32 size_mb, apa_mb, used_mb, free_mb;
 	int scanned, scanning, overflow;
+	int resume_checked, resume_available;
 	HddPart *parts;
 	int n;
 	int changed; /* partitions were modified: file browser caches refresh */
@@ -134,7 +136,9 @@ enum {
 	HOP_UNMOUNT,
 	HOP_DOWNLOAD_INSTALLER,
 	HOP_INSTALL_SOFTWARE,
-	HOP_RESUME_LOOKUP
+	HOP_RESUME_LOOKUP,
+	HOP_RESUME_AVAILABLE,
+	HOP_SYSTEM_APP
 };
 
 typedef struct
@@ -362,11 +366,68 @@ static void pfsRun(HddJob *j)
 	j->ret = 0;
 }
 
+/* Menu probes reuse a retained mount or borrow a free slot without evicting
+ * an unrelated partition. Keep a failed unmount visible to the mount manager. */
+static int pfsProbeMount(const char *partition, char device[16], int *temporary)
+{
+    int free_slot = -1;
+    *temporary = -1;
+    for (int i = 0; i < MOUNT_LIMIT; i++) {
+        if (!strcmp(mountedParty[i], partition)) {
+            snprintf(device, 16, "pfs%d:", i);
+            return 0;
+        }
+        if (free_slot < 0 && !mountedParty[i][0]) free_slot = i;
+    }
+    if (free_slot < 0) return -EBUSY;
+    snprintf(device, 16, "pfs%d:", free_slot);
+    int ret = fileXioMount(device, partition, FIO_MT_RDONLY);
+    if (ret < 0) return ret;
+    strcpy(mountedParty[free_slot], partition);
+    *temporary = free_slot;
+    return 0;
+}
+
+static int pfsProbeClose(int temporary, int result)
+{
+    if (temporary >= 0 && !hddInstallRecoveryFault()) {
+        unmountParty(temporary);
+        if (mountedParty[temporary][0] && result >= 0) return -EBUSY;
+    }
+    return result;
+}
+
+static void systemAppRun(HddJob *j)
+{
+    iox_stat_t stat;
+    char device[16], path[64];
+    int temporary;
+    int ret = pfsProbeMount("hdd0:__system", device, &temporary);
+
+    if (ret < 0) { j->ret = ret; return; }
+    snprintf(path, sizeof(path), "%s/osdmenu/hosdmenu.elf", device);
+    ret = fileXioGetStat(path, &stat);
+    j->ret = pfsProbeClose(temporary, ret >= 0 ? !!FIO_S_ISREG(stat.mode) : ret == -ENOENT ? 0 : ret);
+}
+
 static void releaseMounts(void)
 {
 	unmountAll();
 	unmountParty(0);
 	unmountParty(1);
+}
+
+/* Renaming needs only the target volume closed. Retain other mounts and
+ * refuse a partition pinned by a VMC rather than disconnecting the card. */
+static int unmountForRename(const char *partition)
+{
+	for (int i = 0; i < MOUNT_LIMIT; i++) {
+		if (strcmp(mountedParty[i], partition)) continue;
+		if (Party_vmcIndex[i] >= 0) return -EBUSY;
+		unmountParty(i);
+		if (mountedParty[i][0]) return -EBUSY;
+	}
+	return 0;
 }
 
 static void hddJobRun(void *arg)
@@ -394,10 +455,10 @@ static void hddJobRun(void *arg)
 			j->ret = fileXioRemove(in);
 			break;
 		case HOP_RENAME:
-			releaseMounts();
-			snprintf(in, sizeof(in), "hdd0:%s", j->a);
-			snprintf(out, sizeof(out), "hdd0:%s", j->b);
-			j->ret = fileXioRename(in, out);
+			snprintf(in, sizeof(in), "hdd0:%.32s", j->a);
+			snprintf(out, sizeof(out), "hdd0:%.32s", j->b);
+			j->ret = unmountForRename(in);
+			if (j->ret >= 0) j->ret = fileXioRename(in, out);
 			break;
 		case HOP_RENAME_GAME:
 			j->ret = HdlRenameGame(j->a, j->b);
@@ -426,6 +487,17 @@ static void hddJobRun(void *arg)
 			j->sources = (HddHeaderSourcePartition *)malloc(sizeof(HddHeaderSourcePartition) * MAX_PARTITIONS);
 			j->nsources = j->sources ? HddHeaderListSourcePartitions(j->b, j->sources, MAX_PARTITIONS, &j->invalid) : -ENOMEM;
 			break;
+		case HOP_SYSTEM_APP:
+			systemAppRun(j);
+			break;
+		case HOP_RESUME_AVAILABLE: {
+			char device[16] = "ata0:";
+			int temporary = -1;
+			int ret = j->nsub ? 0 : pfsProbeMount("hdd0:__common", device, &temporary);
+			if (ret >= 0) ret = hddInstallResumeAvailable(j->installer, device, j->nsub);
+			j->ret = pfsProbeClose(temporary, ret);
+			break;
+		}
 		case HOP_RESUME_LOOKUP:
 			j->ret = hddInstallResumeLoad(j->installer, &j->format_plan, &j->resume_sequence);
 			break;
@@ -509,7 +581,7 @@ static HddJob *jobNew(int op)
  * out (cancelable only) or it could not be queued (j freed or abandoned). */
 static int runJob(HddJob *j, const char *title, int cancelable)
 {
-	int probing = j->op == HOP_RESUME_LOOKUP;
+	int probing = j->op == HOP_RESUME_LOOKUP || j->op == HOP_RESUME_AVAILABLE;
 	int recoverable = j->installer && (probing || j->op == HOP_DOWNLOAD_INSTALLER || j->op == HOP_INSTALL_SOFTWARE);
 	int owns_loading = recoverable && !dashLoadingActive();
 	if (owns_loading) dashLoadingBegin(title);
@@ -608,6 +680,7 @@ static int scan(void)
 	hm.used_mb = j->used_mb;
 	hm.overflow = j->overflow;
 	hm.scanned = 1;
+	hm.resume_checked = hm.resume_available = 0;
 	recomputeFree();
 	if (hm.n > 1)
 		qsort(hm.parts, hm.n, sizeof(HddPart), partCmp);
@@ -744,7 +817,7 @@ static void loadPfsInfo(int i)
 //--------------------------------------------------------------
 // Size picker
 //--------------------------------------------------------------
-static int pickSizeStep(const char *title, int min_mb, int max_mb, int start_mb, int quantum)
+static int pickSizeMenu(const char *title, int min_mb, int max_mb, int start_mb, int partition)
 {
 	int size = start_mb;
 	const float w = 440.0f, h = 244.0f;
@@ -754,6 +827,11 @@ static int pickSizeStep(const char *title, int min_mb, int max_mb, int start_mb,
 
 	if (max_mb < min_mb)
 		return -1;
+	if (partition) {
+		max_mb = hddPartitionSizeStep(max_mb, 0, min_mb, max_mb);
+		size = hddPartitionSizeStep(start_mb, 0, min_mb, max_mb);
+		if (size < 0) return -1;
+	}
 	dashInputFlush();
 	while (1) {
 		int step = 0;
@@ -762,9 +840,9 @@ static int pickSizeStep(const char *title, int min_mb, int max_mb, int start_mb,
 		if (dashDashboardPending())
 			return -1;
 		if (in.pressed & DASH_IN_RIGHT)
-			step = quantum;
+			step = 128;
 		if (in.pressed & DASH_IN_LEFT)
-			step = -quantum;
+			step = -128;
 		if (in.pressed & DASH_IN_R1)
 			step = 1024;
 		if (in.pressed & DASH_IN_L1)
@@ -774,14 +852,14 @@ static int pickSizeStep(const char *title, int min_mb, int max_mb, int start_mb,
 		if (in.pressed & DASH_IN_L2)
 			step = -10240;
 		if (step) {
-			size += step;
-			if (size < min_mb)
-				size = min_mb;
-			if (size > max_mb)
-				size = max_mb;
-			size -= size % quantum;
-			if (size < min_mb)
-				size = min_mb;
+			if (partition) size = hddPartitionSizeStep(size, step, min_mb, max_mb);
+			else {
+				size += step;
+				if (size < min_mb) size = min_mb;
+				if (size > max_mb) size = max_mb;
+				size -= size % 128;
+				if (size < min_mb) size = min_mb;
+			}
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
 		if (in.pressed & DASH_IN_OK) {
@@ -824,7 +902,7 @@ static int pickSizeStep(const char *title, int min_mb, int max_mb, int start_mb,
 				/* Tighten the chevrons without overlapping button backings. */
 				hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + (dashCfg.icon_backing ? 0 : -6);
 				hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
-				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), quantum == 8 ? "8 MB" : "128 MB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "128 MB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
 				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "1 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
@@ -861,7 +939,7 @@ static int confirmReservedName(const char *name)
 
 static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 {
-	return pickSizeStep(title, min_mb, max_mb, start_mb, 128);
+	return pickSizeMenu(title, min_mb, max_mb, start_mb, 0);
 }
 
 static void actCreate(void)
@@ -880,7 +958,7 @@ static void actCreate(void)
 		dashModalMessage(DI_WARNING, "HDD full", "There is not enough free space for a new partition (8 MB minimum).", NULL);
 		return;
 	}
-	size = pickSizeStep("Partition size", 8, max_mb, 8, 8);
+	size = pickSizeMenu("Partition size", 8, max_mb, 8, 1);
 	if (size <= 0)
 		return;
 	uniqueName(name, unique, sizeof(unique), -1);
@@ -926,32 +1004,64 @@ static void actRemove(HddPart *p)
 	hddJobFree(j);
 }
 
-static void actRename(HddPart *p)
+static void renamePartition(HddPart *p, const char *name)
 {
-	char name[MAX_PART_NAME + 1], unique[MAX_PART_NAME + 1], old[MAX_PART_NAME + 1];
+	char target[MAX_PART_NAME + 1], detail[160];
 	HddJob *j;
-	int idx = (int)(p - hm.parts);
-
-	dashStrCopy(old, p->name, sizeof(old));
-	dashStrCopy(name, p->name, sizeof(name));
-	if (!dashModalKeyboard("Partition name", name, MAX_PART_NAME - 3) || name[0] == '\0' || !strcmp(name, old))
+	if (!p || p->type == HP_SYSTEM || !strncmp(p->name, "__", 2) || !strcmp(p->name, name)) return;
+	if (!name[0] || strlen(name) > MAX_PART_NAME || strpbrk(name, "/\\:,\r\n") ||
+	    !strncmp(name, "__", 2) || !strcmp(name, ".") || !strcmp(name, "..")) {
+		dashModalMessage(DI_WARNING, "Invalid partition name", "Use 1-32 characters without path separators, commas or the reserved __ prefix.", NULL);
 		return;
-	uniqueName(name, unique, sizeof(unique), idx);
+	}
+	dashStrCopy(target, name, sizeof(target));
 	j = jobNew(HOP_RENAME);
-	if (j == NULL)
-		return;
-	dashStrCopy(j->a, old, sizeof(j->a));
-	dashStrCopy(j->b, unique, sizeof(j->b));
-	if (!runJob(j, "Renaming partition", 0))
-		return;
+	if (j == NULL) return;
+	dashStrCopy(j->a, p->name, sizeof(j->a));
+	dashStrCopy(j->b, target, sizeof(j->b));
+	if (!runJob(j, "Renaming partition", 0)) return;
 	if (j->ret == 0) {
 		dashToast(DASH_TOAST_OK, "Partition renamed");
 		afterChange();
-		if (findPart(unique) >= 0)
-			sel = findPart(unique);
-	} else
-		dashModalMessage(DI_WARNING, "Partition not renamed", "The HDD refused the new name.", unique);
+		int index = findPart(target);
+		if (index >= 0) sel = index;
+	} else {
+		snprintf(detail, sizeof(detail), "%s (error %d)", target, j->ret);
+		dashModalMessage(DI_WARNING, "Partition not renamed",
+		    j->ret == -EBUSY ? "The partition is in use. Unmount its VMC or close other applications/FTP using it." :
+		    j->ret == -EEXIST ? "A partition with that name already exists. Choose a different name." : "The HDD refused the new name.", detail);
+	}
 	hddJobFree(j);
+}
+
+static void actRename(HddPart *p)
+{
+	char name[MAX_PART_NAME + 1];
+	dashStrCopy(name, p->name, sizeof(name));
+	if (dashModalKeyboard("Partition name", name, MAX_PART_NAME)) renamePartition(p, name);
+}
+
+static int partitionHidden(const char *name)
+{
+	size_t length = strlen(name);
+	return length > 7 && !strcmp(name + length - 7, ".HIDDEN");
+}
+
+static void actVisibility(HddPart *p)
+{
+	char name[MAX_PART_NAME + 1], body[256];
+	int hidden = partitionHidden(p->name);
+	if (hidden) snprintf(name, sizeof(name), "%.*s", (int)strlen(p->name) - 7, p->name);
+	else {
+		if (strlen(p->name) > MAX_PART_NAME - 7) {
+			dashModalMessage(DI_WARNING, "Partition name too long", "Adding .HIDDEN would exceed 32 characters. Rename the partition to 25 characters or fewer first.", p->name);
+			return;
+		}
+		snprintf(name, sizeof(name), "%.25s.HIDDEN", p->name);
+	}
+	snprintf(body, sizeof(body), "Rename %s to %s? This controls HOSDMenu visibility. PSBBN DP entries and other saved partition paths are not updated.", p->name, name);
+	if (dashModalConfirm(hidden ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser", body, hidden ? "Show" : "Hide", 0))
+		renamePartition(p, name);
 }
 
 static void actRenameGame(HddPart *p)
@@ -1017,7 +1127,7 @@ static void actFormat(void)
 		dashModalMessage(DI_WARNING, "Not available", "The drive capacity could not be determined within the supported 2 TiB range.", NULL);
 		return;
 	}
-	kind = dashModalChoice("Format HDD", formats, 3, 0);
+	kind = dashModalSelect("Format HDD", formats, 3, 0);
 	if (kind < 0) return;
 	memset(&install, 0, sizeof(install));
 	if (kind != HDD_FORMAT_EXFAT && !dashHddInstallChoose(&install, kind == HDD_FORMAT_APA_JAIL)) return;
@@ -1079,7 +1189,7 @@ static void actFormat(void)
 			REVIEW("exFAT space", "%u MiB", (unsigned)(plan.exfat_sectors / 2048));
 			REVIEW("exFAT label / cluster", "PS2 / 32 KiB");
 		}
-		REVIEW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP, MBR, HOSDMenu, apps" :
+		REVIEW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP (Experimental), MBR, HOSDMenu, apps" :
 		       install.flags == (HDD_INSTALL_HOSD | HDD_INSTALL_APPS) ? "MBR, HOSDMenu and apps" :
 		       install.flags & HDD_INSTALL_HOSD ? "MBR and HOSDMenu" : install.flags & HDD_INSTALL_APPS ? "WLE-R3Z and R3CONFIGURATOR" : "Format only");
 		if (install.flags & HDD_INSTALL_PSBBN) {
@@ -1222,7 +1332,7 @@ static void actResume(void)
 	RESUME_ROW("Drive capacity", "%u MiB", (unsigned)(plan.sectors / 2048));
 	RESUME_ROW("Cache", "%.95s", install.stage);
 	RESUME_ROW("Repository", "%.7s", install.commit);
-	RESUME_ROW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP, MBR, HOSDMenu, apps" : install.flags == 3 ? "MBR, HOSDMenu and apps" : install.flags & HDD_INSTALL_HOSD ? "MBR and HOSDMenu" : "WLE-R3Z and R3CONFIGURATOR");
+	RESUME_ROW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP (Experimental), MBR, HOSDMenu, apps" : install.flags == 3 ? "MBR, HOSDMenu and apps" : install.flags & HDD_INSTALL_HOSD ? "MBR and HOSDMenu" : "WLE-R3Z and R3CONFIGURATOR");
 	if (install.flags & HDD_INSTALL_PSBBN) {
 		RESUME_ROW("Language", "%s", install.language.name);
 		RESUME_ROW("Default game launcher", "%s", hddInstallGameName(install.game_launcher));
@@ -1408,7 +1518,7 @@ static void injectMatching(const char *src, int create_missing)
 				skipped++;
 				continue;
 			}
-			size = pickSizeStep("Partition size", 8, hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB, 8, 8);
+			size = pickSizeMenu("Partition size", 8, hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB, 8, 1);
 			if (size <= 0) {
 				stopped = 1;
 				break;
@@ -1506,6 +1616,52 @@ static void actSystemCnf(HddPart *p)
 	}
 }
 
+/* Cache the read-only probe until refresh or an installer/disk action. The
+ * selected partition has no bearing on whether the drive can resume. */
+static int resumeAvailable(void)
+{
+#ifndef NO_IOP_RESET
+	HddInstall probe = {0};
+	HddJob *j;
+	int jail = !!(hm.filesystem & (HDD_FS_EXFAT | HDD_FS_FAT32));
+	if (console_is_PSX || !hm.present || !hm.formatted) return 0;
+#ifdef ETH
+	if (isFtpServerRunning()) return 0;
+#endif
+	if (hm.resume_checked) return hm.resume_available;
+	if (!dashWorkerAwaitAll("Checking installer status")) return 0;
+#ifdef EXFAT
+	if (jail && !loadAtaModules()) return 0;
+#else
+	if (jail) return 0;
+#endif
+	j = jobNew(HOP_RESUME_AVAILABLE);
+	if (!j) return 0;
+	j->installer = &probe; j->nsub = jail;
+	if (!runJob(j, "Checking installer status", 0)) return 0;
+	int ret = j->ret;
+	hddJobFree(j); hddInstallRelease(&probe);
+	if (ret == HDD_INSTALL_ATA_TIMEOUT) loadHddModules();
+	hm.resume_checked = ret >= 0;
+	hm.resume_available = ret > 0;
+	return hm.resume_available;
+#else
+	return 0;
+#endif
+}
+
+/* Check on opening Options so removing/replacing the ELF takes effect. */
+static int systemAppAvailable(void)
+{
+    if (!dashWorkerAwaitAll("Checking HDD software")) return 0;
+    HddJob *j = jobNew(HOP_SYSTEM_APP);
+    if (!j) return 0;
+    if (!runJob(j, "Checking HDD software", 0)) return 0;
+    int available = j->ret > 0;
+    hddJobFree(j);
+    return available;
+}
+
 static void partitionMenu(void)
 {
 	HddPart *p = (hm.n > 0 && sel < hm.n) ? &hm.parts[sel] : NULL;
@@ -1524,22 +1680,31 @@ static void partitionMenu(void)
 		A_REFRESH,
 		A_FORMAT,
 		A_RESUME,
-		A_INSTALL_APP
+		A_INSTALL_APP,
+		A_VISIBILITY
 	};
 
 	if (p != NULL && !system && dashWorkerAwaitAll("Finishing up"))
 		has_cnf = (HddPartitionHeaderSystemCnfExists(p->name) > 0);
+	int can_hide = p && p->type == HP_PFS && !reserved;
+	int can_install = 0;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+	can_install = !console_is_PSX && hm.formatted && (hm.filesystem & (HDD_FS_EXFAT | HDD_FS_FAT32));
+#endif
+	int have_hosdmenu = (can_hide || can_install) && systemAppAvailable();
 #define ADD(ic, lab, det, dis, id) \
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	if (hm.formatted)
 		ADD(DI_PLUS, "Create partition...", NULL, 0, A_CREATE);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
-	if (!console_is_PSX && hm.formatted && (hm.filesystem & (HDD_FS_EXFAT | HDD_FS_FAT32)))
-		ADD(DI_PLUS, "Install app from PSU...", "8 MiB launcher; Internet required", 0, A_INSTALL_APP);
+	if (can_install && have_hosdmenu)
+		ADD(DI_ARCHIVE_EXTRACT, "Install app from PSU...", "8 MiB launcher; Internet required", 0, A_INSTALL_APP);
 #endif
 	if (p != NULL) {
 		ADD(DI_CLOSE, "Remove partition...", reserved ? "system" : NULL, system || reserved, A_REMOVE);
-		ADD(DI_EDIT, "Rename partition...", NULL, system, A_RENAME);
+		ADD(DI_EDIT, "Rename partition...", NULL, system || reserved, A_RENAME);
+		if (can_hide && have_hosdmenu)
+			ADD(DI_HIDE, partitionHidden(p->name) ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser", NULL, 0, A_VISIBILITY);
 		if (p->type == HP_HDL)
 			ADD(DI_DISC, "Rename game...", NULL, 0, A_RENAME_GAME);
 		ADD(DI_TEXT, "Inject APA header...", NULL, p->type != HP_PFS, A_INJECT);
@@ -1550,7 +1715,7 @@ static void partitionMenu(void)
 	ADD(DI_REFRESH, "Refresh", NULL, 0, A_REFRESH);
 	if (!console_is_PSX && hm.present)
 		ADD(DI_WARNING, "Format HDD...", NULL, 0, A_FORMAT);
-	if (!console_is_PSX && hm.present && hm.formatted)
+	if (resumeAvailable())
 		ADD(DI_REFRESH, "Resume installation...", NULL, 0, A_RESUME);
 #undef ADD
 	r = dashModalMenu(localizeDashboardText("HDD Manager"), p ? p->name : "hdd0:", items, n, 0);
@@ -1566,6 +1731,9 @@ static void partitionMenu(void)
 			break;
 		case A_REMOVE:
 			actRemove(p);
+			break;
+		case A_VISIBILITY:
+			actVisibility(p);
 			break;
 		case A_RENAME:
 			actRename(p);
@@ -1587,6 +1755,7 @@ static void partitionMenu(void)
 			break;
 		case A_RESUME:
 			actResume();
+			hm.resume_checked = 0;
 			break;
 		case A_FORMAT:
 			actFormat();

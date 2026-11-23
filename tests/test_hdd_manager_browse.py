@@ -182,6 +182,37 @@ static void checkScroll(void) {
 harness = harness.replace("int main(void) {", scroll_harness + "\nint main(void) {\n    checkScroll();", 1)
 
 compiler = shutil.which("gcc") or shutil.which("clang")
+filer = (root / "src/filer_browser.c").read_text()
+path_harness = '#include <assert.h>\n#include <stdio.h>\n#include <string.h>\n'
+path_harness += function("static int isHddBrowserPath(", filer)
+path_harness += function("void filerFormatBrowserPathForDisplay(", filer)
+path_harness += r'''
+static void check(const char *path, const char *want)
+{
+    char out[128];
+    filerFormatBrowserPathForDisplay(path, out, sizeof(out));
+    assert(!strcmp(out, want));
+}
+int main(void)
+{
+    char browse[] = "hdd0:/__common/APPS/";
+    check(browse, "hdd0:__common:pfs:/APPS/");
+    assert(!strcmp(browse,"hdd0:/__common/APPS/"));
+    check("hdd1:/+APPS", "hdd1:+APPS:pfs:/");
+    check("hdd0:/", "hdd0:/");
+    check("hdd0:__common:pfs:/APPS/", "hdd0:__common:pfs:/APPS/");
+    check("dvr_hdd0:/+APPS/", "dvr_hdd0:+APPS:pfs:/");
+    check("mass0:/", "usb0:/");
+    check("vmc0:/SAVE/", "vmc0:/SAVE/");
+}
+'''
+with tempfile.TemporaryDirectory(prefix="wle-hdd-path-") as tmp:
+    c, exe = Path(tmp) / "path.c", Path(tmp) / "path.exe"
+    c.write_text(path_harness, encoding="utf-8")
+    subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-DDVRP",
+                    str(c), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True, timeout=10)
+
 with tempfile.TemporaryDirectory(prefix="wle-hdd-") as tmp:
     c, exe = Path(tmp) / "h.c", Path(tmp) / "h.exe"
     c.write_text(harness, encoding="utf-8")

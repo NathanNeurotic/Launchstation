@@ -509,6 +509,8 @@ enum DashIcon {
 	DI_COMPACTFLASH, /* wide CF card with an inset connector/label panel (PC Card CF) */
 	DI_PARTITION, /* dedicated partition icon */
 	DI_HDD_MANAGER, /* dedicated HDD Manager icon */
+	DI_ARCHIVE_CREATE, /* closed package */
+	DI_ARCHIVE_EXTRACT, /* open package */
 	DI_COUNT
 };
 
@@ -986,6 +988,8 @@ typedef struct { const char *label, *value; } DashTableRow;
 int dashModalConfirmTable(const char *title, const DashTableRow *rows, int count, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
 int dashModalChoice(const char *title, const char *const *options, int n, int current);
+/* Initial cursor only; no current-value check mark. */
+int dashModalSelect(const char *title, const char *const *options, int n, int initial);
 
 /* Synchronous work feedback: draws a full frame immediately. */
 void dashLoadingBegin(const char *title);

@@ -65,6 +65,10 @@ system partitions still use 128 MiB alignment. Use an allocator that supports
 mixed mini extents before creating or resizing partitions on these disks from
 another PS2 utility.
 
+The create and header-import size pickers offer **8 MiB**, followed by
+multiples of **128 MiB**. Smaller extents remain available to the allocator
+when it needs to reuse free space.
+
 ## Install an app from a PSU
 
 On an APA Jail HDD with HOSDMenu, choose **Install app from PSU…** in HDD Manager
@@ -74,14 +78,32 @@ present, and prompts if more than one ELF can be used. Internet access is
 required for HDD icons and artwork. A missing asset can use generic artwork.
 HTTP and TLS failures stop installation.
 
+The HDD Manager action appears when the installed HOSDMenu ELF is present.
+A PSBBN DP installation is optional. Dot-prefixed files such as
+POPSLOADER's `.pldrs` are included with the other PSU files.
+
 The app is published under `ata0:/APPS/` with an 8 MiB HOSDMenu launcher
 partition. The review shows the chosen ELF and assets before publishing.
 Updates only replace a managed app and preserve user files outside the PSU.
 After an interruption, selecting the original PSU or the cached `PACKAGE.PSU`
 continues the transaction. Launchstation retains the cache and the previous
-app until publication completes. If an interruption leaves a pending launcher
-without its ownership marker, the installer leaves that partition untouched
-and reports its name.
+app until publication completes. With no valid journal, staging may restart
+if it contains only installer files. Unknown files and staged app or backup
+directories are kept. A pending launcher without durable ownership evidence
+is left untouched.
+
+## Partition names and HOSDMenu visibility
+
+HDD Manager accepts APA names up to 32 bytes and refuses a name already in
+use. A rename leaves other partitions mounted and refuses to disconnect an
+active VMC on the target. When HOSDMenu is installed, its HDD Browser visibility
+can be changed for non-system PFS partitions by adding or removing `.HIDDEN`.
+Managed app updates preserve a hidden launcher's name. PSBBN shortcuts and
+other saved paths retain the old ID.
+
+The File Browser can display a partition path as `hdd0:__common:pfs:/APPS/`.
+That is the same folder shown as `hdd0:/__common/APPS/` during navigation.
+The display format leaves file operations and clipboard paths unchanged.
 
 ## Recovery volume
 

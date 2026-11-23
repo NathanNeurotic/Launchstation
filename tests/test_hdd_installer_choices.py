@@ -81,17 +81,30 @@ with tempfile.TemporaryDirectory(prefix='hdd-install-choices-') as directory:
 #define WLE_NATIVE_CLOUD
 #define EXFAT
 #define DI_INFO 1
+#define DI_CHECK 2
+typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
+static int expected_check=-1,expected_focus;
 static int answers[4],asked,messages,cancel=-1;
-static int dashModalChoice(const char *title,const char *const *items,int count,int initial){
-    assert(title&&count>0&&count<=6&&!initial&&items[0]);
+static int dashModalMenu(const char *title,const char *subtitle,const DashMenuItem *items,int count,int initial){
+    assert(title&&!subtitle&&count>0&&count<=6&&initial==expected_focus&&items[0].label);
+    for(int j=0;j<count;j++)assert(items[j].icon==(j==expected_check?DI_CHECK:-1)&&!items[j].detail&&!items[j].disabled);
+    if(!strcmp(title,"Software after formatting")&&count==2)assert(strstr(items[1].label,"Experimental"));
     int i=asked++;if(i==cancel)return -1;
     assert(answers[i]<count);return answers[i];
 }
-static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);messages++;}
+static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);if(strstr(title,"PSBBN DP installation"))assert(strstr(title,"Experimental"));messages++;}
 '''
+    choice_source=(root/'src/dash_ui.c').read_text()
+    for signature in ('static int modalChoice(', 'int dashModalChoice(', 'int dashModalSelect('):
+        code+=function(choice_source,signature)
     code+=function(source,'int dashHddInstallChoose(')+function(source,'static int installSize(')+function(source,'int dashHddInstallConfigure(')
     code+=r'''
 int main(void){HddInstall in={.flags=7,.jail=1};
+ const char *options[]={"First","Second"};
+ assert(dashModalSelect("empty",NULL,0,0)==-1);
+ expected_check=expected_focus=1;answers[0]=1;assert(dashModalChoice("Existing setting",options,2,1)==1);
+ expected_check=-1;expected_focus=0;asked=0;answers[0]=0;assert(dashModalSelect("New choice",options,2,0)==0);
+ asked=0;
  for(int launcher=0;launcher<2;launcher++){
   answers[0]=1;answers[1]=launcher;asked=messages=0;
   assert(dashHddInstallChoose(&in,1)&&in.flags==7&&in.game_launcher==(unsigned)launcher&&asked==2&&messages==1);

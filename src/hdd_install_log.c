@@ -80,6 +80,11 @@ static void updateStatus(const char *text, int done, int total, int history)
     unlock();
     if (record) hddInstallLog("%s", text);
 }
+void hddInstallLogResult(int result)
+{
+    hddInstallLog("%s", result >= 0 ? HDD_INSTALL_LOG_COMPLETE :
+                  result == -ECANCELED ? "Installation cancelled." : "Installation incomplete.");
+}
 void hddInstallStatus(const char *text, int done, int total)
 { updateStatus(text, done, total, 1); }
 void hddInstallProgress(const char *text, int done, int total)

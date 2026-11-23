@@ -13,6 +13,8 @@ void hddInstallResumeBegin(HddInstall *in, const HddFormatPlan *plan, unsigned s
 void hddInstallResumeEnd(void);
 int hddInstallResumeSave(HddInstall *in);
 int hddInstallResumeLoad(HddInstall *in, HddFormatPlan *plan, unsigned *sequence);
+/* Check resume eligibility using the caller's retained mount or ata0:. */
+int hddInstallResumeAvailable(HddInstall *in, const char *device, int jail);
 int hddInstallResumeRemove(HddInstall *in);
 /* Each stage owner gets private APA names, with a separate name per PFS slot. */
 static inline void hddInstallPendingPfsName(const HddInstall *in, unsigned slot, char name[32])

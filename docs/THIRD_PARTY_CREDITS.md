@@ -118,3 +118,5 @@ These are mentioned or launched through an integration. Their binaries are **not
 Emotion Engine Regular/Bold is by **Neale Davidson / Pixel Sagas** ([designer](https://www.pixelsagas.com/)). The generated atlases are embedded in `src/dash_font_emotion_engine*.c`; original TTF files are not redistributed. Preserve the [included license](licenses/Emotion-Engine-LICENSE.txt) and [source/checksum record](font-generation.md). The supplied terms permit embedding and restrict free use to non-commercial use.
 
 Material Design Icons rocket-launch by **Pictogrammers / MDI contributors**, adapted into the action icon atlas. Preserve the [Apache-2.0 notice](licenses/Material-Design-Icons-LICENSE.txt), original `res/icons/rocket-launch.svg` and its source checksum in `src/dash_icons.c`.
+
+The archive action icons in `src/dash_icons.c` adapt the [Box icon by Pixel perfect](https://www.flaticon.com/free-icon/box_726546) and the [Order icon](https://www.flaticon.com/free-icon/order_9422452) from Flaticon, whose license requires attribution.

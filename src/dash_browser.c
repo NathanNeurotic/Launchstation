@@ -2979,10 +2979,10 @@ static void actionsMenu(void)
 		if (en[PASTE])
 			ADD(DI_PASTE_RENAME, "Paste with new names...", NULL, 0, F_PASTE_RENAME);
 		if (psu_label != NULL && en[PSUPASTE])
-			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
+			ADD(DI_ARCHIVE_EXTRACT, psu_label, NULL, 0, F_PSU);
 		/* copied save folders, each as its own archive here (saildot4k's Create archive) */
 		if (en[PASTE] && clipFoldersOnly() && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "Create archive...", nclipFiles > 1 ? "One .psu, .psv, .cbs or .zip per copied save" :
+			ADD(DI_ARCHIVE_CREATE, "Create archive...", nclipFiles > 1 ? "One .psu, .psv, .cbs or .zip per copied save" :
 			                                                 ".psu, .psv, .cbs or .zip of the copied save", 0, F_ARCHIVE);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) {
 			static int psu_idx[MAX_ENTRY];
@@ -3022,7 +3022,7 @@ static void actionsMenu(void)
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
 		if (hddAppTarget(path, sizeof(path)))
-			ADD(DI_HDD, "Install app to HDD...", "APA Jail; Internet required", 0, F_HDD_APP);
+			ADD(DI_ARCHIVE_EXTRACT, "Install app to HDD...", "APA Jail; Internet required", 0, F_HDD_APP);
 #endif
 		/* any file, .elf/.icn/.sys too; not the built-in commands or an offline PC card */
 		if (f != NULL && !isDir(f) && !isMisc(fb.dir) && (!isPcCardCfPath(fb.dir) || isPcCardCfOnline()))
@@ -3457,9 +3457,10 @@ static void clipboardSummary(char *out, int size)
 static void browserDrawBody(void)
 {
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
-	char info[64], display_path[MAX_PATH + 2];
+	char info[64], display_path[MAX_PATH + 6];
 
-	browserDisplayPath(fb.dir, display_path, sizeof(display_path));
+	if (isUsbBrowsePath(fb.dir)) browserDisplayPath(fb.dir, display_path, sizeof(display_path));
+	else filerFormatBrowserPathForDisplay(fb.dir, display_path, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */

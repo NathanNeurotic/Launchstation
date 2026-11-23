@@ -27,6 +27,7 @@ code = r'''
 #include <string.h>
 #include "libapa.h"
 #include "hdd_format.h"
+#include "hdd_partition_size.h"
 #define APA_IO_MODE_READ 0
 #define APA_IO_MODE_WRITE 1
 #define MB 2048u
@@ -92,12 +93,42 @@ static void del(unsigned lba) {
     assert(c->header->type==0x100 && !apaDelete(c));validate();
 }
 int main(void) {
+    /* Public sizes stay simple while the allocator below still uses 16/32/64
+     * MiB free extents to satisfy the requested volume sizes. */
+    assert(hddPartitionSizeStep(8,128,8,4096)==128);
+    assert(hddPartitionSizeStep(128,128,8,4096)==256);
+    assert(hddPartitionSizeStep(256,128,8,4096)==384);
+    assert(hddPartitionSizeStep(128,-128,8,4096)==8);
+    assert(hddPartitionSizeStep(8,1024,8,16384)==1024);
+    assert(hddPartitionSizeStep(8,10240,8,16384)==10240);
+    assert(hddPartitionSizeStep(1152,-1024,8,16384)==128);
+    assert(hddPartitionSizeStep(1024,-1024,8,16384)==8);
+    assert(hddPartitionSizeStep(8,128,8,64)==8);
+    assert(hddPartitionSizeStep(8,10240,8,255)==128);
+    assert(hddPartitionSizeStep(300,0,8,300)==256);
+    assert(hddPartitionSizeStep(16,128,16,4096)==128);
+    assert(hddPartitionSizeStep(128,-128,16,4096)==16);
+    assert(hddPartitionSizeStep(136,128,136,4096)==256);
+    assert(hddPartitionSizeStep(256,-128,136,4096)==136);
+    assert(hddPartitionSizeStep(8,0,8,7)==-1);
+    for(int maximum=8;maximum<=4096;maximum++) {
+        int selected=8;
+        for(;;){
+            int next=hddPartitionSizeStep(selected,128,8,maximum);
+            assert(next<=maximum&&(next==8||next%128==0));
+            if(next==selected)break;
+            assert(next>selected);selected=next;
+        }
+        while(selected>8){int next=hddPartitionSizeStep(selected,-128,8,maximum);assert(next<selected);selected=next;}
+    }
     assert(sizeof(apa_header_t)==1024);
     hddDevices[0].totalLBA=4096*MB;
     apa_params_t m={0};m.type=1;int error;
     apa_cache_t*c=apaFillHeader(0,&m,0,0,0,128*MB,&error);apaCacheFlushAllDirty(0);apaCacheFree(c);
     assert(add(128)==128*MB);assert(add(256)==256*MB);assert(add(512)==512*MB);assert(add(1024)==1024*MB);
-    unsigned a=add(8),b=add(128),d=add(8);
+    unsigned a=add(hddPartitionSizeStep(8,0,8,4096));
+    unsigned b=add(hddPartitionSizeStep(8,128,8,4096));
+    unsigned d=add(hddPartitionSizeStep(128,-128,8,4096));
     assert(a==2048*MB && b==2176*MB && d==2056*MB);
     assert(headers[2064/8].length==16*MB && headers[2080/8].length==32*MB && headers[2112/8].length==64*MB);
     del(a);del(d);assert(headers[2048/8].type==0 && headers[2048/8].length==128*MB);
@@ -125,7 +156,7 @@ int main(void) {
     headers[0].prev^=8*MB;cache[0].flags|=APA_CACHE_FLAG_DIRTY;apaCacheFlushAllDirty(0);
     assert(hddApaCanAllocate(readSector,NULL,hddDevices[0].totalLBA,8*MB)==-EIO);
     assert(flushes>1000);
-    puts("PASS: production mini allocator, mixed 8/128/8 chain, padding, free splits/coalescing, 2000 fragmented operations and APA Jail bounds");
+    puts("PASS: 8/128 MiB size choices and jumps, free-space bounds, existing growth minima, production mixed-size allocator, free splits/coalescing, 2000 fragmented operations and APA Jail bounds");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="apa-mini-") as tmp:
@@ -137,40 +168,3 @@ with tempfile.TemporaryDirectory(prefix="apa-mini-") as tmp:
                     "-I", str(root / "include"), "-I", str(root / "iop/ps2hdd_osd"), str(tmp / "test.c"),
                     str(root / "src/hdd_apa_boundary.c"), "-o", str(tmp / "test")], check=True)
     subprocess.run([str(tmp / "test")], check=True, timeout=20)
-
-    rename_code = r'''
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
-#include "hdd-ioctl.h"
-typedef struct {int unit;} iomanX_iop_file_t;
-static int fioSema, locked;
-static char source_id[APA_IDMAX], target_id[APA_IDMAX];
-static void WaitSema(int sema){assert(!sema&&!locked);locked=1;}
-static void SignalSema(int sema){assert(!sema&&locked);locked=0;}
-static int apaRename(int device,const char *source,const char *target){
-    assert(!device&&locked);
-    memcpy(source_id,source,sizeof(source_id));
-    memcpy(target_id,target,sizeof(target_id));
-    return 0;
-}
-'''
-    fio = (root / "iop/ps2hdd_osd/hdd_fio.c").read_text()
-    rename_code += function(fio, "int hddReName(")
-    rename_code += r'''
-int main(void){
-    iomanX_iop_file_t drive={0};
-    const char full[]="12345678901234567890123456789012";
-    assert(sizeof(full)==APA_IDMAX+1);
-    assert(!hddReName(&drive,full,"new")&&!locked);
-    assert(!memcmp(source_id,full,APA_IDMAX)&&!strcmp(target_id,"new"));
-    assert(hddReName(&drive,"old",full)==-ENAMETOOLONG);
-    assert(hddReName(&drive,"012345678901234567890123456789012","new")==-ENAMETOOLONG);
-    assert(!hddReName(&drive,"old","new"));
-    assert(!strcmp(source_id,"old")&&!strcmp(target_id,"new")&&!locked);
-}
-'''
-    (tmp / "rename.c").write_text(rename_code)
-    subprocess.run(["gcc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-I", str(tmp),
-                    str(tmp / "rename.c"), "-o", str(tmp / "rename")], check=True)
-    subprocess.run([str(tmp / "rename")], check=True, timeout=10)

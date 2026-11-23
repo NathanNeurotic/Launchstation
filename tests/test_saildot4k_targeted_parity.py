@@ -123,7 +123,7 @@ assert "button_y + 11.0f - 16.0f * text_scale" in ui
 assert "dashButtonTextY(y, fs), label, fs" in ui
 assert "hintOrder(in_hints, n, order)" in ui
 assert "dashButtonTextY(y, DASH_FS_SMALL)" in widgets
-assert 'dashButtonTextY(hy, DASH_FS_SMALL), quantum == 8 ? "8 MB" : "128 MB"' in hdd
+assert 'dashButtonTextY(hy, DASH_FS_SMALL), "128 MB"' in hdd
 for label in ('1 GB', '10 GB'):
     assert f'dashButtonTextY(hy, DASH_FS_SMALL), "{label}"' in hdd
 assert "dashTextFit(bx, dashButtonTextY(by, DASH_FS_SMALL)" in main

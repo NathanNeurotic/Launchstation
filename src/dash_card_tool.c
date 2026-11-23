@@ -1171,7 +1171,7 @@ void dashCardArchiveFolders(const char *dir, const char *const *names, int n, co
 	             done, n);
 	if (failed)
 		snprintf(body + r, sizeof(body) - r, " %d not created. First: %s: %s", failed, first, first_why);
-	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all created" : "Archive created", body, dest_dir);
+	dashModalMessage(failed ? DI_WARNING : DI_ARCHIVE_CREATE, failed ? "Not all created" : "Archive created", body, dest_dir);
 }
 
 static void ctImportPsu(const char *image)

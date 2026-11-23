@@ -130,6 +130,23 @@ static float sdTriP(V2 p, float ax, float ay, float bx, float by, float cx, floa
 	return sdTri(p, a, b, c);
 }
 
+/* Distance to a convex quadrilateral, without triangulation seams. */
+static float sdQuadP(V2 p, float ax, float ay, float bx, float by,
+                     float cx, float cy, float dx, float dy)
+{
+	V2 points[4] = {{ax, ay}, {bx, by}, {cx, cy}, {dx, dy}};
+	float distance = 1e9f;
+	int positive = 0, negative = 0;
+	for (int i = 0; i < 4; i++) {
+		V2 a = points[i], b = points[(i + 1) & 3];
+		float side = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+		positive |= side > 0;
+		negative |= side < 0;
+		distance = fminf2(distance, sdSeg(p, a.x, a.y, b.x, b.y, 0));
+	}
+	return positive && negative ? distance : -distance;
+}
+
 static V2 rot(V2 p, float ang)
 {
 	V2 r;
@@ -491,6 +508,41 @@ static float iconSdf(int id, V2 p)
 				d = U(d, sdSeg(p, 0.60f, -0.84f, 0.60f, -0.36f, 0.085f));
 			}
 			break;
+		case DI_ARCHIVE_CREATE: {
+			/* Closed box adapted from Pixel perfect / Flaticon:
+			 * https://www.flaticon.com/free-icon/box_726546
+			 * Original 512px coordinates; 32px optical inset in this atlas. */
+			V2 q = {p.x * 288.0f + 256.0f, p.y * 288.0f + 256.0f};
+			float lid, left, right, tape;
+			lid = sdQuadP(q, 0, 99, 256, 3, 512, 99, 256, 195);
+			tape = sdQuadP(q, 256, 119, 320, 94, 416, 135, 352, 159);
+			lid = S(lid, tape);
+			left = sdQuadP(q, 0, 131, 240, 221, 240, 509, 0, 420);
+			tape = sdQuadP(q, 64, 363, 128, 387, 128, 418, 64, 394);
+			left = S(left, tape);
+			right = sdQuadP(q, 272, 221, 512, 131, 512, 420, 272, 509);
+			tape = sdQuadP(q, 352, 191, 416, 167, 416, 246, 352, 270);
+			d = U(U(lid, left), S(right, tape)) / 288.0f;
+			break;
+		}
+		case DI_ARCHIVE_EXTRACT: {
+			/* Open box/checkmark adapted from Flaticon:
+			 * https://www.flaticon.com/free-icon/order_9422452 */
+			V2 a = {p.x * 288.0f, p.y * 288.0f + 256.0f};
+			V2 q = {fabsf(a.x), a.y};
+			float body, flap, badge;
+			body = S(sdQuadP(q, 8, 339, 171, 339, 171, 442, 8, 505), sdTriP(q, 8, 339, 40, 384, 171, 339));
+			flap = sdQuadP(q, 12, 314, 176, 250, 208, 307, 44, 371);
+			d = S(sdTriP(q, 0, 300, 157, 240, 0, 180), sdCircle(q, 0, 178, 104));
+			d = U(d, U(body, flap));
+			badge = S(sdCircle(a, 0, 178, 88), U(sdSeg(a, -46, 176, -20, 208, 13), sdSeg(a, -20, 208, 42, 146, 13)));
+			d = U(d, badge);
+			d = U(d, sdSeg(q, 0, 15, 0, 52, 8));
+			d = U(d, sdSeg(q, 82, 36, 64, 67, 8));
+			d = U(d, sdSeg(q, 140, 96, 108, 114, 8));
+			d = U(d, sdSeg(q, 123, 178, 161, 178, 8)) / 288.0f;
+			break;
+		}
 		case DI_REFRESH:
 			d = sdRing(p, 0.0f, 0.0f, 0.62f, T);
 			d = S(d, sdBox(p, 0.4f, -0.4f, 0.4f, 0.4f, 0.0f));
