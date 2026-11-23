@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-23T12:27:11+00:00",
+  "updated_at": "2026-11-23T15:20:36+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 3425,
+  "total_downloads": 3427,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -9921,7 +9921,7 @@
       "release": "latest"
     },
     "781711980": {
-      "downloads": 1,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION-DS.psu",
       "release": "latest"
     },
