@@ -3,6 +3,7 @@
 // description: variation of pad.c with support for the PlayStation 3 and 4 dualshock drivers by Alex Parrado
 //---------------------------------------------------------------------------
 #include "launchelf.h"
+#include "dash.h"
 #include <kernel.h>
 #include <timer.h>
 #include <time.h>
@@ -23,6 +24,8 @@ static int test_joy = 0;
 
 int semPoll,semRunning,semFinish;
 int isRunning;
+static int recovery_poll_tid = -1, recovery_alarm_sem = -1;
+static volatile int recovery_alarm_id = -1;
 
 void clearPadPressState(void)
 {
@@ -40,6 +43,7 @@ void clearPadPressState(void)
 static void alrmHandler(s32 alarm_id, u16 time, void *arg2)
 {
 	s32 *pSema = (s32 *)arg2;
+	recovery_alarm_id = -1;
 	iSignalSema(*pSema);
 	ExitHandler();
 }
@@ -51,7 +55,7 @@ void padPollingThread(void *args)
 {
 	int state;
 	ee_sema_t semData;
-	int semAlrm,iIsRunning;
+	int iIsRunning;
 
 	semData.option = semData.attr = 0;
 	semData.init_count = 0;
@@ -104,14 +108,37 @@ void padPollingThread(void *args)
 		SignalSema(semPoll);
 
 		// nanosleep from the scratch
-		semAlrm = CreateSema(&semData);
-		SetAlarm(POLLING_TIME, alrmHandler, &semAlrm);
-		WaitSema(semAlrm);
-		DeleteSema(semAlrm);
+		recovery_alarm_sem = CreateSema(&semData);
+		recovery_alarm_id = SetAlarm(POLLING_TIME, alrmHandler, &recovery_alarm_sem);
+		WaitSema(recovery_alarm_sem);
+		DeleteSema(recovery_alarm_sem);
+		recovery_alarm_sem = -1;
 	}
 	
+	recovery_poll_tid = -1;
 	SignalSema(semFinish);
 	ExitDeleteThread();
+}
+
+void padSuspendForRecovery(void)
+{
+	if (recovery_poll_tid >= 0) SuspendThread(recovery_poll_tid);
+}
+void padForgetAfterRecovery(void)
+{
+	/* Old IOP/DMA is stopped before releasing any EE polling resources. */
+	if (recovery_poll_tid >= 0) {
+		TerminateThread(recovery_poll_tid); DeleteThread(recovery_poll_tid);
+		recovery_poll_tid = -1;
+	}
+	if (recovery_alarm_id >= 0) ReleaseAlarm(recovery_alarm_id);
+	recovery_alarm_id = -1;
+	if (recovery_alarm_sem >= 0) DeleteSema(recovery_alarm_sem);
+	recovery_alarm_sem = -1;
+	DeleteSema(semPoll); DeleteSema(semRunning); DeleteSema(semFinish);
+	isRunning = 0;
+	ds34usb_reset(); ds34bt_reset();
+	clearPadPressState();
 }
 
 // Init polling thread
@@ -141,6 +168,7 @@ void padPollingInit(void)
 	
 	isRunning=1;
 	pad_thr_id = CreateThread(&th_attr);
+	recovery_poll_tid = pad_thr_id;
 	StartThread(pad_thr_id, NULL);
 }
 
@@ -159,7 +187,8 @@ int readpad_noKBnoRepeat(void)
 {
 	int port;
 
-	WaitSema(semPoll);
+	if (dashWorkerIoBusy()) { if (PollSema(semPoll) < 0) return 0; }
+	else WaitSema(semPoll);
 
 	for (port = 0; port < 4; port++) {
 
@@ -184,7 +213,8 @@ int readpad_no_KB(void)
 	static int rpt_count[4] = {0, 0, 0, 0};
 	int port;
 
-	WaitSema(semPoll);
+	if (dashWorkerIoBusy()) { if (PollSema(semPoll) < 0) return 0; }
+	else WaitSema(semPoll);
 
 	for (port = 0; port < 4; port++) {
 		if (ret[port] != 0) {

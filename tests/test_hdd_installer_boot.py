@@ -116,6 +116,8 @@ job_code = r'''
 #include <errno.h>
 #include <stdio.h>
 #include "hdd_install.h"
+int hddInstallResumeSave(HddInstall *in){assert(in);return 0;}
+int hddInstallFindStage(HddInstall *in){assert(in);return 0;}
 #define HOP_INSTALL_SOFTWARE 1
 typedef struct { HddInstall *installer; HddFormatPlan format_plan; int ret, format_started; } HddJob;
 static int apply_error, mount_error, finish_error, boot_error, applied, mounted, finished, enabled, cleaned, unmounted;
@@ -153,6 +155,7 @@ int main(void) {
     for (unsigned i = 0; i < sizeof(profiles) / sizeof(profiles[0]); i++) {
         in.flags = profiles[i];
         for (int failure = 0; failure <= 4; failure++) {
+            in.applied = in.populated = in.committed = 0;
             applied = mounted = finished = enabled = cleaned = unmounted = 0;
             apply_error = failure == 1 ? -EIO : 0; mount_error = failure == 2 ? -EIO : 0;
             finish_error = failure == 3 ? -EIO : 0; boot_error = failure == 4 ? -EIO : 0;

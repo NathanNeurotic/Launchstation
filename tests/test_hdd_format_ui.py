@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_hdd.c").read_text()
 start = source.index("static void actFormat(void)")
-end = source.index("\nstatic void actStatus(void)", start)
+end = source.index("\nstatic void actResume(void)", start)
 action = source[start:end]
 
 code = r'''
@@ -20,6 +20,8 @@ code = r'''
 #include <time.h>
 #include "hdd_format.h"
 #include "hdd_install.h"
+void hddInstallResumeBegin(HddInstall *in,const HddFormatPlan *p,unsigned seq){assert(in&&p&&!seq);}
+void hddInstallResumeEnd(void){}
 typedef uint32_t u32;
 typedef struct { const char *label, *value; } DashTableRow;
 typedef struct { HddFormatPlan format_plan; HddInstall *installer; int format_started, ret, op; } HddJob;
@@ -190,6 +192,9 @@ vmc_code = r'''
 #include "hdd_format.h"
 #include "hdd_install.h"
 #include "hdd_header_injector.h"
+int hddInstallResumeSave(HddInstall *in){assert(in);return 0;}
+int hddInstallResumeLoad(HddInstall *in,HddFormatPlan *p,unsigned *seq){(void)in;(void)p;(void)seq;return -ENOENT;}
+int hddInstallFindStage(HddInstall *in){(void)in;return 0;}
 #define MAX_PATH 1024
 #define MAX_PART_NAME 256
 #define MAX_PARTITIONS 128

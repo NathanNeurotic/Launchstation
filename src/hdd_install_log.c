@@ -3,6 +3,7 @@
 #include "launchelf.h"
 #include "dash_internal.h"
 #include "hdd_install.h"
+#include "hdd_install_recovery.h"
 #include <stdarg.h>
 
 static struct {
@@ -169,7 +170,7 @@ void hddInstallLogFlush(HddInstall *in)
     char path[sizeof(log_state.path)], line[HDD_INSTALL_LOG_COLS + 1];
     unsigned next, written;
     int fd, ret = 0, previous;
-    if (!log_state.active || !in->owned || !in->stage[0]) return;
+    if (!log_state.active || !in->owned || !in->stage[0] || hddInstallRecoveryFault()) return;
     if (snprintf(path, sizeof(path), "%s/INSTALLER.LOG", in->stage) >= (int)sizeof(path)) return;
     hddInstallLogSnapshot(&snap);
     lock(); next = log_state.saved; unlock();

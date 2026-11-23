@@ -12,6 +12,7 @@
 #define META 260u
 #define CACHE 32
 #define BLOOM 65536u
+#define DATA_BATCH 8u /* 32 KiB, within the existing 64-sector raw RPC. */
 static uint16_t r16(const unsigned char *p) { return p[0] | (uint16_t)p[1] << 8; }
 static uint32_t r32(const unsigned char *p) { return r16(p) | (uint32_t)r16(p + 2) << 16; }
 static void w16(unsigned char *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
@@ -21,16 +22,54 @@ struct InstallExt2 {
     uint32_t start, blocks, groups, serial, freeblocks, freeinodes;
     unsigned char *gdt, *bloom;
     unsigned char bb[BS], ib[BS], it[BS], file[BS], inode[128];
+    unsigned char pending[DATA_BATCH * BS];
+    uint32_t pending_block;
+    unsigned pending_count;
+    int write_error;
     uint32_t bbgroup, ibgroup, itblock, ino, position, size;
     int bbdirty, ibdirty, itdirty, active;
     struct { char path[INSTALL_TAR_PATH]; uint32_t ino; } cache[CACHE];
     unsigned nextcache;
     unsigned cursor[128][2];
 };
+static int flushData(InstallExt2 *f)
+{
+    int ret;
+    if (f->write_error) return f->write_error;
+    if (!f->pending_count) return 0;
+    ret = f->io.write(f->io.context, f->start + f->pending_block * 8,
+                      f->pending_count * 8, f->pending);
+    if (ret < 0) { f->write_error = ret; return ret; }
+    f->pending_count = 0;
+    return 0;
+}
 static int readBlock(InstallExt2 *f, uint32_t b, void *p)
-{ return b < f->blocks ? f->io.read(f->io.context, f->start + b * 8, 8, p) : -EINVAL; }
+{
+    if (f->write_error) return f->write_error;
+    if (f->pending_count && b >= f->pending_block && b - f->pending_block < f->pending_count) {
+        memcpy(p, f->pending + (b - f->pending_block) * BS, BS); return 0;
+    }
+    return b < f->blocks ? f->io.read(f->io.context, f->start + b * 8, 8, p) : -EINVAL;
+}
 static int writeBlock(InstallExt2 *f, uint32_t b, const void *p)
-{ return b < f->blocks ? f->io.write(f->io.context, f->start + b * 8, 8, p) : -EINVAL; }
+{
+    if (f->write_error) return f->write_error;
+    if (f->pending_count && b >= f->pending_block && b - f->pending_block < f->pending_count) {
+        int ret = flushData(f); if (ret < 0) return ret;
+    }
+    return b < f->blocks ? f->io.write(f->io.context, f->start + b * 8, 8, p) : -EINVAL;
+}
+static int queueData(InstallExt2 *f, uint32_t b)
+{
+    int ret;
+    if (b >= f->blocks) return -EINVAL;
+    if (f->pending_count && (b != f->pending_block + f->pending_count || f->pending_count == DATA_BATCH)) {
+        ret = flushData(f); if (ret < 0) return ret;
+    }
+    if (!f->pending_count) f->pending_block = b;
+    memcpy(f->pending + f->pending_count++ * BS, f->file, BS);
+    return 0;
+}
 static uint32_t groupSize(InstallExt2 *f, uint32_t g)
 { uint32_t n = f->blocks - g * BPG; return n < BPG ? n : BPG; }
 static int bitmap(InstallExt2 *f, int inode, uint32_t g)
@@ -64,7 +103,6 @@ static int getInode(InstallExt2 *f, uint32_t ino, unsigned char *data, int put)
 }
 static int alloc(InstallExt2 *f, int inode, uint32_t *value)
 {
-    unsigned char zero[BS] = {0};
     for (uint32_t g = 0; g < f->groups; g++) {
         unsigned char *desc = f->gdt + g * 32, *data = inode ? f->ib : f->bb;
         unsigned limit = inode ? IPG : groupSize(f, g), off = inode ? 14 : 12;
@@ -76,7 +114,9 @@ static int alloc(InstallExt2 *f, int inode, uint32_t *value)
             data[i / 8] |= 1u << (i % 8); w16(desc + off, r16(desc + off) - 1);
             if (inode) { f->ibdirty = 1; f->freeinodes--; *value = g * IPG + i + 1; return 0; }
             f->bbdirty = 1; f->freeblocks--; *value = g * BPG + i;
-            return writeBlock(f, *value, zero);
+            /* Leaf blocks are supplied as complete, zero-padded buffers by
+             * every caller. Only pointer blocks need separate initialization. */
+            return 0;
         }
         return -EIO;
     }
@@ -110,6 +150,7 @@ static int mapped(InstallExt2 *f, unsigned char *ino, uint32_t index, int create
     b = r32(ino + 40 + slot * 4);
     if (!b && create) {
         ret = alloc(f, 0, &b); if (ret < 0) return ret;
+        if (levels) { memset(indirect, 0, BS); ret = writeBlock(f, b, indirect); if (ret < 0) return ret; }
         w32(ino + 40 + slot * 4, b); w32(ino + 28, r32(ino + 28) + 8);
     }
     for (unsigned level = 0; b && level < levels; level++) {
@@ -118,6 +159,10 @@ static int mapped(InstallExt2 *f, unsigned char *ino, uint32_t index, int create
         next = r32(indirect + offsets[level] * 4);
         if (!next && create) {
             ret = alloc(f, 0, &next); if (ret < 0) return ret;
+            if (level + 1 < levels) {
+                unsigned char zero[BS] = {0};
+                ret = writeBlock(f, next, zero); if (ret < 0) return ret;
+            }
             w32(indirect + offsets[level] * 4, next);
             ret = writeBlock(f, b, indirect); if (ret < 0) return ret;
             w32(ino + 28, r32(ino + 28) + 8);
@@ -357,7 +402,7 @@ int installExt2Data(InstallExt2 *f, const void *data, unsigned size)
         memcpy(f->file + offset, p, n); p += n; size -= n; f->position += n;
         if (offset + n == BS || f->position == f->size) {
             ret = mapped(f, f->inode, (f->position - 1) / BS, 1, &b); if (ret < 0) return ret;
-            ret = writeBlock(f, b, f->file); if (ret < 0) return ret;
+            ret = queueData(f, b); if (ret < 0) return ret;
             memset(f->file, 0, BS);
         }
     }
@@ -368,6 +413,7 @@ int installExt2End(InstallExt2 *f)
     int ret;
     if (!f || !f->active) return 0;
     if (f->position != f->size) return -EINVAL;
+    ret = flushData(f); if (ret < 0) return ret;
     ret = getInode(f, f->ino, f->inode, 1); if (ret >= 0) f->active = 0; return ret;
 }
 static int groupDescriptors(InstallExt2 *f)
@@ -401,6 +447,7 @@ int installExt2Finish(InstallExt2 *f)
 {
     int ret;
     if (!f || f->active) return -EINVAL;
+    ret = flushData(f); if (ret < 0) return ret;
     if (f->bbdirty) { ret = writeBlock(f, f->bbgroup * BPG + 2, f->bb); if (ret < 0) return ret; f->bbdirty = 0; }
     if (f->ibdirty) { ret = writeBlock(f, f->ibgroup * BPG + 3, f->ib); if (ret < 0) return ret; f->ibdirty = 0; }
     if (f->itdirty) { ret = writeBlock(f, f->itblock, f->it); if (ret < 0) return ret; f->itdirty = 0; }

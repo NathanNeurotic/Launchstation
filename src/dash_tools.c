@@ -17,6 +17,7 @@
 #include "cloud_http.h"
 #include "qrcodegen.h"
 #endif
+#include "filer_shared.h"
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -808,11 +809,11 @@ static int launchstationUpdateCaPath(char *path, int path_size)
         size_t len = strlen(dir);
         n = snprintf(path, path_size, "%s%sWLE-UPDATE-CA.PEM", dir,
                      dir[len - 1] == '/' ? "" : "/");
-        if (n > 0 && n < path_size && wleExists(path))
+        if (n > 0 && n < path_size && ensurePathDeviceStackReady(path) && wleExists(path))
             return 1;
     }
     return dashStoreBuildPath(path, path_size, "WLE-UPDATE-CA.PEM") == 0 &&
-           wleExists(path);
+           ensurePathDeviceStackReady(path) && wleExists(path);
 }
 
 int dashHttpsCaPath(char *path, int path_size)

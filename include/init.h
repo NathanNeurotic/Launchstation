@@ -8,6 +8,11 @@ void setStartupDriverStatusQuiet(int quiet);
 void closeKeyboardIfOpened(void);
 
 void Reset(void);
+/* Installer fault recovery: stop the old IOP first, rebuild clients only after
+ * the worker has unwound its old RPC stack. Both run on the UI thread. */
+int resetInstallerIopTransport(void);
+const char *installerIopRecoveryError(void);
+int reloadInstallerCoreAfterReset(void);
 unsigned int getIopResetGeneration(void);
 /* Called with 0 right before an IOP reboot and 1 once the core stack, pads
  * and keyboard are back (nested calls are possible). The dashboard uses it

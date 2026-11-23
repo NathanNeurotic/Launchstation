@@ -560,6 +560,8 @@ targets:
       - src/mmce_save_versions.c
       - src/mmce_igr.c
       - src/hdd_filesystem.c
+      - src/hdd_app.c
+      - src/dash_hdd_app.c
       - src/hdd_apa_boundary.c
       - src/hdd_format.c
       - src/hdd_format_recovery.c
@@ -570,6 +572,10 @@ targets:
       - src/save_lzari.c
       - src/save_sign.c
       - src/hdd_install_log.c
+      - src/hdd_install_recovery.c
+      - src/hdd_install_recovery_ps2.c
+      - src/hdd_install_resume.c
+      - src/hdd_install_resume_ps2.c
       - src/hdd_install_ps2.c
       - src/hdd_install_boot.c
       - src/hdd_install_psbbn.c
@@ -665,6 +671,8 @@ targets:
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
+      - "-Wl,--wrap=sceSifCallRpc"
+      - "-Wl,--wrap=sceSifBindRpc"
       - "-L../.cloud-deps/lib"
       # libjpeg-turbo from scripts/build_jpeg.sh, built by the active toolchain.
       - "-L../.jpeg-deps/lib"

@@ -2,6 +2,7 @@
 #include "hdd_install.h"
 #include "init.h"
 #include "filer_shared.h"
+#include "hdd_install_recovery.h"
 
 int dashHddInstallChoose(HddInstall *in, int jail)
 {
@@ -287,16 +288,31 @@ void dashHddInstallDebugBegin(HddInstall *in, const HddFormatPlan *plan)
     hddInstallStatus("Preparing installer; the HDD has not been erased yet", 0, 0);
     dashLoadingBegin("PSBBN DP installer log");
 }
+void dashHddInstallRecoveryFailed(void)
+{
+    /* No acknowledgement means old DMA buffers must remain pinned. Keep an
+     * explicit terminal screen alive, with no more RPCs or automatic resets. */
+    const char *reason = installerIopRecoveryError();
+    hddInstallLog("ERROR IOP recovery failed: %s", reason);
+    hddInstallProgress(reason, 0, 0);
+    for (;;) dashLoadingFrame(reason, 0, 0);
+}
 int dashHddInstallAwait(int id, const char *title)
 {
     int owns_loading = !dashLoadingActive();
-    if (!debug_open) return dashWorkerAwait(id, title, 0);
+    if (!debug_open && !hddInstallRecoveryActive()) return dashWorkerAwait(id, title, 0);
     if (owns_loading) dashLoadingBegin(title);
     while (!dashWorkerDone(id)) {
         DashInput in;
+        if (hddInstallRecoveryResetRequested()) {
+            hddInstallLog("RPC watchdog expired; resetting IOP before releasing old DMA buffers");
+            hddInstallProgress("Recovering storage: resetting IOP", 0, 0);
+            if (!resetInstallerIopTransport()) dashHddInstallRecoveryFailed();
+            hddInstallRecoveryResetComplete();
+        }
         dashWorkerPump();
         if (dashWorkerDone(id)) break;
-        dashInputPoll(&in); debugInput(&in);
+        if (!hddInstallRecoveryFault()) { dashInputPoll(&in); if (debug_open) debugInput(&in); }
         dashLoadingFrame(NULL, 0, 0);
     }
     if (owns_loading) dashLoadingEnd();
@@ -315,7 +331,7 @@ void dashHddInstallDebugEnd(HddInstall *in, int result)
     if (!debug_open) return;
     hddInstallLog("SESSION %s: result=%d", result == -ECANCELED ? "CANCELLED" : result < 0 ? "FAILED" : "COMPLETE", result);
     if (in->error[0]) hddInstallLog("ERROR detail: %s", in->error);
-    if (in->owned) {
+    if (in->owned && in->stage_ready && result != HDD_INSTALL_ATA_TIMEOUT) {
         int id = dashWorkerSubmit("Saving installer log", 0, debugSave, NULL, in);
         if (id > 0) dashHddInstallAwait(id, "Saving installer log");
         else hddInstallLog("ERROR log-save job could not be queued");

@@ -10,6 +10,10 @@ stage = s[s.index('int hddInstallClaimStage('):s.index('static int makeDirectory
 code = r'''
 #define _POSIX_C_SOURCE 200809L
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
+void hddInstallRecoveryObserve(int rc){(void)rc;}
+int hddInstallResumeSave(HddInstall *in){(void)in;return 0;}
+int hddInstallResumeRemove(HddInstall *in){(void)in;return 0;}
 #include "save_sign.h"
 #include <assert.h>
 #include <errno.h>

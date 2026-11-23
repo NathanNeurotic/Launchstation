@@ -1212,3 +1212,35 @@ int InjectHddAppLauncherWithArg(const char *partition_name, const char *elf_path
 	free(scratch);
 	return ret;
 }
+
+int InjectHddAppAssets(const char *partition_name, const char *cnf, const char *settings,
+                       const void *list, unsigned list_size, const void *del, unsigned del_size)
+{
+    char partition[MAX_NAME + 6];
+    iox_stat_t stat;
+    u32 offsets[4] = {0x1200, 0x1400, 0x1800, 0};
+    u32 sizes[4];
+    const void *data[4] = {cnf, settings, list, del};
+    int ret;
+    if (!cnf || !settings || strncmp(cnf, "BOOT2 = PATINFO\n", 16) || strncmp(settings, "PS2X\n", 5) ||
+        !list || !del || !list_size || !del_size || list_size > 0x80000 || del_size > 0x80000) return -EINVAL;
+    sizes[0] = strlen(cnf); sizes[1] = strlen(settings); sizes[2] = list_size; sizes[3] = del_size;
+    offsets[3] = (offsets[2] + list_size + 63) & ~63u;
+    if (sizes[0] >= 512 || sizes[1] >= 1024 || offsets[3] + del_size > 0x111000) return -EFBIG;
+    ret = hddHeaderBuildPartitionPath(partition, sizeof(partition), partition_name);
+    if (ret < 0) return ret;
+    ret = fileXioGetStat(partition, &stat);
+    if (ret < 0) return ret;
+    if (stat.mode != APA_TYPE_PFS || stat.private_5 < 262144) return -EINVAL;
+    memset(hdd_header_buffer + 0x1000, 0, offsets[3] + del_size - 0x1000);
+    memcpy(hdd_header_buffer + 0x1000, APA_HEADER_MAGIC, strlen(APA_HEADER_MAGIC));
+    for (unsigned i = 0; i < 4; i++) {
+        u32 relative = offsets[i] - 0x1000;
+        memcpy(hdd_header_buffer + 0x1010 + i * 8, &relative, 4);
+        memcpy(hdd_header_buffer + 0x1014 + i * 8, &sizes[i], 4);
+        memcpy(hdd_header_buffer + offsets[i], data[i], sizes[i]);
+    }
+    ret = hddHeaderWriteRawRange(stat.private_5, 0x1000, hdd_header_buffer + 0x1000, offsets[3] + del_size - 0x1000);
+    if (ret < 0) return ret;
+    return fileXioDevctl("hdd0:", HDIOC_FLUSH, NULL, 0, NULL, 0);
+}

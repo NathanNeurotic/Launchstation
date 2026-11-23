@@ -25,6 +25,8 @@ code = r'''
 #include <stdio.h>
 #include <string.h>
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
+void hddInstallRecoveryObserve(int rc){(void)rc;}
 typedef int64_t s64;
 typedef struct PreflightPath PreflightPath;
 #include "install_ext2.h"
@@ -74,21 +76,21 @@ code += r'''
 int main(void){
  strcpy(settings.stage,"ata0:/stage");settings.sizes[HI_SYSTEM]=100;settings.sizes[HI_LANGUAGE]=60;settings.sizes[HI_PS2LINUX]=40;
  settings.sizes[HI_CHANNELS]=30;
- for(unsigned japanese=0;japanese<2;japanese++)for(unsigned linux=0;linux<2;linux++)for(int preflight=0;preflight<2;preflight++){
+ for(unsigned japanese=0;japanese<2;japanese++)for(unsigned linux=0;linux<2;linux++){
   settings.flags=7|(linux?HDD_INSTALL_PS2LINUX:0);
   strcpy(settings.language.code,japanese?"jpn":"eng");
-  Payload p={.in=&settings,.preflight=preflight,.output=-1};
+  Payload p={.in=&settings,.output=-1};
   overall=opened=closed=current_updates=0;
   assert(archives(&p)==0&&opened==2+linux+japanese&&closed==opened);
   assert(p.archive_done==160+40*linux+30*japanese&&p.archive_total==p.archive_done);
-  assert(overall==(preflight?1000:900));
+  assert(overall==900);
   /* Reading compressed input must not replace the current installed file. */
-  assert(current_updates==(preflight?(2+linux+japanese)*2:0));
+  assert(current_updates==0);
  }
- Payload p={.in=&settings,.preflight=1,.output=-1};overall=0;read_error=1;
+ Payload p={.in=&settings,.output=-1};overall=0;read_error=1;
  assert(archives(&p)==-EIO&&p.archive_done==100&&overall<1000);read_error=0;
  /* ext2 and PFS sinks report only the current file's uncompressed bytes. */
- unsigned char bytes[12]={0};p.preflight=0;p.file_size=12;p.file_done=0;p.route=0;p.fs[0]=(InstallExt2*)1;
+ unsigned char bytes[12]={0};p.file_size=12;p.file_done=0;p.route=0;p.fs[0]=(InstallExt2*)1;
  strcpy(p.current,"__linux.4/bn/example");
  assert(data(&p,bytes,5)==0&&live_done==5&&live_total==12);
  ext2_error=-EIO;assert(data(&p,bytes,7)==-EIO&&live_done==5);ext2_error=0;

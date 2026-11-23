@@ -22,6 +22,8 @@ code=r'''
 #include <stdio.h>
 #include <string.h>
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
+#define FIO_S_ISDIR(mode) ((mode) == 0x4000)
 #define APA_PRINTF(...) ((void)0)
 #define FIO_O_CREAT 1
 #define FIO_O_EXCL 2
@@ -73,7 +75,7 @@ static int fileXioGetStat(const char *path,iox_stat_t *out){
     if(fail_index==(int)i&&fail_phase==5)out->private_0=1;
     return 0;
 }
-static int hddMakeFilesystem(int mb,char *name,int group){assert(opened==expected_count&&closed==expected_count&&stats==expected_count&&mb==(int)contents_mb&&group==FS_GROUP_APPLICATION&&!strcmp(name,"__contents"));contents++;return mb;}
+int hddInstallPfsPartition(HddInstall *in,unsigned mb,const char *name){assert(in);assert(opened==expected_count&&closed==expected_count&&stats==expected_count&&mb==contents_mb&&!strcmp(name,"__contents"));contents++;return mb;}
 static int fileXioMount(const char *mount,const char *partition,int flags){assert(contents==1&&!mounted&&!strcmp(mount,"pfs0:")&&!strcmp(partition,"hdd0:__common")&&flags==FIO_MT_RDWR);mounted++;return 0;}
 static int genMkdir(const char *path,int mode){assert(mounted&&!strcmp(path,"pfs0:/Your Saves")&&mode==0777);mkdirs++;return 0;}
 static int fileXioUmount(const char *mount){assert(mounted&&!strcmp(mount,"pfs0:"));mounted--;return 0;}

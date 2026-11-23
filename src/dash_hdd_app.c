@@ -1,0 +1,634 @@
+#include "dash_internal.h"
+#include "hdd_app.h"
+#include "hdd_install.h"
+#include "hdd_header_injector.h"
+#include "filer_shared.h"
+#include "filer_size_cache.h"
+#include "init.h"
+#include "dash_sound.h"
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+#include "cloud_http.h"
+#include <hdd-ioctl.h>
+#include <libhdd.h>
+#include <ctype.h>
+#include <malloc.h>
+#include <zlib.h>
+
+#define APP_TEMP "ata0:/LAUNCHSTATION_APP_TEMP"
+#define APP_MAX_ASSET (512 * 1024)
+typedef struct {
+    SaveArchive save;
+    HddApp app;
+    HddAppJournal journal;
+    HddInstall network;
+    unsigned char *package;
+    unsigned package_size, crc;
+    char source[MAX_PATH], stage[MAX_PATH], target[128], pending[33];
+    char settings[1024], cnf[512], info[1024];
+    char icon_source[96], art_source[96];
+    int result, resumed, mounted, cleanup_error;
+} AppInstall;
+
+static int join(char *out, const char *parent, const char *leaf)
+{ return snprintf(out, MAX_PATH, "%s/%s", parent, leaf) < MAX_PATH ? 0 : -ENAMETOOLONG; }
+static int flush(void)
+{ return fileXioDevctl("hdd0:", HDIOC_FLUSH, NULL, 0, NULL, 0); }
+static int finish(int fd, int ret)
+{
+    if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
+    int closed = genClose(fd);
+    return ret < 0 ? ret : closed < 0 ? closed : 0;
+}
+static int transfer(int fd, void *data, unsigned size, int writing)
+{
+    unsigned done = 0;
+    while (done < size) {
+        unsigned count = size - done < 65536 ? size - done : 65536;
+        int n = writing ? genWrite(fd, (unsigned char *)data + done, count) : genRead(fd, (unsigned char *)data + done, count);
+        if (n <= 0 || (unsigned)n > count) return n < 0 ? n : -EIO;
+        done += n;
+    }
+    return 0;
+}
+static int writeFile(const char *path, const void *data, unsigned size)
+{
+    int fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    return fd < 0 ? fd : finish(fd, transfer(fd, (void *)data, size, 1));
+}
+static int readFile(const char *path, unsigned char **data, unsigned *size, unsigned maximum)
+{
+    int ret = 0, fd = genOpen(path, FIO_O_RDONLY);
+    if (fd < 0) return fd;
+    s64 length = genLseek(fd, 0, SEEK_END);
+    if (length <= 0 || length > maximum || genLseek(fd, 0, SEEK_SET) != 0) ret = -EFBIG;
+    else if (!(*data = malloc(length + 1))) ret = -ENOMEM;
+    else { *size = length; ret = transfer(fd, *data, *size, 0); (*data)[*size] = 0; }
+    return finish(fd, ret);
+}
+static int exists(const char *path)
+{
+    iox_stat_t stat;
+    int ret = genGetStat(path, &stat);
+    return ret >= 0 ? 1 : ret == -ENOENT ? 0 : ret;
+}
+static int mkdirChecked(const char *path)
+{
+    iox_stat_t stat;
+    int ret = genGetStat(path, &stat);
+    if (ret >= 0) return FIO_S_ISDIR(stat.mode) ? 0 : -ENOTDIR;
+    if (ret != -ENOENT) return ret;
+    return genMkdir(path, 0777);
+}
+static int releasePfs(void)
+{
+    /* Do not evict pinned VMCs or disturb a concurrently running FTP server. */
+    if (vmcMounted[0] || vmcMounted[1] || isFtpServerRunning()) return -EBUSY;
+    for (int i = 0; i < MOUNT_LIMIT; i++) {
+        unmountParty(i);
+        if (mountedParty[i][0]) return -EBUSY;
+    }
+    return 0;
+}
+static int identity(const AppInstall *in, char out[160], int package)
+{
+    return snprintf(out, 160, "LSAPP1\n%s\n%s\n%s%08lx\n", in->app.folder, in->app.partition,
+                    package ? "PSU=" : "APP=", package ? (unsigned long)in->crc : 0ul);
+}
+static int checkOwner(AppInstall *in, const char *parent, int package)
+{
+    char path[MAX_PATH], expected[160];
+    unsigned char *data = NULL; unsigned size = 0;
+    int n = identity(in, expected, package), ret = join(path, parent, "LSAPP.ID");
+    if (ret >= 0) ret = readFile(path, &data, &size, 159);
+    if (ret >= 0) {
+        if (size != (unsigned)n) ret = -EEXIST;
+        else if (package < 0) {
+            /* Any prior package CRC is acceptable for an owned app update. */
+            unsigned prefix = (unsigned)n - 9;
+            if (memcmp(data, expected, prefix) || data[n - 1] != '\n') ret = -EEXIST;
+            else for (unsigned i = prefix; i < (unsigned)n - 1; i++)
+                if (!isxdigit(data[i])) { ret = -EEXIST; break; }
+        } else if (memcmp(data, expected, size)) ret = -EEXIST;
+    }
+    free(data); return ret;
+}
+static int writeOwner(AppInstall *in, const char *parent, int package)
+{
+    char path[MAX_PATH], text[160];
+    int n = identity(in, text, package), ret = join(path, parent, "LSAPP.ID");
+    return ret < 0 ? ret : writeFile(path, text, n);
+}
+static int readJournal(AppInstall *in)
+{
+    HddAppJournal best = {0};
+    for (unsigned slot = 0; slot < 2; slot++) {
+        char path[MAX_PATH], leaf[24]; unsigned char *data = NULL; unsigned size = 0;
+        HddAppJournal j;
+        snprintf(leaf, sizeof(leaf), "RESUME%u.BIN", slot); join(path, in->stage, leaf);
+        int ret = readFile(path, &data, &size, HDD_APP_JOURNAL_SIZE);
+        if (ret >= 0 && size == HDD_APP_JOURNAL_SIZE && !hddAppJournalDecode(&j, data) && j.sequence > best.sequence) best = j;
+        free(data);
+        if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
+    }
+    if (!best.sequence || best.package_crc != in->crc || best.package_size != in->package_size) return -EINVAL;
+    in->journal = best;
+    for (unsigned i = 0; i < in->app.elf_count; i++)
+        if (!strcmp(in->save.files[in->app.elf[i]].name, best.boot)) return hddAppChooseBoot(&in->save, &in->app, i);
+    return -EINVAL;
+}
+static int checkpoint(AppInstall *in, unsigned phase)
+{
+    unsigned char data[HDD_APP_JOURNAL_SIZE]; char path[MAX_PATH], leaf[24];
+    HddAppJournal next = in->journal;
+    next.sequence++; next.phase = phase;
+    int ret = hddAppJournalEncode(&next, data);
+    snprintf(leaf, sizeof(leaf), "RESUME%u.BIN", (unsigned)(next.sequence & 1)); join(path, in->stage, leaf);
+    if (ret >= 0) ret = flush();
+    if (ret >= 0) ret = writeFile(path, data, sizeof(data));
+    if (ret >= 0) ret = flush();
+    if (ret >= 0) in->journal = next;
+    return ret;
+}
+static int mountPartition(AppInstall *in, const char *name)
+{
+    char path[40]; snprintf(path, sizeof(path), "hdd0:%s", name);
+    int ret = fileXioMount("pfs3:", path, FIO_MT_RDWR);
+    if (ret >= 0) {
+        in->mounted = 1;
+        strcpy(mountedParty[3], path);
+    }
+    return ret;
+}
+static int unmountPartition(AppInstall *in, int ret)
+{
+    if (in->mounted && !hddInstallRecoveryFault()) {
+        int closed = fileXioUmount("pfs3:");
+        if (closed < 0 && ret >= 0) ret = closed;
+        if (closed >= 0) { in->mounted = 0; mountedParty[3][0] = 0; }
+    }
+    return ret;
+}
+static int partitionOwner(AppInstall *in, const char *name)
+{
+    int ret = mountPartition(in, name);
+    if (ret >= 0) ret = checkOwner(in, "pfs3:/res", 0);
+    return unmountPartition(in, ret);
+}
+static int directoryEmpty(const char *path)
+{
+    iox_dirent_t entry;
+    int fd = fileXioDopen(path), ret;
+    if (fd < 0) return fd;
+    while ((ret = fileXioDread(fd, &entry)) > 0)
+        if (strcmp(entry.name, ".") && strcmp(entry.name, "..")) { ret = -EEXIST; break; }
+    int closed = fileXioDclose(fd); return ret < 0 ? ret : closed < 0 ? closed : 0;
+}
+static void snapshot(void *arg)
+{
+    AppInstall *in = arg;
+    in->result = readFile(in->source, &in->package, &in->package_size, SAVE_ARCHIVE_LIMIT);
+    if (in->result < 0) return;
+    if (!saveArchiveParse(&in->save, in->package, in->package_size, "APP.PSU")) { in->result = -EINVAL; return; }
+    in->result = hddAppInspect(&in->save, &in->app);
+    in->crc = crc32(0, in->package, in->package_size);
+}
+
+static int apiCommit(AppInstall *in, const char *repository, char commit[41])
+{
+    char path[192]; CloudHttpResponse response = {0};
+    snprintf(path, sizeof(path), "/repos/%s/git/ref/heads/main", repository);
+    int ret = cloudHttpRequest("GET", "api.github.com", path, "Accept: application/vnd.github+json\r\n", NULL, 0,
+                           in->network.ca_path, &response, in->network.error, sizeof(in->network.error));
+    if (ret >= 0) {
+        if (response.status != 200 || !response.body) {
+            snprintf(in->network.error, sizeof(in->network.error), "GitHub metadata returned HTTP %d.", response.status);
+            ret = -EIO;
+        } else ret = hddInstallCommit(response.body, commit) ? 0 : -EINVAL;
+    }
+    cloudHttpResponseFree(&response); return ret;
+}
+static void progress(int done, int total, void *arg)
+{ dashWorkerStatus(arg, done, total); }
+static int download(AppInstall *in, const char *repository, const char *commit, const char *remote, const char *leaf)
+{
+    char url[384], path[MAX_PATH]; int size = 0;
+    join(path, in->stage, leaf);
+    snprintf(url, sizeof(url), "https://raw.githubusercontent.com/%s/%s/%s", repository, commit, remote);
+    dashWorkerStatus(remote, 0, 0);
+    int fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0) return fd;
+    int ret = cloudHttpDownloadAlignedFd(url, fd, in->network.ca_path, APP_MAX_ASSET, &size, NULL,
+                               progress, (void *)remote, in->network.error, sizeof(in->network.error));
+    ret = finish(fd, ret < 0 ? ret : size > 0 ? 0 : -EIO);
+    if (ret == -ENOENT) genRemove(path);
+    return ret;
+}
+static int assets(AppInstall *in)
+{
+    char commit[41], db_commit[41] = "", remote[192];
+    int ret = apiCommit(in, HDD_INSTALL_REPOSITORY, commit);
+    if (ret < 0) return ret;
+    ret = download(in, HDD_INSTALL_REPOSITORY, commit, "scripts/Game-Installer.sh", "DP-TEMPLATE.TXT");
+    if (ret < 0) return ret;
+    char path[MAX_PATH]; unsigned char *text = NULL; unsigned size = 0;
+    join(path, in->stage, "DP-TEMPLATE.TXT");
+    ret = readFile(path, &text, &size, APP_MAX_ASSET);
+    if (ret >= 0) {
+        ret = hddAppIconSettings((char *)text, &in->app, in->settings);
+        if (ret < 0) snprintf(in->network.error, sizeof(in->network.error), "PSBBN DP's HDD icon metadata template was not recognized.");
+    }
+    free(text); if (ret < 0) return ret;
+    for (unsigned i = 0; i < 2; i++) {
+        const char *suffix = i ? "DEL" : "LST", *leaf = i ? "DELETE.ICO" : "LIST.ICO";
+        snprintf(remote, sizeof(remote), "icons/ico/%s_%s.ico", in->app.asset, suffix);
+        ret = download(in, HDD_INSTALL_REPOSITORY, commit, remote, leaf);
+        if (ret == -ENOENT) {
+            if (!i) { ret = apiCommit(in, "CosmicScale/HDD-OSD-Icon-Database", db_commit); if (ret < 0) return ret; }
+            else if (!db_commit[0]) { ret = apiCommit(in, "CosmicScale/HDD-OSD-Icon-Database", db_commit); if (ret < 0) return ret; }
+            snprintf(remote, sizeof(remote), "apps/%s_%s.ico", in->app.asset, suffix);
+            ret = download(in, "CosmicScale/HDD-OSD-Icon-Database", db_commit, remote, leaf);
+        }
+        if (ret == -ENOENT) {
+            snprintf(remote, sizeof(remote), "icons/ico/APP_DEFAULT_%s.ico", suffix);
+            ret = download(in, HDD_INSTALL_REPOSITORY, commit, remote, leaf);
+            snprintf(in->icon_source, sizeof(in->icon_source), "DP generic (matching icon unavailable)");
+        }
+        if (ret < 0) return ret;
+    }
+    if (!in->icon_source[0]) snprintf(in->icon_source, sizeof(in->icon_source), "HDD icon: %s", in->app.asset);
+    snprintf(remote, sizeof(remote), "icons/art/%s.png", in->app.asset);
+    ret = download(in, HDD_INSTALL_REPOSITORY, commit, remote, "JACKET.PNG");
+    if (ret == -ENOENT) {
+        ret = download(in, HDD_INSTALL_REPOSITORY, commit, "icons/art/APP.png", "JACKET.PNG");
+        strcpy(in->art_source, "DP generic artwork");
+    } else snprintf(in->art_source, sizeof(in->art_source), "%s", in->app.asset);
+    if (ret < 0) return ret;
+    /* Reject empty/error bodies before any partition/app mutation. */
+    join(path, in->stage, "JACKET.PNG"); text = NULL; size = 0;
+    ret = readFile(path, &text, &size, APP_MAX_ASSET);
+    if (ret >= 0 && (size < 24 || memcmp(text, "\211PNG\r\n\032\n", 8))) {
+        ret = -EINVAL;
+        snprintf(in->network.error, sizeof(in->network.error), "Downloaded HDD artwork is not a PNG image.");
+    }
+    free(text); if (ret < 0) return ret;
+    join(path, in->stage, "ICON.SYS"); ret = writeFile(path, in->settings, strlen(in->settings));
+    if (ret >= 0) { join(path, in->stage, "UPSTREAM.TXT"); ret = writeFile(path, commit, 40); }
+    return ret;
+}
+
+static int validateTarget(AppInstall *in)
+{
+    char partition[40]; iox_stat_t stat;
+    snprintf(partition, sizeof(partition), "hdd0:%s", in->app.partition);
+    int part = fileXioGetStat(partition, &stat), target = exists(in->target);
+    if (target < 0 || (part < 0 && part != -ENOENT)) return target < 0 ? target : part;
+    if (part >= 0) {
+        if (stat.mode != 0x100 || stat.attr) return -EEXIST;
+        int ret = partitionOwner(in, in->app.partition);
+        if (ret < 0) return ret;
+        in->journal.update = 1;
+        /* Folder ownership is checked independently; never adopt an unrelated
+         * ATA folder merely because a PP name matches. */
+        if (target && (ret = checkOwner(in, in->target, -1)) < 0) return ret;
+        return target ? 0 : -ENOENT;
+    }
+    if (target) return -EEXIST;
+    snprintf(partition, sizeof(partition), "hdd0:%s", in->pending);
+    part = fileXioGetStat(partition, &stat);
+    if (part >= 0) return -EEXIST;
+    if (part != -ENOENT) return part;
+    return hddCheckAllocation(8u * 2048);
+}
+
+static void prepare(void *arg)
+{
+    AppInstall *in = arg; int ret = releasePfs();
+    if (ret < 0) { in->result = ret; return; }
+    uint32_t limit;
+    ret = hddGetApaCapacity(&limit);
+    if (ret < 0 || fileXioDevctl("hdd0:", HDIOC_STATUS, NULL, 0, NULL, 0)) { in->result = ret < 0 ? ret : -ENODEV; return; }
+    /* Only an APA Jail hybrid is suitable for a launcher targeting ata0. */
+    int sectors = fileXioDevctl("hdd0:", HDIOC_TOTALSECTOR, NULL, 0, NULL, 0);
+    if (limit >= (uint32_t)sectors) { in->result = -ENOTSUP; return; }
+    ret = hddCheckAllocation(8u * 2048);
+    /* A full, valid chain can still update an existing managed launcher. */
+    if (ret < 0 && ret != -ENOSPC) { in->result = ret; return; }
+    ret = mountPartition(in, "__system");
+    if (ret >= 0) ret = exists("pfs3:/osdmenu/hosdmenu.elf");
+    ret = unmountPartition(in, ret == 1 ? 0 : ret < 0 ? ret : -ENOENT);
+    if (ret < 0) {
+        snprintf(in->network.error, sizeof(in->network.error), "Install HOSDMenu on this APA Jail HDD first.");
+        in->result = ret; return;
+    }
+    ret = mkdirChecked(APP_TEMP);
+    if (ret < 0) { in->result = ret; return; }
+    char folded[33];
+    for (unsigned i = 0; i <= strlen(in->app.folder); i++) folded[i] = toupper((unsigned char)in->app.folder[i]);
+    unsigned id = crc32(0, (unsigned char *)folded, strlen(folded));
+    snprintf(in->stage, sizeof(in->stage), APP_TEMP "/%08x-%08x", id, in->crc);
+    snprintf(in->target, sizeof(in->target), "ata0:/APPS/%s", in->app.folder);
+    snprintf(in->pending, sizeof(in->pending), "+LSAPP.%08x", id);
+    int present = exists(in->stage);
+    if (present < 0) { in->result = present; return; }
+    if (present) {
+        ret = readJournal(in);
+        if (ret >= 0) in->resumed = 1;
+        else if (!directoryEmpty(in->stage)) ret = 0; /* failed before claiming */
+        else { in->result = ret; return; }
+    } else ret = genMkdir(in->stage, 0777);
+    if (ret < 0) { in->result = ret; return; }
+    if (!in->resumed) {
+        ret = validateTarget(in);
+        if (ret < 0) {
+            if (ret == -EEXIST) snprintf(in->network.error, sizeof(in->network.error), "An existing app folder or launcher partition has a different owner.");
+            if (ret == -ENOSPC) snprintf(in->network.error, sizeof(in->network.error), "There is no suitable free APA space for an 8 MiB launcher.");
+            in->result = ret; return;
+        }
+        in->journal.package_crc = in->crc; in->journal.package_size = in->package_size;
+        strcpy(in->journal.boot, in->app.boot);
+        ret = checkpoint(in, HA_STAGED);
+        if (ret < 0) { in->result = ret; return; }
+    }
+    char path[MAX_PATH]; join(path, in->stage, "PACKAGE.PSU");
+    ret = writeFile(path, in->package, in->package_size);
+    if (ret >= 0) {
+        cloudHttpSetCaBundle(in->network.ca_data, in->network.ca_size);
+        cloudHttpDownloadBatchBegin();
+        ret = assets(in);
+        cloudHttpDownloadBatchEnd();
+        cloudHttpSetCaBundle(NULL, 0);
+    }
+    if (ret >= 0) ret = flush();
+    if (ret >= 0) in->network.error[0] = 0;
+    in->result = ret;
+}
+
+/* Copy preserves user files absent from the replacement PSU. A private staging
+ * directory and bounded depth keep package files away from a live app folder. */
+static int copyFile(const char *from, const char *to)
+{
+    unsigned char *buffer = memalign(64, 65536);
+    if (!buffer) return -ENOMEM;
+    int src = genOpen(from, FIO_O_RDONLY), dst = -1, ret = src < 0 ? src : 0;
+    if (ret >= 0) { dst = genOpen(to, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC); if (dst < 0) ret = dst; }
+    while (ret >= 0) {
+        int n = genRead(src, buffer, 65536);
+        if (!n) break;
+        if (n < 0) { ret = n; break; }
+        ret = transfer(dst, buffer, n, 1);
+    }
+    if (dst >= 0) ret = finish(dst, ret);
+    if (src >= 0) ret = finish(src, ret);
+    free(buffer); return ret;
+}
+static int copyTree(const char *from, const char *to, unsigned depth)
+{
+    if (depth > MAX_RECURSE) return -ELOOP;
+    int ret = mkdirChecked(to), fd = -1;
+    iox_dirent_t entry;
+    char src[MAX_PATH], dst[MAX_PATH];
+    if (ret >= 0) { fd = fileXioDopen(from); if (fd < 0) ret = fd; }
+    while (ret >= 0 && (ret = fileXioDread(fd, &entry)) > 0) {
+        if (!strcmp(entry.name, ".") || !strcmp(entry.name, "..")) continue;
+        if (strpbrk(entry.name, "/\\:") || join(src, from, entry.name) < 0 || join(dst, to, entry.name) < 0) { ret = -ENAMETOOLONG; break; }
+        dashWorkerStatus(entry.name, 0, 0);
+        if (FIO_S_ISDIR(entry.stat.mode)) ret = copyTree(src, dst, depth + 1);
+        else if (FIO_S_ISREG(entry.stat.mode)) ret = copyFile(src, dst);
+        else ret = -EINVAL;
+    }
+    if (fd >= 0 && !hddInstallRecoveryFault()) { int closed = fileXioDclose(fd); if (ret >= 0) ret = closed; }
+    return ret;
+}
+static int removeTree(char *path, unsigned depth)
+{
+    if (depth > MAX_RECURSE) return -ELOOP;
+    int fd = fileXioDopen(path), ret;
+    iox_dirent_t entry; char child[MAX_PATH];
+    if (fd < 0) return fd;
+    while ((ret = fileXioDread(fd, &entry)) > 0) {
+        if (!strcmp(entry.name, ".") || !strcmp(entry.name, "..")) continue;
+        if (strpbrk(entry.name, "/\\:") || join(child, path, entry.name) < 0) { ret = -EINVAL; break; }
+        ret = FIO_S_ISDIR(entry.stat.mode) ? removeTree(child, depth + 1) : genRemove(child);
+        if (ret < 0) break;
+    }
+    if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
+    int closed = fileXioDclose(fd);
+    return ret < 0 ? ret : closed < 0 ? closed : genRmdir(path);
+}
+static int renameAbsent(const char *from, const char *to)
+{
+    int present = exists(to);
+    return present ? present < 0 ? present : -EEXIST : fileXioRename(from, to);
+}
+static int pendingPartition(AppInstall *in)
+{
+    char path[64]; iox_stat_t stat;
+    snprintf(path, sizeof(path), "hdd0:%s", in->pending);
+    int ret = fileXioGetStat(path, &stat);
+    if (ret == -ENOENT) ret = hddMakeFilesystem(8, in->pending, FS_GROUP_APPLICATION);
+    else if (ret >= 0) {
+        if (stat.mode != 0x100 || stat.attr || stat.private_0 || stat.size != 8u * 2048 || stat.private_5 < 262144) return -EEXIST;
+        /* Only HA_CREATE may reformat an unpublished partition. Its intent
+         * record was flushed before creating this exact previously absent name. */
+        int zonesize = 8192;
+        ret = fileXioFormat("pfs:", path, &zonesize, sizeof(zonesize));
+    }
+    if (ret >= 0) ret = mountPartition(in, in->pending);
+    if (ret >= 0) ret = mkdirChecked("pfs3:/res");
+    if (ret >= 0) ret = writeOwner(in, "pfs3:/res", 0);
+    return unmountPartition(in, ret);
+}
+static int installHeader(AppInstall *in)
+{
+    char path[MAX_PATH], name[40];
+    unsigned char *list = NULL, *del = NULL;
+    unsigned list_size = 0, del_size = 0;
+    const char *part = in->journal.update ? in->app.partition : in->pending;
+    int ret = hddAppSystemCnf(&in->app, in->cnf);
+    if (ret >= 0) ret = hddAppInfo(&in->app, in->info);
+    if (ret >= 0) ret = mountPartition(in, part);
+    if (ret >= 0) ret = mkdirChecked("pfs3:/res");
+    if (ret >= 0) ret = writeFile("pfs3:/res/info.sys", in->info, strlen(in->info));
+    if (ret >= 0) { join(path, in->stage, "JACKET.PNG"); ret = copyFile(path, "pfs3:/res/jkt_001.png"); }
+    if (ret >= 0) ret = writeOwner(in, "pfs3:/res", 0);
+    ret = unmountPartition(in, ret);
+    if (ret >= 0) { join(path, in->stage, "LIST.ICO"); ret = readFile(path, &list, &list_size, APP_MAX_ASSET); }
+    if (ret >= 0) { join(path, in->stage, "DELETE.ICO"); ret = readFile(path, &del, &del_size, APP_MAX_ASSET); }
+    snprintf(name, sizeof(name), "%s", part);
+    if (ret >= 0) ret = InjectHddAppAssets(name, in->cnf, in->settings, list, list_size, del, del_size);
+    free(list); free(del); return ret;
+}
+static void apply(void *arg)
+{
+    AppInstall *in = arg; int ret = releasePfs();
+    char next[MAX_PATH], old[MAX_PATH], path[MAX_PATH];
+    join(next, in->stage, "NEW"); join(old, in->stage, "OLD");
+    if (ret < 0) goto out;
+    if (in->journal.phase >= HA_FILES && in->journal.phase <= HA_PUBLISH) {
+        int present = exists(next);
+        ret = present < 0 ? present : present ? checkOwner(in, next, 1) :
+              in->journal.phase == HA_PUBLISH ? checkOwner(in, in->target, 1) : -ENOENT;
+        if (ret < 0) goto out;
+    }
+    if (in->journal.update) ret = partitionOwner(in, in->app.partition);
+    else if (in->journal.phase >= HA_PARTITION) {
+        char named[40]; iox_stat_t stat;
+        snprintf(named, sizeof(named), "hdd0:%s", in->app.partition);
+        int present = fileXioGetStat(named, &stat);
+        ret = present == -ENOENT ? partitionOwner(in, in->pending) :
+              present < 0 ? present : in->journal.phase >= HA_RENAME ? partitionOwner(in, in->app.partition) : -EEXIST;
+    }
+    if (ret < 0) goto out;
+    if (in->journal.phase < HA_FILES) {
+        dashWorkerStatus("Staging app files", 0, 0);
+        ret = mkdirChecked("ata0:/APPS");
+        if (ret >= 0) ret = mkdirChecked(next);
+        if (ret >= 0 && in->journal.update) ret = checkOwner(in, in->target, -1);
+        if (ret >= 0 && in->journal.update) ret = copyTree(in->target, next, 0);
+        for (unsigned i = 0; ret >= 0 && i < in->save.count; i++) {
+            SaveArchiveEntry *f = &in->save.files[i];
+            dashWorkerStatus(f->name, i, in->save.count);
+            ret = join(path, next, f->name);
+            if (ret >= 0) ret = writeFile(path, f->data, f->size);
+        }
+        if (ret >= 0) ret = writeOwner(in, next, 1);
+        if (ret >= 0) ret = checkpoint(in, HA_FILES);
+        if (ret < 0) goto out;
+    }
+    if (in->journal.phase < HA_CREATE) { ret = checkpoint(in, HA_CREATE); if (ret < 0) goto out; }
+    if (in->journal.phase < HA_PARTITION) {
+        dashWorkerStatus(in->journal.update ? "Keeping existing launcher partition" : "Creating 8 MiB launcher partition", 0, 0);
+        ret = in->journal.update ? partitionOwner(in, in->app.partition) : pendingPartition(in);
+        if (ret >= 0) ret = checkpoint(in, HA_PARTITION);
+        if (ret < 0) goto out;
+    }
+    if (in->journal.phase < HA_MOVE_OLD) { ret = checkpoint(in, HA_MOVE_OLD); if (ret < 0) goto out; }
+    if (in->journal.phase < HA_PUBLISH) {
+        if (in->journal.update) {
+            int present = exists(old);
+            ret = present < 0 ? present : present ? checkOwner(in, old, -1) : checkOwner(in, in->target, -1);
+            if (!present && ret >= 0) ret = renameAbsent(in->target, old);
+            if (ret < 0) goto out;
+        }
+        ret = checkpoint(in, HA_PUBLISH); if (ret < 0) goto out;
+    }
+    if (in->journal.phase < HA_HEADER) {
+        int present = exists(in->target);
+        ret = present < 0 ? present : present ? checkOwner(in, in->target, 1) : renameAbsent(next, in->target);
+        if (ret >= 0) ret = checkpoint(in, HA_HEADER);
+        if (ret < 0) goto out;
+    }
+    if (in->journal.phase < HA_RENAME) {
+        dashWorkerStatus("Installing HDD icon, artwork and PATINFO launcher", 0, 0);
+        ret = installHeader(in);
+        if (ret >= 0) ret = checkpoint(in, HA_RENAME);
+        if (ret < 0) goto out;
+    }
+    if (in->journal.phase < HA_DONE) {
+        if (!in->journal.update) {
+            char from[40], to[40]; iox_stat_t stat;
+            snprintf(from, sizeof(from), "hdd0:%s", in->pending); snprintf(to, sizeof(to), "hdd0:%s", in->app.partition);
+            int present = fileXioGetStat(to, &stat);
+            if (present == -ENOENT) ret = fileXioRename(from, to);
+            else ret = present < 0 ? present : partitionOwner(in, in->app.partition);
+        }
+        if (ret >= 0) ret = checkpoint(in, HA_DONE);
+        if (ret < 0) goto out;
+    }
+    /* Success only: backups/cache remain available throughout any failure. */
+    dashWorkerStatus("Finishing app installation", 1, 1);
+    ret = removeTree(in->stage, 0);
+    if (ret < 0 && !hddInstallRecoveryFault()) { in->cleanup_error = ret; ret = 0; }
+out:
+    in->result = unmountPartition(in, ret);
+}
+
+static int run(AppInstall *in, const char *title, void (*work)(void *))
+{
+    hddInstallRecoveryBegin();
+    int id = dashWorkerSubmit(title, 0, work, NULL, in);
+    if (id < 0) { hddInstallRecoveryEnd(); in->result = -EBUSY; return 0; }
+    int done = dashHddInstallAwait(id, title);
+    hddInstallRecoveryObserve(in->result);
+    int fault = hddInstallRecoveryFault(), reset = hddInstallRecoveryWasReset();
+    hddInstallRecoveryEnd();
+    if (fault) {
+        if ((!reset && !resetInstallerIopTransport()) || !reloadInstallerCoreAfterReset()) dashHddInstallRecoveryFailed();
+        in->mounted = 0; in->result = HDD_INSTALL_ATA_TIMEOUT;
+        memset(mountedParty, 0, sizeof(mountedParty)); latestMount = -1;
+        for (int i = 0; i < MOUNT_LIMIT; i++) Party_vmcIndex[i] = -1;
+        loadHddModules(); loadAtaModules();
+    }
+    return done && in->result >= 0;
+}
+
+/* The source snapshot precedes network preparation, which may reset UDPFS. */
+void dashHddInstallApp(const char *psu_path)
+{
+    AppInstall *in = calloc(1, sizeof(*in));
+    if (!in) return;
+    if (!dashWorkerAwaitAll("Preparing app installer")) goto cleanup;
+    if (console_is_PSX) {
+        dashModalMessage(DI_WARNING, "App installer unavailable", "This installer requires a PS2 APA Jail HDD with HOSDMenu.", NULL); goto cleanup;
+    }
+    if (vmcMounted[0] || vmcMounted[1] || isFtpServerRunning()) {
+        dashModalMessage(DI_WARNING, "HDD busy", "Unmount VMCs and stop the FTP server before installing an app.", NULL); goto cleanup;
+    }
+    if (!dashModalConfirm("Install app to HDD", "Requires an Internet connection to download HDD icons and artwork from PSBBN DP. Requires APA Jail with HOSDMenu; app files go on ata0: and the launcher uses an 8 MiB APA partition.", "Continue", 0)) goto cleanup;
+    if (psu_path) dashStrCopy(in->source, psu_path, sizeof(in->source));
+    else if (!dashPickPath("Choose an app PSU (or staged PACKAGE.PSU to resume)", "", DASH_PICK_FILE, "PSU", in->source, sizeof(in->source))) goto cleanup;
+    if (!ensurePathDeviceStackReady(in->source)) { in->result = -ENODEV; goto error; }
+    if (!run(in, "Reading app PSU", snapshot)) goto error;
+    if (in->result > 0) {
+        const char **names = malloc(in->app.elf_count * sizeof(*names));
+        if (!names) { in->result = -ENOMEM; goto error; }
+        for (unsigned i = 0; i < in->app.elf_count; i++) names[i] = in->save.files[in->app.elf[i]].name;
+        int selected = dashModalChoice("Choose the app's boot ELF", names, in->app.elf_count, 0);
+        free(names); if (selected < 0) goto cleanup;
+        hddAppChooseBoot(&in->save, &in->app, selected);
+    }
+    if (!dashHttpsCaPath(in->network.ca_path, sizeof(in->network.ca_path)) || hddInstallLoadCa(&in->network) < 0) {
+        dashModalMessage(DI_WARNING, "CA bundle unavailable", "Could not read WLE-UPDATE-CA.PEM beside Launchstation or in its settings folder.", NULL); goto cleanup;
+    }
+    dashSoundShutdown();
+    in->network.jail = 1;
+    if ((in->result = dashHddInstallPrepareStorage(&in->network)) < 0) goto error;
+    if (!run(in, "Downloading HDD app assets", prepare)) goto error;
+    {
+        DashTableRow rows[] = {
+            {"App", in->app.title}, {"Boot ELF", in->app.boot}, {"App folder", in->target},
+            {"Launcher partition", in->app.partition}, {"Allocation", in->journal.update ? "Keep existing size" : "8 MiB (free APA space only)"},
+            {"HDD icon", in->icon_source}, {"Artwork", in->art_source},
+            {"Operation", in->resumed ? "Resume interrupted installation" : in->journal.update ? "Update managed app; preserve extra files" : "Install new app"}
+        };
+        if (!dashModalConfirmTable("Review app installation", rows, sizeof(rows) / sizeof(rows[0]), in->resumed ? "Resume" : "Install", 0)) goto cleanup;
+    }
+    if (!run(in, "Installing HDD app", apply)) goto error;
+    filerSizeCacheInvalidate("ata0:/APPS/"); filerSizeCacheInvalidate("hdd0:/");
+    dashModalMessage(DI_CHECK, "App installed", in->app.title, in->cleanup_error ?
+        "The launcher is ready. Temporary files could not be removed; the app is installed." : "The launcher is available in HOSDMenu / PSBBN.");
+    goto cleanup;
+error:
+    {
+        char message[320];
+        if (in->journal.phase == HA_DONE) {
+            dashModalMessage(DI_WARNING, "App installed; cleanup interrupted", "The app and launcher were committed. Temporary files are retained.", in->stage);
+            goto cleanup;
+        }
+        snprintf(message, sizeof(message), "Installation stopped (error %d). %s", in->result,
+                 in->network.error[0] ? in->network.error : "Use an app PSU with a PS2 ELF on an APA Jail HDD. Existing folders/partitions must belong to this installer.");
+        dashModalMessage(DI_WARNING, "App installation incomplete", message,
+            in->journal.sequence ? "Staged files are retained. Select the same PSU, or its staged PACKAGE.PSU, to resume." : NULL);
+    }
+cleanup:
+    saveArchiveFree(&in->save); free(in->package); hddInstallRelease(&in->network); free(in);
+    dashSoundMaintain(); dashBgmStart();
+}
+#else
+void dashHddInstallApp(const char *psu_path)
+{
+    (void)psu_path;
+    dashModalMessage(DI_WARNING, "App installer unavailable", "This build requires networking, HTTPS and ATA filesystem support.", NULL);
+}
+#endif

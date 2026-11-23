@@ -35,11 +35,18 @@ sink = re.search(r"static unsigned char \*mem_sink;\n", source).group(0)
 
 program = r'''
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #define CLOUD_HTTP_MEM_FD (-2)
 #define CLOUD_HTTP_IO 16384
+#define CLOUD_HTTP_HEADER_MAX 12288
+#define HDD_INSTALL_ATA_TIMEOUT (-502)
+static void hddInstallRecoveryObserve(int result) { (void)result; abort(); }
 typedef struct { unsigned long sum; unsigned long bytes; } mbedtls_sha256_context;
 static int mbedtls_sha256_update(mbedtls_sha256_context *c, const unsigned char *d, size_t n) {
     for (size_t i = 0; i < n; i++) c->sum = c->sum * 131 + d[i];
@@ -52,7 +59,7 @@ static void set_error(char *error, int error_size, const char *where, int code) 
 }
 ''' + decoder + sink + source[source.index("typedef struct {\n    unsigned char *bytes;"):
         source.index("static void download_progress(")] + function("static int download_write(") + \
-    function("static int download_chunked_consume(") + r'''
+    function("static int download_chunked_consume(") + function("static int download_framing(") + r'''
 #define CAP 5000
 static unsigned char payload[CAP + 1];
 static unsigned char buffer[CAP + 16];
@@ -126,10 +133,51 @@ static void run(const char *name,
     printf("PASS %s: cap bytes kept and hashed, cap + 1 refused\n", name);
 }
 
+static void framing(void) {
+    static const char *const malformed[] = {
+        "HTTP/1.1 200 OK\r\nContent-Length: 3x",
+        "HTTP/1.1 200 OK\r\nContent-Length: +3",
+        "HTTP/1.1 200 OK\r\nContent-Length: 2147483648",
+        "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nContent-Length: 3",
+        "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nTransfer-Encoding: chunked",
+        "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, chunked",
+    };
+    int length = -1, chunked = 0;
+    assert(download_framing("HTTP/1.1 200 OK\r\nContent-Length:\t3 ", &length, &chunked) == 0);
+    assert(length == 3 && !chunked);
+    length = -1;
+    assert(download_framing("HTTP/1.1 200 OK\r\nTransfer-Encoding: Chunked \r\nX-Test: x", &length, &chunked) == 0);
+    assert(length == -1 && chunked);
+    for (size_t i = 0; i < sizeof(malformed) / sizeof(malformed[0]); i++) {
+        length = -1; chunked = 0;
+        assert(download_framing(malformed[i], &length, &chunked) < 0);
+    }
+}
+
+static void trailers(void) {
+    CloudChunkDecoder decoder = {0};
+    mbedtls_sha256_context sha = {0};
+    char error[64];
+    int written = 0;
+    const unsigned char first[] = "0\r\nX-Test: ok\r\n\r";
+    const unsigned char final[] = "\n";
+    assert(download_chunked_consume(&decoder, first, sizeof(first)-1, CLOUD_HTTP_MEM_FD,
+                                   CAP, &written, &sha, NULL, error, sizeof(error)) == 0);
+    assert(download_chunked_consume(&decoder, final, sizeof(final)-1, CLOUD_HTTP_MEM_FD,
+                                   CAP, &written, &sha, NULL, error, sizeof(error)) == 1);
+    const unsigned char extra[] = "0\r\n\r\nx";
+    memset(&decoder, 0, sizeof(decoder));
+    assert(download_chunked_consume(&decoder, extra, sizeof(extra)-1, CLOUD_HTTP_MEM_FD,
+                                   CAP, &written, &sha, NULL, error, sizeof(error)) < 0);
+}
+
 int main(void) {
     for (int i = 0; i <= CAP; i++) payload[i] = (unsigned char)(i * 7 + 3);
     run("fixed length", fixed);
     run("chunked", chunked);
+    framing();
+    trailers();
+    puts("PASS: strict length and transfer framing, split chunk trailers and unexpected trailing bytes");
     return 0;
 }
 '''

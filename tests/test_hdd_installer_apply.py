@@ -29,6 +29,10 @@ code = r'''
 #include <time.h>
 #include <unistd.h>
 #include "hdd_install.h"
+int hddInstallRecoveryFault(void){return 0;}
+void hddInstallRecoveryObserve(int rc){(void)rc;}
+int hddInstallResumeSave(HddInstall *in){assert(in);return 0;}
+int hddInstallResumeRemove(HddInstall *in){assert(in);return 0;}
 #define MAX_PATH 1025
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_O_WRONLY O_WRONLY
@@ -43,7 +47,7 @@ code = r'''
 #define HDIOC_FLUSH 1
 typedef uint64_t u64;
 typedef int64_t s64;
-typedef struct { unsigned mode,attr; } iox_stat_t;
+typedef struct { unsigned mode,attr,size,private_5,private_0; } iox_stat_t;
 static char work[1024];
 static const char *mounted[4];
 static unsigned mounts,attrcalls,partitions,injected,psbbn_parts;
@@ -74,6 +78,7 @@ static int fileXioGetStat(const char*p,iox_stat_t*s){char path[4096];struct stat
 static int fileXioChStat(const char*p,const iox_stat_t*s,int flags){assert(strstr(p,"pfs2:/APPS") && s->attr==0xc4a7 && flags==FIO_CST_ATTR);attrcalls++;return attr_error;}
 static int fileXioMount(const char*m,const char*p,int flags){unsigned i=m[3]-'0';assert(i<4&&!mounted[i]&&flags==FIO_MT_RDWR);mounted[i]=p+5;mounts++;return 0;}
 static int fileXioUmount(const char*m){unsigned i=m[3]-'0';assert(i<4&&mounted[i]);mounted[i]=NULL;mounts--;return 0;}
+static int fileXioFormat(const char *dev,const char *part,const char *arg,int len){(void)dev;(void)part;(void)arg;(void)len;assert(0);return -EIO;}
 static int hddMakeFilesystem(int mb,char*name,int group){char path[4096];assert(mb==128&&group==FS_GROUP_APPLICATION);partitions++;snprintf(path,sizeof(path),"%s/%s",work,name);assert(!mkdir(path,0700));return mb;}
 static int InjectHddAppLauncher(const char*p,const char*elf,const char*title,const void*icon,unsigned size){assert(p&&title&&icon&&size&&strstr(elf,"ata0:/APPS/")&&partitions==injected+1);injected++;return 0;}
 static int InjectHddAppLauncherWithArg(const char*p,const char*elf,const char*title,const void*icon,unsigned size,const char*arg){
