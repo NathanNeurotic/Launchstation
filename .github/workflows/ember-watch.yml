@@ -1,0 +1,141 @@
+name: Ember Watch
+
+# Keeps the full kit's EMBER/ (LAUNCHSTATION-<build>.zip) level with Gageformer's official Ember release.
+#
+# The kit's POPS/ and EMBER/ are pinned to one RiptOPL commit in ship/kit-externals.json, every file by
+# SHA-256, so a new Ember needs a new pin, not just a rebuild. RiptOPL's own Ember Watch (every 6 hours)
+# bundles each official ember.elf into RiptOPL's ship/EMBER/. Once a day this compares the SHA-256 GitHub
+# publishes for the newest Ember release's ember.elf with the pinned one. On a difference it re-derives the
+# pin for RiptOPL's current rebuild/main (scripts/package_kit.py refresh-pin) -- but only when that commit's
+# ember.elf IS the official one; if RiptOPL has not caught up yet it waits for the next run. The new pin is
+# fetched and checked (scripts/package_kit.py fetch), the kit tests run, it is committed to master and
+# Automated-Build is started (a GITHUB_TOKEN push starts no workflow on its own). Anything unexpected fails
+# the run without touching the repository. It never opens issues.
+#
+# Neutrino needs no pin: Automated-Build downloads the latest official Neutrino itself, and Neutrino Watch
+# rebuilds the kit when upstream publishes a newer one.
+
+on:
+  schedule:
+    - cron: "53 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write # start Automated-Build after the commit
+
+concurrency:
+  group: ember-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.repository == 'NathanNeurotic/Launchstation'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EMBER_REPO: Gageformer/Ember
+      RIPTOPL_REPO: NathanNeurotic/RiptOPL
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Compare the kit's Ember with the latest official release
+        id: cmp
+        run: |
+          set -eu
+          # Newest published release (pre-releases included: Ember ships as pre-releases) carrying ember.elf.
+          UP="$(gh api --paginate --slurp "repos/$EMBER_REPO/releases?per_page=100" 2>/dev/null | jq -r \
+            '([.[][] | select(.draft | not) | select(any(.assets[]; .name == "ember.elf"))] | sort_by(.published_at) | last // empty)
+             | [.tag_name, ([.assets[] | select(.name == "ember.elf")][0].digest // "")] | @tsv' || true)"
+          TAG="$(printf '%s' "$UP" | cut -f1)"
+          DIGEST="$(printf '%s' "$UP" | cut -f2)"
+          case "$DIGEST" in
+            sha256:?*) UP_SHA="${DIGEST#sha256:}" ;;
+            *) echo "Could not read the latest ember.elf and its SHA-256 (transient?); nothing to do."; exit 0 ;;
+          esac
+          OURS="$(jq -r '.files["EMBER/ember.elf"].sha256' ship/kit-externals.json)"
+          echo "upstream $TAG ember.elf = [$UP_SHA]"
+          echo "kit pin  ember.elf        = [$OURS]"
+          if [ "$UP_SHA" = "$OURS" ]; then
+            echo "The kit already pins the latest Ember. Nothing to do."
+            exit 0
+          fi
+          { echo "changed=yes"; echo "tag=$TAG"; echo "sha=$UP_SHA"; } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout RiptOPL rebuild/main
+        if: steps.cmp.outputs.changed == 'yes'
+        uses: actions/checkout@v6
+        with:
+          repository: NathanNeurotic/RiptOPL
+          ref: rebuild/main
+          path: build/riptopl
+          persist-credentials: false
+
+      - name: Re-pin the externals to RiptOPL's current commit
+        id: pin
+        if: steps.cmp.outputs.changed == 'yes'
+        env:
+          SHA: ${{ steps.cmp.outputs.sha }}
+        run: |
+          set -eu
+          SRC=build/riptopl
+          COMMIT="$(git -C "$SRC" rev-parse HEAD)"
+          NEW="$RUNNER_TEMP/kit-externals.json"
+          python3 scripts/package_kit.py --manifest "$NEW" refresh-pin --commit "$COMMIT" --repository "$RIPTOPL_REPO" --source "$SRC"
+          GOT="$(jq -r '.files["EMBER/ember.elf"].sha256' "$NEW")"
+          if [ "$GOT" != "$SHA" ]; then
+            echo "RiptOPL $COMMIT still bundles ember.elf $GOT, not the official $SHA; its Ember Watch has not caught up yet. Next run retries."
+            exit 0
+          fi
+          # Every pinned file must be fetchable from GitHub at that commit with the pinned bytes.
+          python3 scripts/package_kit.py --manifest "$NEW" fetch --cache "$RUNNER_TEMP/kit-externals"
+          python3 - ship/kit-externals.json "$NEW" > "$RUNNER_TEMP/changed.txt" <<'PY'
+          import json, sys
+          old, new = (json.load(open(p))["files"] for p in sys.argv[1:])
+          for name in sorted(set(old) | set(new)):
+              if (old.get(name) or {}).get("sha256") != (new.get(name) or {}).get("sha256"):
+                  print("- " + name + ("" if name in new else " (removed)") + ("" if name in old else " (new)"))
+          PY
+          cp "$NEW" ship/kit-externals.json
+          { echo "updated=yes"; echo "commit=$COMMIT"; } >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/changed.txt"
+
+      - name: Re-run the kit tests against the new pin
+        if: steps.pin.outputs.updated == 'yes'
+        run: python3 tests/test_kit_package.py
+
+      - name: Commit to master and rebuild the kit
+        if: steps.pin.outputs.updated == 'yes'
+        env:
+          TAG: ${{ steps.cmp.outputs.tag }}
+          SHA: ${{ steps.cmp.outputs.sha }}
+          COMMIT: ${{ steps.pin.outputs.commit }}
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ship/kit-externals.json
+          {
+            echo "Kit: update Ember to the official $TAG build"
+            echo
+            echo "Automatic update by Ember Watch. The kit's POPS/ and EMBER/ are now pinned"
+            echo "to RiptOPL ${COMMIT:0:12}, whose ember.elf matches the official release's"
+            echo "published SHA-256. Every pinned file was fetched and checked. Changed:"
+            cat "$RUNNER_TEMP/changed.txt"
+            echo
+            echo "ember.elf SHA-256: $SHA"
+            echo "RiptOPL: https://github.com/$RIPTOPL_REPO/tree/$COMMIT"
+          } > "$RUNNER_TEMP/msg.txt"
+          git commit -q -F "$RUNNER_TEMP/msg.txt"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:master; then
+              break
+            fi
+            [ "$attempt" = 3 ] && { echo "Could not push after 3 attempts." >&2; exit 1; }
+            git pull --rebase -q origin master
+          done
+          gh workflow run compile.yml --repo "$GITHUB_REPOSITORY" --ref master
+          echo "Pinned Ember $TAG through RiptOPL $COMMIT; Automated-Build started."

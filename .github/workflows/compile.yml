@@ -289,6 +289,7 @@ jobs:
           python3 tests/test_cloud_tls_paths.py
           python3 tests/test_download_metrics.py
           python3 tests/test_rolling_release_workflow.py
+          python3 tests/test_ember_watch.py
           python3 tests/test_llvm_toolchain.py
           python3 .github/scripts/test_ps2build_sdk_watch.py
           python3 tests/test_release_notes.py
