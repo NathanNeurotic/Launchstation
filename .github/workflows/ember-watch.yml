@@ -11,8 +11,8 @@ name: Ember Watch
 # fetched and checked (scripts/package_kit.py fetch), the kit tests run, it is committed to master and
 # Automated-Build is started (a GITHUB_TOKEN push starts no workflow on its own). Anything unexpected before
 # the push fails the run without touching the repository. If starting Automated-Build fails after the push,
-# the new pin stays on master and the next run starts the build (it checks that a build ran after the last
-# pin change before saying there is nothing to do). It never opens issues.
+# the new pin stays on master and the next run starts the build (it checks that a master build contains the
+# last pin change before saying there is nothing to do). It never opens issues.
 #
 # Neutrino needs no pin: Automated-Build downloads the latest official Neutrino itself, and Neutrino Watch
 # rebuilds the kit when upstream publishes a newer one.
@@ -62,11 +62,21 @@ jobs:
           echo "upstream $TAG ember.elf = [$UP_SHA]"
           echo "kit pin  ember.elf        = [$OURS]"
           if [ "$UP_SHA" = "$OURS" ]; then
-            # A pin pushed by an earlier run whose build dispatch failed: start that build now.
-            PINNED_AT="$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=master&path=ship/kit-externals.json&per_page=1" --jq '.[0].commit.committer.date // ""' || true)"
-            BUILT_AT="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow compile.yml --branch master --limit 1 --json createdAt --jq '.[0].createdAt // ""' || echo unknown)"
-            if [ -n "$PINNED_AT" ] && [ "$BUILT_AT" != unknown ] && [[ "$BUILT_AT" < "$PINNED_AT" ]]; then
-              echo "The pin changed at $PINNED_AT but the last master build started at [$BUILT_AT]; starting Automated-Build."
+            # A pin pushed by an earlier run whose build dispatch failed: start that build now. A build counts
+            # only if the commit it built contains the last pin change. Any failed lookup skips this check.
+            PIN="$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=master&path=ship/kit-externals.json&per_page=1" --jq '.[0].sha // ""' || true)"
+            BUILT=unknown
+            if [ -n "$PIN" ] && RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow compile.yml --branch master --limit 20 --json headSha --jq '.[].headSha')"; then
+              BUILT=no
+              for RUN_SHA in $(printf '%s\n' "$RUNS" | awk '!seen[$0]++'); do
+                case "$(gh api "repos/$GITHUB_REPOSITORY/compare/$PIN...$RUN_SHA" --jq .status 2>/dev/null || echo unknown)" in
+                  identical|ahead) BUILT=yes; break ;;
+                  unknown) BUILT=unknown; break ;;
+                esac
+              done
+            fi
+            if [ "$BUILT" = no ]; then
+              echo "No master build contains the pin change ${PIN:0:12}; starting Automated-Build."
               gh workflow run compile.yml --repo "$GITHUB_REPOSITORY" --ref master
               exit 0
             fi

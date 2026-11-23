@@ -25,5 +25,5 @@ assert "contents: write" in entries, entries
 assert "actions: write" in entries, entries
 assert watch.count("permissions:") == 1  # no job-level override
 # A pin whose build never started (dispatch failed after the push) is built by the next run.
-assert watch.index("BUILT_AT") < watch.index("Nothing to do.")
+assert watch.index("compare/$PIN...$RUN_SHA") < watch.index("Nothing to do.")
 print("Ember Watch: pins only the official ember.elf, checks before committing, rebuilds the kit")
