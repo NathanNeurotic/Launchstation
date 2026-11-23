@@ -308,7 +308,7 @@ int hddCreatePfsExtent(unsigned sizeMB, const char *name)
 		int ret = hddCheckAllocation(sizeMB * 2048u);
 		if (ret < 0) return ret;
 		snprintf(path, sizeof(path), "hdd0:%s,,,%s,PFS", name, sizesString[i]);
-		int fd = fileXioOpen(path, FIO_O_RDWR | FIO_O_CREAT | FIO_O_EXCL);
+		int fd = fileXioOpen(path, FIO_O_RDWR | FIO_O_CREAT | FIO_O_EXCL, 0);
 		return fd < 0 ? fd : fileXioClose(fd);
 	}
 	return -EINVAL;
