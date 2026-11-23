@@ -527,6 +527,7 @@ extern int semRunning,semFinish;
 extern int isRunning;
 #endif
 int setupPad(void);
+int setupPadForRecovery(void);
 void padSuspendForRecovery(void);
 void padForgetAfterRecovery(void);
 int reopenPadPorts(void);

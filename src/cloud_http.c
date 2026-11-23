@@ -857,6 +857,7 @@ typedef struct {
     int line_len;
     int state; /* 0=size, 1=data, 2=CR, 3=LF, 4=done, 5=trailer, 6=trailer LF */
     unsigned trailer_bytes;
+    int trailer_colon;
     unsigned long left;
 } CloudChunkDecoder;
 
@@ -962,6 +963,12 @@ static int download_write(int fd, const unsigned char *data, int len,
     return 0;
 }
 
+static int http_field_name_byte(unsigned char ch)
+{
+    return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
+           (ch >= 'a' && ch <= 'z') || (ch && strchr("!#$%&'*+-.^`_|~", ch) != NULL);
+}
+
 static int download_chunked_consume(CloudChunkDecoder *dec,
                                     const unsigned char *data, int len,
                                     int fd, int max_bytes, int *written,
@@ -974,16 +981,27 @@ static int download_chunked_consume(CloudChunkDecoder *dec,
         if (dec->state == 0) {
             unsigned char ch = data[at++];
             if (ch == '\n') {
-                char *end;
-                unsigned long size;
+                unsigned long size = 0;
+                int i = 0;
 
                 if (!dec->line_len || dec->line[dec->line_len - 1] != '\r')
                     goto malformed;
-                dec->line[--dec->line_len] = 0;
-                errno = 0;
-                size = strtoul(dec->line, &end, 16);
-                if (!isxdigit((unsigned char)dec->line[0]) || errno == ERANGE || (*end && *end != ';'))
-                    goto malformed;
+                dec->line_len--;
+                while (i < dec->line_len && isxdigit((unsigned char)dec->line[i])) {
+                    unsigned char digit = dec->line[i++];
+                    unsigned value = digit <= '9' ? digit - '0' : (digit | 32) - 'a' + 10;
+                    if (size > (ULONG_MAX - value) / 16) goto malformed;
+                    size = size * 16 + value;
+                }
+                if (i == 0) goto malformed;
+                if (i < dec->line_len) {
+                    while (i < dec->line_len && (dec->line[i] == ' ' || dec->line[i] == '\t')) i++;
+                    if (i == dec->line_len || dec->line[i++] != ';') goto malformed;
+                }
+                for (; i < dec->line_len; i++) {
+                    unsigned char byte = dec->line[i];
+                    if ((byte < ' ' && byte != '\t') || byte == 127) goto malformed;
+                }
                 if (size > (unsigned long)(max_bytes - *written)) {
                     set_error(error, error_size, "HTTPS download exceeds the size limit", 0);
                     return -1;
@@ -1027,13 +1045,21 @@ static int download_chunked_consume(CloudChunkDecoder *dec,
             if (++dec->trailer_bytes > CLOUD_HTTP_HEADER_MAX)
                 goto malformed;
             if (dec->state == 5) {
-                if (ch == '\r') dec->state = 6;
-                else if (ch == '\n' || ch == '\0') goto malformed;
-                else dec->line_len++;
+                if (ch == '\r') {
+                    if (dec->line_len && !dec->trailer_colon) goto malformed;
+                    dec->state = 6;
+                } else {
+                    if (!dec->trailer_colon) {
+                        if (ch == ':' && dec->line_len) dec->trailer_colon = 1;
+                        else if (!http_field_name_byte(ch)) goto malformed;
+                    } else if ((ch < ' ' && ch != '\t') || ch == 127) goto malformed;
+                    dec->line_len++;
+                }
             } else {
                 if (ch != '\n') goto malformed;
                 dec->state = dec->line_len ? 5 : 4;
                 dec->line_len = 0;
+                dec->trailer_colon = 0;
             }
         }
     }
@@ -1123,13 +1149,14 @@ static CloudTls *download_open(CloudTls *stack, const char *host, const char *ca
 }
 
 /* Reject ambiguous framing before writing any body bytes. */
-static int download_framing(const char *headers, int *length, int *chunked)
+static int download_framing(const char *headers, int *length, int *chunked, int *close)
 {
     const char *line = strstr(headers, "\r\n");
     while (line != NULL) {
         line += 2;
         const char *end = strstr(line, "\r\n");
         if (end == NULL) end = line + strlen(line);
+        if (*line == ' ' || *line == '\t') return -1;
         if (!strncasecmp(line, "Content-Length:", 15)) {
             const char *p = line + 15;
             int n = 0;
@@ -1151,6 +1178,16 @@ static int download_framing(const char *headers, int *length, int *chunked)
             while (value_end > p && (value_end[-1] == ' ' || value_end[-1] == '\t')) value_end--;
             if (*chunked || value_end - p != 7 || strncasecmp(p, "chunked", 7)) return -1;
             *chunked = 1;
+        } else if (!strncasecmp(line, "Connection:", 11)) {
+            const char *p = line + 11;
+            while (p < end) {
+                while (p < end && (*p == ' ' || *p == '\t' || *p == ',')) p++;
+                const char *token = p;
+                while (p < end && *p != ',') p++;
+                const char *tail = p;
+                while (tail > token && (tail[-1] == ' ' || tail[-1] == '\t')) tail--;
+                if (tail - token == 5 && !strncasecmp(token, "close", 5)) *close = 1;
+            }
         }
         line = *end == 0 ? NULL : end;
     }
@@ -1192,11 +1229,11 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
         CloudTls stack_tls;
         CloudTls *tls;
         char host[256], path[2048], request[6144], auth_line[2112];
-        char *raw, *header_end, value[64], location[CLOUD_HTTP_LOCATION_MAX];
+        char *raw, *header_end, location[CLOUD_HTTP_LOCATION_MAX];
         unsigned char *io_buf;
         int used = 0, header_len, body_len, status, chunked = 0;
         int content_length = -1, written = 0, complete = 0, r;
-        int reused = 0, persistent = 0;
+        int reused = 0, persistent = 0, close = 0;
         mbedtls_sha256_context sha;
         CloudChunkDecoder decoder;
 
@@ -1326,7 +1363,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
             return aligned != NULL && status == 404 ? -ENOENT : -1;
         }
 
-        if (download_framing(raw, &content_length, &chunked) < 0 ||
+        if (download_framing(raw, &content_length, &chunked, &close) < 0 ||
             content_length > max_bytes || (content_length >= 0 && body_len > content_length)) {
             download_dispose(tls, &stack_tls);
             free(raw);
@@ -1335,9 +1372,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
             return -1;
         }
         persistent = batch && (chunked || content_length >= 0) &&
-                     !strncmp(raw, "HTTP/1.1 ", 9) &&
-                     (!header_value(raw, "Connection", value, sizeof(value)) ||
-                      !strcasecmp(value, "keep-alive"));
+                     !strncmp(raw, "HTTP/1.1 ", 9) && !close;
         complete = content_length == 0;
 
         if (fd != CLOUD_HTTP_MEM_FD && genLseek(fd, 0, SEEK_SET) != 0) {

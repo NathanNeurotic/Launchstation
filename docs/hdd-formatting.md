@@ -79,7 +79,9 @@ partition. The review shows the chosen ELF and assets before publishing.
 Updates only replace a managed app and preserve user files outside the PSU.
 After an interruption, selecting the original PSU or the cached `PACKAGE.PSU`
 continues the transaction. Launchstation retains the cache and the previous
-app until publication completes.
+app until publication completes. If an interruption leaves a pending launcher
+without its ownership marker, the installer leaves that partition untouched
+and reports its name.
 
 ## Recovery volume
 
@@ -245,7 +247,10 @@ It reads the owned installation folder and validates the saved layout against
 the actual disk before showing a confirmation. Alternating, checksummed
 checkpoints record completed stages. Cached downloads are checked against the
 saved digests, and HTTPS uses the CA bundle from the running installation or its
-settings device. Older caches without a checkpoint need a fresh install.
+settings device. Resume verifies the start sectors of PFS partitions created by
+this installation. If a timeout interrupts the first staging-folder claim,
+retry uses a separate folder and leaves the original untouched. Older
+checkpoints without the partition identity fields cannot be resumed.
 
 The installer activates the downloaded MBR only after files/configuration
 succeed, after flushing the payload and verifying its readback. APA-Jail recovery metadata remains the creation-time snapshot.

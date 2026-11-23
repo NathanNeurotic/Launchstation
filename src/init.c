@@ -130,6 +130,7 @@ IMPORT_BIN2C(allowdvdv_irx);
 //State of module collections
 static u8 have_HDD_modules = 0;
 static u8 have_basic_modules = 0;
+static u8 have_filexio_module = 0;
 static u8 have_filexio_ready = 0;
 static u8 have_mc_rpc_ready = 0;
 #ifdef HOMEBREW_SIO2MAN
@@ -378,7 +379,7 @@ static void waitForUsbMassEnumerate(void);
 static void loadKbdModules(void);
 static int pathUsesUsbMass(const char *path);
 void loadUsbModules(void);
-void ensureCoreIoStackReady(void);
+int ensureCoreIoStackReady(void);
 void setupPowerOff(void);
 void startKbd(void);
 void Reset(void);
@@ -1244,6 +1245,7 @@ static void loadBasicModules(void)
 	id = SifExecModuleBuffer(iomanx_irx, size_iomanx_irx, 0, NULL, &ret);
 	DPRINTF(" [IOMANX]: id=%d ret=%d\n", id, ret);
 	id = SifExecModuleBuffer(filexio_irx, size_filexio_irx, 0, NULL, &ret);
+	have_filexio_module = (id >= 0 && ret == 0);
 	DPRINTF(" [FILEXIO]: id=%d ret=%d\n", id, ret);
 
 	id = SifExecModuleBuffer(allowdvdv_irx, size_allowdvdv_irx, 0, NULL, &ret);  //unlocks cdvd for reading on psx dvr
@@ -1311,12 +1313,13 @@ int setFileXioTransferWide(int wide)
 	return -1;
 }
 
-void ensureCoreIoStackReady(void)
+int ensureCoreIoStackReady(void)
 {
 	loadBasicModules();
 
 	if (!have_filexio_ready) {
-		fileXioInit();
+		if (!have_filexio_module || fileXioInit() < 0)
+			return 0;
 		/* Keep the SDK transfer buffer here: network, USB and BDM services
 		 * share the IOP heap. A paste widens it only while it copies. */
 		have_filexio_ready = 1;
@@ -1341,6 +1344,7 @@ void ensureCoreIoStackReady(void)
 	}
 
 	load_vmcman_module();
+	return 1;
 }
 //------------------------------
 //endfunc ensureCoreIoStackReady
@@ -2233,7 +2237,8 @@ int reloadInstallerCoreAfterReset(void)
 	hddInstallLog("IOP recovery: rebuilding EE file and heap clients");
 	fileXioExit(); SifLoadFileExit(); clearIopModuleState();
 	if (SifLoadFileInit() < 0 || SifInitIopHeap() < 0) return 0;
-	initsbv_patches(); ensureCoreIoStackReady();
+	initsbv_patches();
+	if (!ensureCoreIoStackReady()) return 0;
 	dashSoundShutdown(); /* generation changed: discard EE audio state only */
 #ifdef DS34
 	hddInstallLog("IOP recovery: loading DS34 input modules");
@@ -2241,7 +2246,7 @@ int reloadInstallerCoreAfterReset(void)
 #endif
 	installer_recovery_error = "Controller initialization failed after IOP reset. Restart the console.";
 	hddInstallLog("IOP recovery: opening controller ports");
-	if (!setupPad()) return 0;
+	if (!setupPadForRecovery()) return 0;
 	clearPadPressState(); startKbd();
 	hddInstallLog("IOP recovery: core services and controller restored");
 	return 1;
@@ -3120,6 +3125,7 @@ int ensureUsbKeyboardReady(void)
 static void clearIopModuleState(void)
 {
 	have_basic_modules = 0;
+	have_filexio_module = 0;
 	have_filexio_ready = 0;
 	have_mc_rpc_ready = 0;
 #ifdef HOMEBREW_SIO2MAN

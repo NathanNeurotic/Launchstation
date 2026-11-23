@@ -59,7 +59,8 @@ static void set_error(char *error, int error_size, const char *where, int code) 
 }
 ''' + decoder + sink + source[source.index("typedef struct {\n    unsigned char *bytes;"):
         source.index("static void download_progress(")] + function("static int download_write(") + \
-    function("static int download_chunked_consume(") + function("static int download_framing(") + r'''
+    function("static int http_field_name_byte(") + function("static int download_chunked_consume(") + \
+    function("static int download_framing(") + r'''
 #define CAP 5000
 static unsigned char payload[CAP + 1];
 static unsigned char buffer[CAP + 16];
@@ -141,17 +142,21 @@ static void framing(void) {
         "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nContent-Length: 3",
         "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nTransfer-Encoding: chunked",
         "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, chunked",
+        "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n , gzip",
     };
-    int length = -1, chunked = 0;
-    assert(download_framing("HTTP/1.1 200 OK\r\nContent-Length:\t3 ", &length, &chunked) == 0);
+    int length = -1, chunked = 0, close = 0;
+    assert(download_framing("HTTP/1.1 200 OK\r\nContent-Length:\t3 ", &length, &chunked, &close) == 0);
     assert(length == 3 && !chunked);
     length = -1;
-    assert(download_framing("HTTP/1.1 200 OK\r\nTransfer-Encoding: Chunked \r\nX-Test: x", &length, &chunked) == 0);
+    assert(download_framing("HTTP/1.1 200 OK\r\nTransfer-Encoding: Chunked \r\nX-Test: x", &length, &chunked, &close) == 0);
     assert(length == -1 && chunked);
     for (size_t i = 0; i < sizeof(malformed) / sizeof(malformed[0]); i++) {
         length = -1; chunked = 0;
-        assert(download_framing(malformed[i], &length, &chunked) < 0);
+        assert(download_framing(malformed[i], &length, &chunked, &close) < 0);
     }
+    length = -1; chunked = 0;
+    assert(download_framing("HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nConnection: upgrade, ClOsE \t, x",
+                            &length, &chunked, &close) == 0 && close);
 }
 
 static void trailers(void) {
@@ -169,6 +174,21 @@ static void trailers(void) {
     memset(&decoder, 0, sizeof(decoder));
     assert(download_chunked_consume(&decoder, extra, sizeof(extra)-1, CLOUD_HTTP_MEM_FD,
                                    CAP, &written, &sha, NULL, error, sizeof(error)) < 0);
+    const unsigned char invalid[][32] = {"0x0\r\n\r\n", "0\r\nnot-a-field\r\n\r\n",
+                                         "0\r\nBad Name: value\r\n\r\n", "0\0x\r\n\r\n"};
+    const unsigned lengths[] = {7, 18, 22, 7};
+    for (unsigned i = 0; i < sizeof(lengths) / sizeof(lengths[0]); i++) {
+        memset(&decoder, 0, sizeof(decoder));
+        assert(download_chunked_consume(&decoder, invalid[i], lengths[i], CLOUD_HTTP_MEM_FD,
+                                       CAP, &written, &sha, NULL, error, sizeof(error)) < 0);
+    }
+    const unsigned char extension[] = "1 \t;x=y\r\na\r\n0\r\n\r\n";
+    memset(&decoder,0,sizeof(decoder));
+    mem_sink = buffer;
+    assert(download_chunked_consume(&decoder, extension, sizeof(extension)-1, CLOUD_HTTP_MEM_FD,
+                                   CAP, &written, &sha, NULL, error, sizeof(error)) == 1);
+    assert(written == 1 && buffer[0] == 'a');
+    mem_sink = NULL;
 }
 
 int main(void) {

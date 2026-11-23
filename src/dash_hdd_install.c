@@ -169,7 +169,8 @@ int dashHddInstallPrepareStorage(HddInstall *in)
     hddInstallLog("Loading ATA filesystem modules (jail=%d)", in->jail);
     if (in->jail && !loadAtaModules()) return -ENODEV;
 #endif
-    snprintf(in->stage, sizeof(in->stage), "%s/PSBBN_DP_TEMP", in->jail ? "ata0:" : "pfs2:");
+    if (!in->stage[0])
+        snprintf(in->stage, sizeof(in->stage), "%s/PSBBN_DP_TEMP", in->jail ? "ata0:" : "pfs2:");
     return 0;
 #else
     (void)in;

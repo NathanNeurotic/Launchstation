@@ -74,11 +74,18 @@ static int genWrite(int fd,const void*p,unsigned n){if(n>31)n=31;return write(fd
 static int genMkdir(const char*p,int mode){char path[4096];int r=map(p,path,sizeof(path));return r<0?r:mkdir(path,mode)<0?-errno:0;}
 static int genRemove(char*p){char path[4096];int r=map(p,path,sizeof(path));return r<0?r:unlink(path);}
 static int genRmdir(char*p){char path[4096];int r=map(p,path,sizeof(path));return r<0?r:rmdir(path);}
-static int fileXioGetStat(const char*p,iox_stat_t*s){char path[4096];struct stat st;int r=map(p,path,sizeof(path));if(r<0)return r;if(stat(path,&st)<0)return -errno;s->mode=st.st_mode;return 0;}
+static int fileXioGetStat(const char*p,iox_stat_t*s){
+    char path[4096];struct stat st;
+    if(!strncmp(p,"hdd0:",5)){
+        snprintf(path,sizeof(path),"%s/%s",work,p+5);
+        if(stat(path,&st)<0)return -errno;
+        *s=(iox_stat_t){.mode=0x100,.size=128*2048,.private_5=262144};return 0;
+    }
+    int r=map(p,path,sizeof(path));if(r<0)return r;if(stat(path,&st)<0)return -errno;s->mode=st.st_mode;return 0;
+}
 static int fileXioChStat(const char*p,const iox_stat_t*s,int flags){assert(strstr(p,"pfs2:/APPS") && s->attr==0xc4a7 && flags==FIO_CST_ATTR);attrcalls++;return attr_error;}
 static int fileXioMount(const char*m,const char*p,int flags){unsigned i=m[3]-'0';assert(i<4&&!mounted[i]&&flags==FIO_MT_RDWR);mounted[i]=p+5;mounts++;return 0;}
 static int fileXioUmount(const char*m){unsigned i=m[3]-'0';assert(i<4&&mounted[i]);mounted[i]=NULL;mounts--;return 0;}
-static int fileXioFormat(const char *dev,const char *part,const char *arg,int len){(void)dev;(void)part;(void)arg;(void)len;assert(0);return -EIO;}
 static int hddMakeFilesystem(int mb,char*name,int group){char path[4096];assert(mb==128&&group==FS_GROUP_APPLICATION);partitions++;snprintf(path,sizeof(path),"%s/%s",work,name);assert(!mkdir(path,0700));return mb;}
 static int InjectHddAppLauncher(const char*p,const char*elf,const char*title,const void*icon,unsigned size){assert(p&&title&&icon&&size&&strstr(elf,"ata0:/APPS/")&&partitions==injected+1);injected++;return 0;}
 static int InjectHddAppLauncherWithArg(const char*p,const char*elf,const char*title,const void*icon,unsigned size,const char*arg){
@@ -103,7 +110,7 @@ void hddInstallPhase(unsigned phase) { assert(phase==HDD_INSTALL_PHASE_INSTALL);
 code += native
 code += r'''
 int main(int argc,char**argv){
-    HddInstall in={0};FILE*f;char path[4096],hash[41];unsigned i,size;int ret;
+    HddInstall in={.apa_sectors=128*1024*2048u};FILE*f;char path[4096],hash[41];unsigned i,size;int ret;
     assert(argc==5);snprintf(work,sizeof(work),"%s",argv[1]);in.flags=atoi(argv[2]);in.jail=!!(in.flags&4);in.game_launcher=atoi(argv[4]);
     in.ready=in.owned=1;strcpy(in.stage,in.jail?"ata0:/PSBBN_DP_TEMP":"pfs2:/PSBBN_DP_TEMP");memset(in.commit,'a',40);
     if(in.jail)strcpy(in.language.code,"jpn");
@@ -131,6 +138,14 @@ int main(int argc,char**argv){
     }
     assert(attrcalls==(!in.jail&&(in.flags&2)?3:0));
     assert(partitions==(in.jail?3:0)&&injected==partitions&&psbbn_parts==(unsigned)in.jail);
+    if(in.jail){
+        assert(in.pfs_start[HDD_INSTALL_PFS_GAME]==262144);
+        in.pfs_start[HDD_INSTALL_PFS_GAME]=524288;
+        assert(hddInstallPfsPartition(&in,128,"PP.LAUNCHER",HDD_INSTALL_PFS_GAME)==-EEXIST);
+        in.pfs_start[HDD_INSTALL_PFS_GAME]=0;
+        assert(hddInstallPfsPartition(&in,128,"PP.LAUNCHER",HDD_INSTALL_PFS_GAME)==-EEXIST);
+        assert(partitions==3);
+    }
     if(in.flags&2){snprintf(path,sizeof(path),"%s/%s/APPS/APP_WLE-R3Z/WLE-R3Z.ELF",work,in.jail?"ata":"__common");assert(!access(path,F_OK));}
     if(in.flags&1){snprintf(path,sizeof(path),"%s/__system/osdmenu/hosdmenu.elf",work);assert(!access(path,F_OK));}
     if(!in.jail&&(in.flags&1)){snprintf(path,sizeof(path),"%s/__sysconf/osdmenu/OSDMBR.CNF",work);assert(!access(path,F_OK));}

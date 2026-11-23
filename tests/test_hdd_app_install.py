@@ -70,7 +70,9 @@ static int genRemove(char*p){return result(unlink(p));}
 static int genRmdir(char*p){return result(rmdir(p));}
 static int genGetStat(const char*p,iox_stat_t*s){struct stat st;if(stat(p,&st)<0)return -errno;memset(s,0,sizeof(*s));s->mode=st.st_mode;s->size=st.st_size;return 0;}
 int hddInstallRecoveryFault(void){return 0;}
+void hddInstallRecoveryObserve(int ret){(void)ret;}
 static int isFtpServerRunning(void){return 0;}
+static int isSmbServerRunning(void){return 0;}
 static void unmountParty(int i){assert(i>=0&&i<4);mountedParty[i][0]=0;}
 static void dashWorkerStatus(const char*t,int d,int n){assert(t&&d>=0&&n>=0);}
 static int fileXioDevctl(const char*p,int cmd,void*a,int b,void*c,int d){(void)a;(void)b;(void)c;(void)d;assert(!strcmp(p,"hdd0:")&&cmd==HDIOC_FLUSH);crashpoint();return 0;}
@@ -82,7 +84,6 @@ static int fileXioGetStat(const char*p,iox_stat_t*s){char path[256];partPath(pat
 static int fileXioMount(const char*mount,const char*part,int mode){char path[256];(void)mode;assert(!strcmp(mount,"pfs3:"));partPath(path,part);if(access(path,F_OK))return -ENOENT;assert(!symlink(path,"pfs3:"));return 0;}
 static int fileXioUmount(const char*p){assert(!strcmp(p,"pfs3:"));return result(unlink(p));}
 static int fileXioRename(const char*from,const char*to){char a[256],b[256];if(!strncmp(from,"hdd0:",5)){partPath(a,from);partPath(b,to);from=a;to=b;}int r=result(rename(from,to));crashpoint();return r;}
-static int fileXioFormat(const char*dev,const char*part,void*arg,int n){(void)arg;assert(!strcmp(dev,"pfs:")&&n==4&&!strncmp(part,"hdd0:+LSAPP.",12));format_count++;crashpoint();return 0;}
 static int hddMakeFilesystem(int mb,char*name,int type){char path[256];assert(mb==8&&type==FS_GROUP_APPLICATION&&!strncmp(name,"+LSAPP.",7));snprintf(path,sizeof(path),"part/%s",name);assert(!mkdir(path,0700));create_count++;crashpoint();return 0;}
 int hddCheckAllocation(uint32_t sectors){assert(sectors==8*2048);allocation_checks++;return 0;}
 int InjectHddAppAssets(const char*part,const char*cnf,const char*settings,const void*list,unsigned ls,const void*del,unsigned ds){assert(part&&strstr(cnf,"ata0:/APPS/APP_TEST/BOOT.ELF")&&!strncmp(settings,"PS2X\n",5)&&list&&ls&&del&&ds);header_count++;crashpoint();return 0;}
@@ -115,14 +116,15 @@ int cloudHttpDownloadAlignedFd(const char*url,int fd,const char*ca,int max,int*s
 # AppInstall is the actual frontend/backend context.
 code += source[source.index("typedef struct {"):source.index("static int join(")]
 for signature in ("static int join(", "static int flush(", "static int finish(", "static int transfer(",
-                  "static int writeFile(", "static int readFile(", "static int exists(", "static int mkdirChecked(",
+                  "static int writeFile(", "static int readFile(", "static int verifyPackage(", "static int cachePackage(",
+                  "static int exists(", "static int mkdirChecked(",
                   "static int releasePfs(", "static int identity(", "static int checkOwner(", "static int writeOwner(",
                   "static int readJournal(", "static int checkpoint(", "static int mountPartition(",
                   "static int unmountPartition(", "static int partitionOwner(",
                   "static int validateTarget(",
                   "static int apiCommit(", "static void progress(", "static int download(", "static int assets(", "static int copyFile(",
                   "static int copyTree(", "static int removeTree(", "static int renameAbsent(",
-                  "static int pendingPartition(", "static int installHeader(", "static void apply("):
+                  "static int pendingPartition(", "static int installHeader(", "static int stageAppFiles(", "static void apply("):
     code += function(signature)
 code += r'''
 static const unsigned char payload[52]={0x7f,'E','L','F',1,1,1,[16]=2,[18]=8};
@@ -154,6 +156,41 @@ static void verify(AppInstall*in,int update){
 }
 int main(int argc,char**argv){
     assert(argc==3);int update=atoi(argv[1]),crash=atoi(argv[2]);
+    if(update==4){
+        AppInstall*in=calloc(1,sizeof(*in));setup(in,0);
+        static unsigned char package[4096];memset(package,0x55,sizeof(package));in->package=package;
+        assert(!cachePackage(in)&&!verifyPackage(in,"ata0:/stage/PACKAGE.PSU"));
+        operation=0;
+        assert(!cachePackage(in)&&operation==0);
+        rawFile("ata0:/stage/PACKAGE.PSU","old",3);
+        fault_at=1;
+        if(!setjmp(crashed)){cachePackage(in);assert(0);}
+        fault_at=0;
+        unsigned char *old=NULL;unsigned length=0;
+        assert(!readFile("ata0:/stage/PACKAGE.PSU",&old,&length,4096)&&length==3&&!memcmp(old,"old",3));free(old);
+        assert(!cachePackage(in)&&!verifyPackage(in,"ata0:/stage/PACKAGE.PSU"));
+        free(in);return 0;
+    }
+    if(update==5){
+        AppInstall*in=calloc(1,sizeof(*in));setup(in,1);
+        assert(!stageAppFiles(in,"ata0:/stage/NEW")&&!checkpoint(in,HA_FILES));
+        rawFile("ata0:/APPS/APP_TEST/USER.CFG","new config",10);
+        assert(!unlink("ata0:/APPS/APP_TEST/config/extra.cfg"));
+        in->resumed=1;apply(in);
+        assert(in->result==0&&in->journal.phase==HA_DONE);
+        unsigned char *data=NULL;unsigned size=0;
+        assert(!readFile("ata0:/APPS/APP_TEST/USER.CFG",&data,&size,20)&&size==10&&!memcmp(data,"new config",10));free(data);
+        assert(access("ata0:/APPS/APP_TEST/config/extra.cfg",F_OK)<0);
+        free(in);return 0;
+    }
+    if(update==6){
+        AppInstall*in=calloc(1,sizeof(*in));setup(in,0);
+        assert(!mkdir("part/+LSAPP.12345678",0700)&&!mkdir("part/+LSAPP.12345678/res",0700));
+        in->crc++;assert(!writeOwner(in,"part/+LSAPP.12345678/res",1));in->crc--;
+        assert(pendingPartition(in)==-EEXIST);
+        in->crc++;assert(!checkOwner(in,"part/+LSAPP.12345678/res",1));
+        free(in);return 0;
+    }
     if(update==3){
         AppInstall*in=calloc(1,sizeof(*in));setup(in,0);
         assert(!validateTarget(in)&&allocation_checks==1);
@@ -184,7 +221,11 @@ int main(int argc,char**argv){
         for(int i=0;i<32;i++)if(directories[i]){closedir(directories[i]);directories[i]=NULL;}
         for(int fd=3;fd<256;fd++)close(fd);
         unlink("pfs3:");in->mounted=0;memset(&in->journal,0,sizeof(in->journal));
-        assert(!readJournal(in));apply(in);
+        assert(!readJournal(in));in->resumed=1;apply(in);
+        if(!update&&in->result<0&&in->journal.phase==HA_CREATE){
+            assert(access("part/+LSAPP.12345678",F_OK)==0&&access(in->target,F_OK)<0&&!header_count);
+            free(in);return 0;
+        }
     }
     verify(in,update);printf("PASS operations=%d crash=%d update=%d\n",operation,crash,update);free(in);
 }
@@ -197,8 +238,9 @@ with tempfile.TemporaryDirectory(prefix="hdd-app-install-") as tmp:
     for case in range(6):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             subprocess.run([str(tmp / "test"), "2", str(case)], cwd=work, check=True)
-    with tempfile.TemporaryDirectory(dir=tmp) as work:
-        subprocess.run([str(tmp / "test"), "3", "0"], cwd=work, check=True)
+    for case in range(3, 7):
+        with tempfile.TemporaryDirectory(dir=tmp) as work:
+            subprocess.run([str(tmp / "test"), str(case), "0"], cwd=work, check=True)
     for update in (0, 1):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             output = subprocess.check_output([str(tmp / "test"), str(update), "0"], cwd=work, text=True)
@@ -206,4 +248,4 @@ with tempfile.TemporaryDirectory(prefix="hdd-app-install-") as tmp:
         for crash in range(1, operations + 1):
             with tempfile.TemporaryDirectory(dir=tmp) as work:
                 subprocess.run([str(tmp / "test"), str(update), str(crash)], cwd=work, check=True, stdout=subprocess.DEVNULL)
-    print("PASS: pinned DP/HDD icon lookup, 404-only fallback, unsafe template/invalid artwork refusal; every app transaction step resumes; user configs and partition sizes survive updates")
+    print("PASS: app assets, atomic cache verification, pending ownership, refreshed user files and safe publication replay")

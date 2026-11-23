@@ -10,8 +10,9 @@ stage = s[s.index('int hddInstallClaimStage('):s.index('static int makeDirectory
 code = r'''
 #define _POSIX_C_SOURCE 200809L
 #include "hdd_install.h"
-int hddInstallRecoveryFault(void){return 0;}
-void hddInstallRecoveryObserve(int rc){(void)rc;}
+static int fault;
+int hddInstallRecoveryFault(void){return fault;}
+void hddInstallRecoveryObserve(int rc){if(rc==HDD_INSTALL_ATA_TIMEOUT)fault=rc;}
 int hddInstallResumeSave(HddInstall *in){(void)in;return 0;}
 int hddInstallResumeRemove(HddInstall *in){(void)in;return 0;}
 #include "save_sign.h"
@@ -45,7 +46,7 @@ static int mapped(const char *p, char *out, size_t cap) {
     n=snprintf(out,cap,"%s/%s%s",work,base,tail+1);return n<0||n>=(int)cap?-ENAMETOOLONG:0;
 }
 static int restore_open_error;
-static int genOpen(const char*p,int mode) { char path[2048]; int r=mapped(p,path,sizeof(path));if(r<0)return r;if(restore_open_error && (mode & FIO_O_CREAT) && strstr(p,"owner.bin"))return -EIO;return open(path,mode,0600); }
+static int genOpen(const char*p,int mode) { char path[2048]; int r=mapped(p,path,sizeof(path));if(r<0)return r;if(restore_open_error && (mode & FIO_O_CREAT) && strstr(p,"owner.bin"))return restore_open_error==2?HDD_INSTALL_ATA_TIMEOUT:-EIO;return open(path,mode,0600); }
 static int genRead(int fd,void*p,unsigned n) {if(n>3)n=3;return read(fd,p,n);}
 static int genWrite(int fd,const void*p,unsigned n) {if(n>3)n=3;return write(fd,p,n);}
 #define genLseek lseek
@@ -94,6 +95,15 @@ int main(int argc,char**argv) {
     assert(hddInstallCreateStage(&other)==0&&other.owned);
     assert(hddInstallUnmountStage(&other)==0&&!mounted);
     assert(hddInstallMountStage(&other)==0);hddInstallCleanup(&other);assert(!other.owned);assert(hddInstallUnmountStage(&other)==0);hddInstallRelease(&other);
+    HddInstall retry={.jail=1,.ca_size=1};
+    retry.ca_data=malloc(1);assert(retry.ca_data);
+    strcpy(retry.stage,"ata0:/PSBBN_DP_TEMP");
+    restore_open_error=2;
+    assert(hddInstallCreateStage(&retry)==HDD_INSTALL_ATA_TIMEOUT&&!retry.owned&&fault);
+    snprintf(path,sizeof(path),"%s/ata/PSBBN_DP_TEMP",work);assert(!access(path,F_OK));
+    restore_open_error=fault=0;retry.recovery_attempts=1;
+    assert(!hddInstallCreateStage(&retry)&&retry.owned&&!strcmp(retry.stage,"ata0:/PSBBN_DP_TEMP_1"));
+    assert(!hddInstallCleanup(&retry)&&!access(path,F_OK));hddInstallRelease(&retry);
     puts("PASS: create ATA/PFS temp folders, preserve CA before erasure, short I/O, refuse existing folders and ownership-checked cleanup");
 }
 '''

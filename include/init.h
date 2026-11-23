@@ -33,7 +33,7 @@ void setupPowerOff(void);
 int isPowerOffReady(void);
 void closeAllAndPoweroff(void);
 void startKbd(void);
-void ensureCoreIoStackReady(void);
+int ensureCoreIoStackReady(void);
 int setFileXioTransferWide(int wide);
 int isMemoryCardRpcReady(void); /* the memory card RPC client is bound */
 void ensureMemoryCardPortAccessible(int port);

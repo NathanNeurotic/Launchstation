@@ -2860,6 +2860,16 @@ static void opBookmark(void)
 	}
 }
 
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+static int hddAppTarget(char *path, int size)
+{
+	int idx[2];
+	if (targets(idx, 2) != 1) return 0;
+	const FILEINFO *file = &fb.files[idx[0]];
+	return !isDir(file) && fullPath(file, path, size) && genCmpFileExt(path, "PSU");
+}
+#endif
+
 static void actionsMenu(void)
 {
 	FILEINFO *f = (fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) ? &fb.files[fb.sel] : NULL;
@@ -3011,7 +3021,7 @@ static void actionsMenu(void)
 		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
-		if (f && !isDir(f) && fb.nmarked <= 1 && fullPath(f, path, sizeof(path)) && genCmpFileExt(path, "PSU"))
+		if (hddAppTarget(path, sizeof(path)))
 			ADD(DI_HDD, "Install app to HDD...", "APA Jail; Internet required", 0, F_HDD_APP);
 #endif
 		/* any file, .elf/.icn/.sys too; not the built-in commands or an offline PC card */
@@ -3360,7 +3370,9 @@ static void actionsMenu(void)
 			break;
 		}
 		case F_HDD_APP:
-			if (f && fullPath(f, path, sizeof(path))) dashHddInstallApp(path);
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+			if (hddAppTarget(path, sizeof(path))) dashHddInstallApp(path);
+#endif
 			refresh();
 			break;
 		case F_REFRESH:

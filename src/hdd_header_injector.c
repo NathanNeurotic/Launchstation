@@ -1221,6 +1221,7 @@ int InjectHddAppAssets(const char *partition_name, const char *cnf, const char *
     u32 offsets[4] = {0x1200, 0x1400, 0x1800, 0};
     u32 sizes[4];
     const void *data[4] = {cnf, settings, list, del};
+    unsigned char *scratch;
     int ret;
     if (!cnf || !settings || strncmp(cnf, "BOOT2 = PATINFO\n", 16) || strncmp(settings, "PS2X\n", 5) ||
         !list || !del || !list_size || !del_size || list_size > 0x80000 || del_size > 0x80000) return -EINVAL;
@@ -1232,15 +1233,18 @@ int InjectHddAppAssets(const char *partition_name, const char *cnf, const char *
     ret = fileXioGetStat(partition, &stat);
     if (ret < 0) return ret;
     if (stat.mode != APA_TYPE_PFS || stat.private_5 < 262144) return -EINVAL;
-    memset(hdd_header_buffer + 0x1000, 0, offsets[3] + del_size - 0x1000);
-    memcpy(hdd_header_buffer + 0x1000, APA_HEADER_MAGIC, strlen(APA_HEADER_MAGIC));
+    scratch = memalign(64, offsets[3] + del_size);
+    if (scratch == NULL) return -ENOMEM;
+    memset(scratch + 0x1000, 0, offsets[3] + del_size - 0x1000);
+    memcpy(scratch + 0x1000, APA_HEADER_MAGIC, strlen(APA_HEADER_MAGIC));
     for (unsigned i = 0; i < 4; i++) {
         u32 relative = offsets[i] - 0x1000;
-        memcpy(hdd_header_buffer + 0x1010 + i * 8, &relative, 4);
-        memcpy(hdd_header_buffer + 0x1014 + i * 8, &sizes[i], 4);
-        memcpy(hdd_header_buffer + offsets[i], data[i], sizes[i]);
+        memcpy(scratch + 0x1010 + i * 8, &relative, 4);
+        memcpy(scratch + 0x1014 + i * 8, &sizes[i], 4);
+        memcpy(scratch + offsets[i], data[i], sizes[i]);
     }
-    ret = hddHeaderWriteRawRange(stat.private_5, 0x1000, hdd_header_buffer + 0x1000, offsets[3] + del_size - 0x1000);
-    if (ret < 0) return ret;
-    return fileXioDevctl("hdd0:", HDIOC_FLUSH, NULL, 0, NULL, 0);
+    ret = hddHeaderWriteRawRange(stat.private_5, 0x1000, scratch + 0x1000, offsets[3] + del_size - 0x1000);
+    if (ret >= 0) ret = fileXioDevctl("hdd0:", HDIOC_FLUSH, NULL, 0, NULL, 0);
+    free(scratch);
+    return ret;
 }

@@ -87,13 +87,20 @@ static int verifyDisk(HddInstall *in, const HddFormatPlan *plan)
                 st.size != mb * 2048u || st.private_5 != in->linux[i].start || st.size != in->linux[i].sectors ||
                 st.private_5 < 2048 || st.size > limit || st.private_5 > limit - st.size) return -EINVAL;
         }
-        static const char *const pfs[] = {"__contents", "PP.APP_WLE-R3Z", "PP.SYS_R3CONFIGURATOR", "PP.LAUNCHER"};
-        for (unsigned i = 0; i < 4; i++) {
-            char path[64]; iox_stat_t st; unsigned mb = i ? 128 : in->contents_mb;
-            snprintf(path, sizeof(path), "hdd0:%s", pfs[i]);
-            if (fileXioGetStat(path, &st) < 0 || st.mode != 0x100 || st.attr || st.private_0 || st.size != mb * 2048u ||
-                st.size > limit || st.private_5 < 2048 || st.private_5 > limit - st.size) return -EINVAL;
-        }
+    }
+    static const char *const pfs[HDD_INSTALL_PFS_COUNT] = {
+        "__contents", "PP.APP_WLE-R3Z", "PP.SYS_R3CONFIGURATOR", "PP.LAUNCHER"
+    };
+    for (unsigned i = 0; i < HDD_INSTALL_PFS_COUNT; i++) {
+        char path[64];
+        iox_stat_t st;
+        unsigned mb = i == HDD_INSTALL_PFS_CONTENTS ? in->contents_mb : 128;
+        int needed = in->applied && (in->flags & HDD_INSTALL_PSBBN);
+        if (!in->pfs_start[i] && !needed) continue;
+        snprintf(path, sizeof(path), "hdd0:%s", pfs[i]);
+        if (fileXioGetStat(path, &st) < 0 || st.mode != 0x100 || st.attr || st.private_0 || st.size != mb * 2048u ||
+            st.private_5 != in->pfs_start[i] || st.size > limit || st.private_5 < 2048 ||
+            st.private_5 > limit - st.size) return -EINVAL;
     }
     return 0;
 }
@@ -109,20 +116,27 @@ int hddInstallResumeLoad(HddInstall *in, HddFormatPlan *plan, unsigned *sequence
 #endif
         int mounted = !jail && fileXioMount("pfs2:", "hdd0:__common", FIO_MT_RDONLY) >= 0;
         if (!jail && !mounted) continue;
-        const char *stage = jail ? "ata0:/PSBBN_DP_TEMP" : "pfs2:/PSBBN_DP_TEMP";
-        for (unsigned slot = 0; slot < 2; slot++) {
-            HddFormatPlan p; unsigned seq;
-            memset(candidate, 0, sizeof(*candidate));
-            int read = readJournal(candidate, &p, &seq, stage, slot);
-            if (read >= 0 && candidate->jail == (int)jail) {
-                candidate->owned = 1; snprintf(candidate->stage, sizeof(candidate->stage), "%s", stage);
-                if (hddInstallFindStage(candidate) < 0 || verifyDisk(candidate, &p) < 0) ret = -EINVAL;
-                else if (!found || seq > *sequence) {
-                    hddInstallRelease(in); *in = *candidate; candidate->launcher_files = NULL;
-                    *plan = p; *sequence = seq; found = 1;
-                }
-            } else if (read != -ENOENT) ret = -EINVAL;
-            hddInstallRelease(candidate);
+        char stage[40];
+        for (unsigned dir = 0; dir <= HDD_INSTALL_RECOVERY_LIMIT; dir++) {
+            const char *device = jail ? "ata0:" : "pfs2:";
+            if (dir) snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP_%u", device, dir);
+            else snprintf(stage, sizeof(stage), "%s/PSBBN_DP_TEMP", device);
+            for (unsigned slot = 0; slot < 2; slot++) {
+                HddFormatPlan p;
+                unsigned seq;
+                memset(candidate, 0, sizeof(*candidate));
+                int read = readJournal(candidate, &p, &seq, stage, slot);
+                if (read >= 0 && candidate->jail == (int)jail) {
+                    candidate->owned = 1;
+                    snprintf(candidate->stage, sizeof(candidate->stage), "%s", stage);
+                    if (hddInstallFindStage(candidate) < 0 || verifyDisk(candidate, &p) < 0) ret = -EINVAL;
+                    else if (!found || seq > *sequence) {
+                        hddInstallRelease(in); *in = *candidate; candidate->launcher_files = NULL;
+                        *plan = p; *sequence = seq; found = 1;
+                    }
+                } else if (read != -ENOENT) ret = -EINVAL;
+                hddInstallRelease(candidate);
+            }
         }
         if (mounted) fileXioUmount("pfs2:");
     }

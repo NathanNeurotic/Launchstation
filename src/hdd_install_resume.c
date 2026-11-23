@@ -88,7 +88,7 @@ static int valid(const HddInstall *in, const HddFormatPlan *p)
     }
     return 1;
 }
-/* The explicit order is the on-disk v1 format; additions require a new version. */
+/* The explicit order is the on-disk format; additions require a new version. */
 static void body(Wire *w, HddInstall *in, HddFormatPlan *p, int reading)
 {
 #define N(value) do { uint32_t v = (value); number(w, &v, reading); if (reading) (value) = v; } while (0)
@@ -100,6 +100,7 @@ static void body(Wire *w, HddInstall *in, HddFormatPlan *p, int reading)
     B(in->owner); B(in->commit); B(in->archives); B(in->hashes); B(in->language.code); B(in->language.name); B(in->archive_item); B(in->channels);
     for (unsigned i = 0; i < HDD_INSTALL_ASSETS; i++) N(in->sizes[i]);
     for (unsigned i = 0; i < HDD_INSTALL_LINUX_PARTITIONS; i++) { N(in->linux[i].start); N(in->linux[i].sectors); }
+    for (unsigned i = 0; i < HDD_INSTALL_PFS_COUNT; i++) N(in->pfs_start[i]);
     if (in->launcher_count > HDD_INSTALL_LAUNCHER_FILES) { w->error = 1; return; }
     if (reading && in->launcher_count) {
         in->launcher_files = calloc(in->launcher_count, sizeof(*in->launcher_files));
@@ -116,18 +117,18 @@ int hddInstallResumeEncode(const HddInstall *in, const HddFormatPlan *p, unsigne
     body(&w, (HddInstall *)in, (HddFormatPlan *)p, 0);
     if (w.error) return -ENOSPC;
     Wire header = {bytes, 0, 24, 0};
-    uint32_t version = 1, size = w.offset, crc = 0, sequence_value = seq;
-    put(&header, "LSINST1", 8); number(&header, &version, 0); number(&header, &sequence_value, 0); number(&header, &size, 0); number(&header, &crc, 0);
+    uint32_t version = 2, size = w.offset, crc = 0, sequence_value = seq;
+    put(&header, "LSINST2", 8); number(&header, &version, 0); number(&header, &sequence_value, 0); number(&header, &size, 0); number(&header, &crc, 0);
     header.offset = 20; crc = checksum(bytes, size); number(&header, &crc, 0);
     return size;
 }
 int hddInstallResumeDecode(HddInstall *in, HddFormatPlan *plan, unsigned *sequence, const void *bytes, unsigned size)
 {
     uint32_t version = 0, seq = 0, length = 0, crc = 0;
-    if (!in || !plan || !sequence || !bytes || size < 24 || size > HDD_INSTALL_RESUME_MAX || memcmp(bytes, "LSINST1", 8)) return -EINVAL;
+    if (!in || !plan || !sequence || !bytes || size < 24 || size > HDD_INSTALL_RESUME_MAX || memcmp(bytes, "LSINST2", 8)) return -EINVAL;
     Wire w = {(unsigned char *)bytes, 8, size, 0};
     number(&w, &version, 1); number(&w, &seq, 1); number(&w, &length, 1); number(&w, &crc, 1);
-    if (version != 1 || length != size || !seq || seq >= 0x7fffffff || checksum(bytes, size) != crc) return -EINVAL;
+    if (version != 2 || length != size || !seq || seq >= 0x7fffffff || checksum(bytes, size) != crc) return -EINVAL;
     HddInstall *decoded = calloc(1, sizeof(*decoded)); HddFormatPlan p = {0};
     if (!decoded) return -ENOMEM;
     body(&w, decoded, &p, 1);

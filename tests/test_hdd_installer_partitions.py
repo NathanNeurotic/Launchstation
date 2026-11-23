@@ -75,7 +75,7 @@ static int fileXioGetStat(const char *path,iox_stat_t *out){
     if(fail_index==(int)i&&fail_phase==5)out->private_0=1;
     return 0;
 }
-int hddInstallPfsPartition(HddInstall *in,unsigned mb,const char *name){assert(in);assert(opened==expected_count&&closed==expected_count&&stats==expected_count&&mb==contents_mb&&!strcmp(name,"__contents"));contents++;return mb;}
+int hddInstallPfsPartition(HddInstall *in,unsigned mb,const char *name,unsigned slot){assert(in&&slot==HDD_INSTALL_PFS_CONTENTS);assert(opened==expected_count&&closed==expected_count&&stats==expected_count&&mb==contents_mb&&!strcmp(name,"__contents"));contents++;return mb;}
 static int fileXioMount(const char *mount,const char *partition,int flags){assert(contents==1&&!mounted&&!strcmp(mount,"pfs0:")&&!strcmp(partition,"hdd0:__common")&&flags==FIO_MT_RDWR);mounted++;return 0;}
 static int genMkdir(const char *path,int mode){assert(mounted&&!strcmp(path,"pfs0:/Your Saves")&&mode==0777);mkdirs++;return 0;}
 static int fileXioUmount(const char *mount){assert(mounted&&!strcmp(mount,"pfs0:"));mounted--;return 0;}

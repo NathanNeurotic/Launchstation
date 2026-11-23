@@ -10,6 +10,7 @@ header_function = header_source[start:]  # Last function in this translation uni
 code = r'''
 #include <assert.h>
 #include <errno.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,11 +21,11 @@ code = r'''
 #define HDIOC_FLUSH 1
 typedef uint32_t u32;
 typedef struct {unsigned mode,private_5;} iox_stat_t;
-static unsigned char hdd_header_buffer[2*1024*1024],disk[2*1024*1024];
+static unsigned char disk[2*1024*1024];
 static unsigned flushes,wrong_partition,write_failure;
 static int hddHeaderBuildPartitionPath(char*out,unsigned size,const char*name){return snprintf(out,size,"hdd0:%s",name)>0?0:-EINVAL;}
 static int fileXioGetStat(const char*path,iox_stat_t*stat){assert(!strcmp(path,"hdd0:PP.APP_MY_APP"));stat->mode=wrong_partition?0x1337:APA_TYPE_PFS;stat->private_5=262144;return 0;}
-static int hddHeaderWriteRawRange(u32 lba,u32 offset,const void*data,u32 n){assert(lba==262144&&offset==0x1000&&n<0x111000);if(write_failure)return -EIO;memcpy(disk+offset,data,n);return 0;}
+static int hddHeaderWriteRawRange(u32 lba,u32 offset,const void*data,u32 n){assert(lba==262144&&offset==0x1000&&n<0x111000&&!((uintptr_t)data%64));if(write_failure)return -EIO;memcpy(disk+offset,data,n);return 0;}
 static int fileXioDevctl(const char*dev,int cmd,void*a,int b,void*c,int d){assert(!strcmp(dev,"hdd0:")&&cmd==HDIOC_FLUSH&&!a&&!b&&!c&&!d);flushes++;return 0;}
 '''
 code += header_function

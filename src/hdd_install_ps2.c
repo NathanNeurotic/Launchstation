@@ -92,8 +92,16 @@ int hddInstallCreateStage(HddInstall *in)
         if (ret < 0) return ret;
     } else {
         ret = genMkdir(in->stage, 0777);
+        /* A timed-out claim may have left a partial owner marker behind.
+         * Keep any existing directory and claim a separate one. */
+        for (unsigned slot = 1; ret == -EEXIST && in->recovery_attempts && slot <= HDD_INSTALL_RECOVERY_LIMIT; slot++) {
+            snprintf(in->stage, sizeof(in->stage), "%s/PSBBN_DP_TEMP_%u", in->jail ? "ata0:" : "pfs2:", slot);
+            ret = genMkdir(in->stage, 0777);
+        }
+        hddInstallRecoveryObserve(ret);
         if (ret < 0) return ret;
         ret = hddInstallClaimStage(in);
+        hddInstallRecoveryObserve(ret);
         if (ret < 0) {
             if (!hddInstallRecoveryFault()) genRmdir(in->stage);
             return ret;
@@ -680,7 +688,10 @@ int hddInstallClaimStage(HddInstall *in)
     fd = genOpen(path, FIO_O_CREAT | FIO_O_EXCL | FIO_O_WRONLY);
     if (fd < 0) return fd;
     ret = closeResult(fd, writeAll(fd, in->owner, sizeof(in->owner)));
-    if (ret < 0) { genRemove(path); return ret; }
+    if (ret < 0) {
+        if (!hddInstallRecoveryFault()) genRemove(path);
+        return ret;
+    }
     in->owned = 1; return 0;
 }
 static int stageMatches(HddInstall *in, const char *stage)
@@ -813,25 +824,32 @@ static int copyAsset(HddInstall *in, unsigned asset, const char *destination)
     if (ret < 0) return ret;
     return copyFile(in, hddInstallAssetName(asset), in->sizes[asset], destination, in->recovery_attempts || in->resumed);
 }
-int hddInstallPfsPartition(HddInstall *in, unsigned mb, const char *name)
+int hddInstallPfsPartition(HddInstall *in, unsigned mb, const char *name, unsigned slot)
 {
-    if (in->owned && (in->recovery_attempts || in->resumed)) {
-        char path[96]; iox_stat_t st;
-        snprintf(path, sizeof(path), "hdd0:%s", name);
-        int ret = fileXioGetStat(path, &st);
-        if (ret >= 0) {
-            const int zone = 8192;
-            if (st.mode != 0x100 || st.size != mb * 2048u || st.attr || st.private_0 ||
-                in->apa_sectors < st.size || st.private_5 < 2048 || st.private_5 > in->apa_sectors - st.size) return -EINVAL;
-            /* Apply has not completed. This new install owns this volume,
-             * and an earlier timeout may have interrupted its PFS format. */
-            hddInstallLog("RECOVERY reinitializing owned PFS %s (%u MiB)", name, mb);
-            ret = fileXioFormat("pfs:", path, (const char *)&zone, sizeof(zone));
-            return ret < 0 ? ret : (int)mb;
-        }
-        if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
+    char path[96];
+    iox_stat_t st;
+    if (slot >= HDD_INSTALL_PFS_COUNT || !mb || mb > UINT32_MAX / 2048u) return -EINVAL;
+    snprintf(path, sizeof(path), "hdd0:%s", name);
+    int ret = fileXioGetStat(path, &st);
+    if (in->pfs_start[slot]) {
+        if (ret < 0) return ret;
+        if (st.private_5 != in->pfs_start[slot]) return -EEXIST;
+    } else {
+        if (ret != -ENOENT) return ret < 0 ? ret : -EEXIST;
+        ret = hddMakeFilesystem(mb, (char *)name, FS_GROUP_APPLICATION);
+        if (ret != (int)mb) return ret < 0 ? ret : -ENOSPC;
+        ret = fileXioGetStat(path, &st);
+        if (ret < 0) return ret;
     }
-    return hddMakeFilesystem(mb, (char *)name, FS_GROUP_APPLICATION);
+    if (st.mode != 0x100 || st.size != mb * 2048u || st.attr || st.private_0 ||
+        in->apa_sectors < st.size || st.private_5 < 2048 ||
+        st.private_5 > in->apa_sectors - st.size) return -EINVAL;
+    if (!in->pfs_start[slot]) {
+        in->pfs_start[slot] = st.private_5;
+        ret = hddInstallResumeSave(in);
+        if (ret < 0) return ret;
+    }
+    return mb;
 }
 static int installApps(HddInstall *in)
 {
@@ -855,7 +873,7 @@ static int installApps(HddInstall *in)
             for (unsigned i = 0; i < save.count; i++) if (!strcmp(save.files[i].name, "list.icn")) icon = &save.files[i];
             hddInstallLog("Create app launcher: %s (128 MiB)", app_partitions[index]);
             hddInstallLogFlush(in);
-            ret = hddInstallPfsPartition(in, 128, app_partitions[index]);
+            ret = hddInstallPfsPartition(in, 128, app_partitions[index], HDD_INSTALL_PFS_APP + index);
             if (ret != 128) ret = ret < 0 ? ret : -ENOSPC;
             else if (!icon || pathJoin(elf, sizeof(elf), folder, app_boot[index]) < 0) ret = -EINVAL;
             else ret = InjectHddAppLauncher(app_partitions[index], elf, app_names[index], icon->data, icon->size);
@@ -948,7 +966,7 @@ static int installGamePartition(HddInstall *in)
     }
     if (ret >= 0) {
         hddInstallLog("Creating PP.LAUNCHER (128 MiB): %s", title);
-        ret = hddInstallPfsPartition(in, 128, "PP.LAUNCHER");
+        ret = hddInstallPfsPartition(in, 128, "PP.LAUNCHER", HDD_INSTALL_PFS_GAME);
         ret = ret == 128 ? 0 : ret < 0 ? ret : -ENOSPC;
     }
     snprintf(elf, sizeof(elf), "hdd0:__system:pfs:/launcher/%s", hddInstallGameElf(in->game_launcher));

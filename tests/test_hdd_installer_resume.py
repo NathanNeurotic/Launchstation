@@ -35,7 +35,8 @@ static HddFormatPlan actual;
 static int genOpen(const char *path,int flags){
  char local[2048];const char *p=strrchr(path,'/');assert(p&&p[1]);
  if(!strncmp(path,"pfs2:",5))assert(mounted);
- snprintf(local,sizeof(local),"%s/%s",directory,p+1);int fd=open(local,flags,0600);return fd<0?-errno:fd;
+ snprintf(local,sizeof(local),"%s/%.*s-%s",directory,(int)(p-strchr(path,'/')-1),strchr(path,'/')+1,p+1);
+ int fd=open(local,flags,0600);return fd<0?-errno:fd;
 }
 static int genRead(int fd,void *p,unsigned n){return read(fd,p,n>37?37:n);}
 static int genWrite(int fd,const void*p,unsigned n){
@@ -44,7 +45,11 @@ static int genWrite(int fd,const void*p,unsigned n){
 }
 #define genLseek lseek
 #define genClose close
-static int genRemove(char *path){char local[2048];snprintf(local,sizeof(local),"%s/%s",directory,strrchr(path,'/')+1);return unlink(local)<0?-errno:0;}
+static int genRemove(char *path){
+ char local[2048];const char *first=strchr(path,'/'),*last=strrchr(path,'/');
+ snprintf(local,sizeof(local),"%s/%.*s-%s",directory,(int)(last-first-1),first+1,last+1);
+ return unlink(local)<0?-errno:0;
+}
 static int fileXioMount(const char *m,const char*p,int flags){assert(!strcmp(m,"pfs2:")&&!strcmp(p,"hdd0:__common")&&flags==2&&!mounted);mounted=1;return 0;}
 static int fileXioUmount(const char *m){assert(!strcmp(m,"pfs2:")&&mounted);mounted=0;return 0;}
 static void put32(unsigned char*p,unsigned n){for(unsigned i=0;i<4;i++)p[i]=n>>(i*8);}
@@ -68,7 +73,7 @@ code += (root / 'src/hdd_install_resume_ps2.c').read_text().replace('#include "l
 code += r'''
 static void original(HddInstall *in,int jail){
  memset(in,0,sizeof(*in));in->flags=3;in->jail=jail;in->owned=in->stage_ready=1;
- strcpy(in->stage,jail?"ata0:/PSBBN_DP_TEMP":"pfs2:/PSBBN_DP_TEMP");
+ strcpy(in->stage,jail?"ata0:/PSBBN_DP_TEMP_1":"pfs2:/PSBBN_DP_TEMP");
  memset(in->owner,0x62,sizeof(in->owner));
  assert(!hddFormatPlan(&actual,jail?HDD_FORMAT_APA_JAIL:HDD_FORMAT_APA,1000215216u,jail?40960:0,12345));
 }
@@ -83,6 +88,7 @@ int main(int argc,char **argv){
   assert(hddInstallResumeSave(&in)==-EIO); /* torn seq 3 cannot replace seq 2 */
   fail_after=-1;hddInstallResumeEnd();mounted=0;
   assert(!hddInstallResumeLoad(&loaded,&plan,&sequence)&&sequence==2&&loaded.resumed&&!loaded.recovery_attempts);
+  assert(!strcmp(in.stage,loaded.stage));
   assert(loaded.downloaded_assets==(1u<<HI_MBR)&&!memcmp(&plan,&actual,sizeof(plan))&&!loaded.ca_data);
   hddInstallRelease(&loaded);memset(&loaded,0,sizeof(loaded));
   wrong_disk=1;assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-EINVAL&&!loaded.ca_data);wrong_disk=0;

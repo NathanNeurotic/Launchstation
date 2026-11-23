@@ -64,7 +64,7 @@ int hddInstallPsbbnPartitions(HddInstall *in)
         in->linux[i].start = st.private_5;
         in->linux[i].sectors = st.size;
     }
-    ret = hddInstallPfsPartition(in, in->contents_mb ? in->contents_mb : 1024, "__contents");
+    ret = hddInstallPfsPartition(in, in->contents_mb ? in->contents_mb : 1024, "__contents", HDD_INSTALL_PFS_CONTENTS);
     if (ret != (int)(in->contents_mb ? in->contents_mb : 1024)) return ret < 0 ? ret : -ENOSPC;
     ret = fileXioMount("pfs0:", "hdd0:__common", FIO_MT_RDWR);
     if (ret < 0) return ret;
@@ -329,6 +329,7 @@ done:
     while (mounts && !hddInstallRecoveryFault()) {
         char mount[8]; int closed;
         snprintf(mount, sizeof(mount), "pfs%u:", --mounts); closed = fileXioUmount(mount);
+        hddInstallRecoveryObserve(closed);
         if (ret >= 0 && closed < 0) ret = closed;
     }
     for (unsigned i = 0; i < HDD_INSTALL_LINUX_PARTITIONS; i++) installExt2Free(p->fs[i]);

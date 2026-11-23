@@ -16,6 +16,8 @@
 #define HDD_INSTALL_LAUNCHER_FILES 160
 
 enum { HDD_GAME_OPL, HDD_GAME_NEUTRINO };
+enum { HDD_INSTALL_PFS_CONTENTS, HDD_INSTALL_PFS_APP, HDD_INSTALL_PFS_CONFIG,
+       HDD_INSTALL_PFS_GAME, HDD_INSTALL_PFS_COUNT };
 typedef struct {
     char path[192], hash[41];
     uint32_t size;
@@ -54,6 +56,7 @@ typedef struct {
     unsigned applied, populated, committed;
     unsigned apa_sectors;
     unsigned resumed;
+    uint32_t pfs_start[HDD_INSTALL_PFS_COUNT];
 } HddInstall;
 
 unsigned hddInstallPartitionMb(const HddInstall *install, unsigned index);
@@ -107,7 +110,7 @@ int hddInstallPsbbnPartitions(HddInstall *install);
 int hddInstallPsbbnPayload(void *install, const HddFormatIo *io);
 int hddInstallClaimStage(HddInstall *install);
 int hddInstallFindStage(HddInstall *install);
-int hddInstallPfsPartition(HddInstall *install, unsigned mb, const char *name);
+int hddInstallPfsPartition(HddInstall *install, unsigned mb, const char *name, unsigned slot);
 int hddInstallCleanup(HddInstall *install);
 
 /* Installer progress/log: one serialized writer, UI snapshots, no

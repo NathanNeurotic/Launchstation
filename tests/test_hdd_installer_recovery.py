@@ -117,7 +117,7 @@ typedef uint64_t u64;
 typedef struct { int pressed; } DashInput;
 static int debug_open,worker_alive,done,suspended,stopped,forgot,reset_calls,sync_calls;
 static int rebuilding,core_calls,pads,inputs,frames,pumps,fallback,loading,ds34;
-static int fail_reset,fail_sync,fail_pad,expect_terminal;
+static int fail_reset,fail_sync,fail_filexio,fail_pad,expect_terminal;
 static int pccf_bus_owned,pccf_loaded;
 static unsigned iop_reset_generation;
 static u64 now;
@@ -142,12 +142,12 @@ static void clearIopModuleState(void){assert(rebuilding&&!worker_alive);}
 static int SifLoadFileInit(void){assert(rebuilding);return 0;}
 static int SifInitIopHeap(void){assert(rebuilding);return 0;}
 static void initsbv_patches(void){assert(rebuilding);}
-static void ensureCoreIoStackReady(void){assert(rebuilding);}
+static int ensureCoreIoStackReady(void){assert(rebuilding);return !fail_filexio;}
 static void dashSoundShutdown(void){assert(rebuilding);}
 #ifdef DS34
 static void loadDs34InputModules(void){assert(rebuilding);ds34++;}
 #endif
-static int setupPad(void){assert(rebuilding&&!worker_alive);pads++;return !fail_pad;}
+static int setupPadForRecovery(void){assert(rebuilding&&!worker_alive);pads++;return !fail_pad;}
 static void startKbd(void){assert(pads);}
 void hddInstallLog(const char *s,...){assert(s);}
 void hddInstallProgress(const char *s,int a,int b){assert(s&&!a&&!b);}
@@ -177,7 +177,7 @@ transport += r'''
 static void reset(void){
     hddInstallRecoveryEnd();exited_rpc=0;worker_alive=1;done=suspended=stopped=forgot=reset_calls=sync_calls=0;
     rebuilding=core_calls=pads=inputs=frames=pumps=fallback=loading=ds34=0;
-    fail_reset=fail_sync=fail_pad=expect_terminal=0;pccf_bus_owned=pccf_loaded=1;now=0;
+    fail_reset=fail_sync=fail_filexio=fail_pad=expect_terminal=0;pccf_bus_owned=pccf_loaded=1;now=0;
 }
 int main(void){
     reset();assert(dashHddInstallAwait(1,"Fallback")&&fallback==1&&!frames);
@@ -201,6 +201,13 @@ int main(void){
         assert(strstr(installerIopRecoveryError(),failure?"boot completion":"could not be queued"));
         assert(now>=15000&&worker_alive&&!forgot&&!core_calls&&!hddInstallRecoveryWasReset());
     }
+    for(int failure=0;failure<2;failure++){
+        reset();worker_alive=0;
+        assert(resetInstallerIopTransport());
+        fail_filexio=!failure;fail_pad=failure;
+        assert(!reloadInstallerCoreAfterReset()&&core_calls==1&&pads==failure);
+        assert(strstr(installerIopRecoveryError(),failure?"Controller initialization":"IOP core services"));
+    }
     puts("PASS: reset skips old-server cleanup, UI releases RPC only after IOP acknowledgment, rebuild follows worker unwind, reset failures retain buffers");
 }
 '''
@@ -212,3 +219,34 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-reset-') as directory:
                         *(['-DDS34'] if ds34 else []), '-I', str(root / 'include'), str(d / 'test.c'),
                         str(root / 'src/hdd_install_recovery.c'), '-o', str(d / 'test')], check=True)
         subprocess.run([str(d / 'test')], check=True, timeout=10)
+
+    pad_code = r'''
+#include <assert.h>
+#include <stdint.h>
+typedef uint64_t u64;
+enum {PAD_STATE_DISCONN, PAD_STATE_STABLE, PAD_STATE_FINDCTP1, PAD_STATE_ERROR};
+static u64 now;
+static int stable_after;
+static u64 Timer(void){return now;}
+static void DelayThread(int us){assert(us==1000);now++;}
+static int padGetState(int port,int slot){
+    assert(port==1&&!slot);
+    return stable_after>=0&&now>=(u64)stable_after?PAD_STATE_STABLE:PAD_STATE_ERROR;
+}
+'''
+    for filename in ('pad.c', 'pad_ds34.c'):
+        source = (root / 'src' / filename).read_text()
+        body = pad_code
+        if filename == 'pad.c':
+            body += 'static int pad_reopen_active;\n'
+        body += function(source, 'static int waitPadReadyUntil(')
+        body += r'''
+int main(void){
+    stable_after=-1;assert(!waitPadReadyUntil(1,0,5)&&now==5);
+    now=0;stable_after=3;assert(waitPadReadyUntil(1,0,5)&&now==3);
+}
+'''
+        (d / 'pad.c').write_text(body)
+        subprocess.run(['gcc', '-std=c99', '-Wall', '-Wextra', '-Werror', str(d / 'pad.c'),
+                        '-o', str(d / 'pad')], check=True)
+        subprocess.run([str(d / 'pad')], check=True, timeout=10)
