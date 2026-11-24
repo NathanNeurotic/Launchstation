@@ -151,6 +151,8 @@ static int genClose(int fd){assert(handles>0);handles--;return close(fd);}
 static s64 genLseek(int fd,s64 n,int whence){return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){int r=write(fd,p,n);return r<0?-errno:r;}
+#define GEN_RESERVE_MIN_BYTES 0x100000
+static int genReserveContiguous(int fd,const char *path,u64 size){(void)fd;(void)path;(void)size;return 0;}
 /* A device that reports a file deleted that is still there. */
 static int genRemove(char *p){if(strstr(p,"STICKY"))return 0;return unlink(p)?-errno:0;}
 static int genRmdir(char *p){return rmdir(p)?-errno:0;}

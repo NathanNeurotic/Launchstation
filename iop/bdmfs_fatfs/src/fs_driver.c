@@ -24,6 +24,7 @@
 #include <usbhdfsd-common.h>
 
 #include "fs_driver.h"
+#include "bdmfs_reserve.h"
 
 //#define DEBUG  //comment out this line when not debugging
 #include "module_debug.h"
@@ -742,15 +743,24 @@ int fs_ioctl2(iop_file_t *fd, int cmd, void *data, unsigned int datalen, void *r
     int ret   = 0;
     FIL *file = ((FIL *)(fd->privdata));
 
-    (void)data;
-    (void)datalen;
-
     if (file == NULL)
         return -ENXIO;
 
     _fs_lock();
 
     switch (cmd) {
+        case BDMFS_IOCTL2_RESERVE: {
+            unsigned long long bytes;
+
+            /* A folder handle holds a DIR here, not a FIL. */
+            if (!(fd->mode & O_WRONLY) || data == NULL || datalen != sizeof(bytes)) {
+                ret = -EINVAL;
+                break;
+            }
+            memcpy(&bytes, data, sizeof(bytes));
+            ret = fs_reserve_contiguous(file, bytes);
+            break;
+        }
         case USBMASS_IOCTL_RENAME:
             // TODO
             // f_rename() requires two string parameters (newpath, oldpath)

@@ -207,6 +207,24 @@ targets:
     libs: [gcc]
     headers: [bdm, common, loadcore, stdio, sysclib, threadman, usbd]
 
+  # sdk-core bdmfs_fatfs, the FAT/exFAT driver behind mass:, mx4sio:, ilink: and ata:, with a
+  # request that gives a new file one unbroken run of clusters (iop/bdmfs_fatfs/ORIGIN.md,
+  # include/bdmfs_reserve.h). Embedded under the SDK name bdmfs_fatfs in Launchstation itself.
+  - name: bdmfs_fatfs_fork
+    type: iop
+    sources:
+      - iop/bdmfs_fatfs/src/main.c
+      - iop/bdmfs_fatfs/src/fs_driver.c
+      - iop/bdmfs_fatfs/src/reserve.c
+      - iop/bdmfs_fatfs/src/fatfs/diskio.c
+      - iop/bdmfs_fatfs/src/fatfs/ff.c
+      - iop/bdmfs_fatfs/src/fatfs/ffsystem.c
+      - iop/bdmfs_fatfs/src/fatfs/ffunicode.c
+    include_dirs: [iop/bdmfs_fatfs/src, iop/bdmfs_fatfs/src/include, iop/bdmfs_fatfs/src/fatfs/include, include]
+    imports_lst: iop/bdmfs_fatfs/src/imports.lst
+    libs: [gcc]
+    headers: [bdm, cdvd, common, intrman, ioman, iomanx, loadcore, stdio, sysclib, sysmem, threadman]
+
   # The SDK ps2ips target is the EE client library, not an embeddable IRX.
   # Build its matching IOP socket RPC server explicitly under a distinct name.
   - name: ps2ips_rpc
@@ -729,7 +747,7 @@ targets:
       - padman
       - mtapman
       - bdm
-      - bdmfs_fatfs
+      - bdmfs_fatfs_fork:bdmfs_fatfs
       - usbmass_bd_fork:usbmass_bd
       - ata_bd
       - libsd

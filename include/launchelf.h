@@ -623,6 +623,8 @@ int genOpen(const char *path, int mode);
 s64 genLseek(int fd, s64 where, int how);
 int genRead(int fd, void *buf, int size);
 int genWrite(int fd, void *buf, int size);
+#define GEN_RESERVE_MIN_BYTES 0x100000 /* smaller files gain nothing from one unbroken run */
+int genReserveContiguous(int fd, const char *path, u64 size);
 int genClose(int fd);
 int genDopen(char *path);
 int genDclose(int fd);
