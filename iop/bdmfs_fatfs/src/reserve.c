@@ -20,7 +20,7 @@ int fs_reserve_contiguous(FIL *file, unsigned long long bytes)
 
     /* f_expand keeps the cluster count in 32 bits and would allocate a wrapped, smaller count for a
      * size beyond that. No volume holds more clusters than it has. */
-    if ((FSIZE_t)bytes != bytes || fs == NULL || fs->csize == 0 ||
+    if ((FSIZE_t)bytes != bytes || !fs || fs->csize == 0 ||
         bytes / ((unsigned long long)fs->csize * FF_MAX_SS) > fs->n_fatent - 2)
         return 0;
     result = f_expand(file, (FSIZE_t)bytes, 1);
