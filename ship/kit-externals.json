@@ -2,8 +2,8 @@
   "comment": "Kit externals pinned to one RiptOPL commit; regenerate with scripts/package_kit.py refresh-pin.",
   "source": {
     "repository": "NathanNeurotic/RiptOPL",
-    "commit": "ace59bf010c702b488ca32ec5f0193eecae3253b",
-    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/ace59bf010c702b488ca32ec5f0193eecae3253b"
+    "commit": "e0cbfec4291d81abe7e0fc4f94eb08590121345b",
+    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/e0cbfec4291d81abe7e0fc4f94eb08590121345b"
   },
   "files": {
     "EMBER/Ember Official Webpage.url": {
