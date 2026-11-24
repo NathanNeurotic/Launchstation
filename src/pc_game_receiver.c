@@ -143,9 +143,11 @@ static int copyWithResume(PcReceiveItem *item, const char *source, const char *d
 	 * out of the middle of a network/HDD transfer. */
 	if (item->size > 0) {
 		drawMsg(LNG(PC_Recv_Reserving));
-		if (fileXioLseek64(out, (s64)item->size - 1, SEEK_SET) == (s64)item->size - 1)
-			fileXioWrite(out, &zero, 1);
-		fileXioLseek64(out, 0, SEEK_SET);
+		if (genReserveContiguous(out, dest, item->size) <= 0) {  //one unbroken run where the volume has one
+			if (fileXioLseek64(out, (s64)item->size - 1, SEEK_SET) == (s64)item->size - 1)
+				fileXioWrite(out, &zero, 1);
+			fileXioLseek64(out, 0, SEEK_SET);
+		}
 	}
 
 	while (pos < item->size) {

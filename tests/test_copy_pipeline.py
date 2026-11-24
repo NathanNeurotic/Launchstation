@@ -172,6 +172,10 @@ static s64 genLseek(int fd,s64 n,int whence){assert(fd_generation[fd]==generatio
 static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
 static int genRmdir(char *p){return rmdir(p)?-errno:0;}
+#define GEN_RESERVE_MIN_BYTES 0x100000
+/* the request goes out once per large file, to a destination that is open and still empty */
+static int reserve_calls,fail_reserve;
+static int genReserveContiguous(int fd,const char *path,u64 size){struct stat st;assert(fd_kind[fd]==2&&fd_generation[fd]==generation&&path&&size>=GEN_RESERVE_MIN_BYTES);assert(!fstat(fd,&st)&&st.st_size==0);reserve_calls++;return fail_reserve?-EIO:0;}
 static int move_deletes;
 static int genRemove(char *p){if(browser_cut&&!strncmp(p,clipPath,strlen(clipPath)))move_deletes++;if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
 static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
@@ -229,6 +233,7 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
+static int matchesLarge(const char *p,const unsigned char *data,int n){struct stat st;unsigned char *out=malloc(n+1);int fd=open(p,O_RDONLY),count=0,r;if(fd<0||fstat(fd,&st)||st.st_size!=n){free(out);if(fd>=0)close(fd);return 0;}while(count<n&&(r=read(fd,out+count,n-count))>0)count+=r;close(fd);r=count==n&&!memcmp(data,out,n);free(out);return r;}
 static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;fail_widen=fail_narrow=narrow_calls=0;listing_allocs=0;read_calls=write_calls=0;udpfs_stale=UDPFS_OK;udpfs_decompress=decoded_size=0;opens=udpfs_read_opens=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
@@ -468,6 +473,20 @@ int main(void){
  /* Repeated operations clear prior error state, and formatting is bounded. */
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');
+ /* A large file asks once for one unbroken run of clusters, before its first write (the stub
+  * checks the destination is still empty). A file under 1 MiB never asks. */
+ {static unsigned char big[3*1048576];for(unsigned i=0;i<sizeof(big);i++)big[i]=(unsigned char)(i*31u>>3);
+  reset();put("mc0:/GAME.ISO",big,sizeof(big));unlink("usb0:/GAME.ISO");strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.ISO");
+  int asked=reserve_calls;message[0]=0;subfunc_Paste(message,"usb0:/");
+  assert(!message[0]&&!handles&&reserve_calls==asked+1&&matchesLarge("usb0:/GAME.ISO",big,sizeof(big)));
+  reset();put("mc0:/SMALL.BIN",big,1048575);unlink("usb0:/SMALL.BIN");strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"SMALL.BIN");
+  message[0]=0;subfunc_Paste(message,"usb0:/");
+  assert(!message[0]&&!handles&&reserve_calls==asked+1&&matchesLarge("usb0:/SMALL.BIN",big,1048575));
+  /* A volume that fails while the run is allocated stops the copy: nothing is written, the
+   * destination is removed and the source stays. */
+  reset();unlink("usb0:/GAME.ISO");strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.ISO");fail_reserve=1;
+  int writes=write_calls;message[0]=0;subfunc_Paste(message,"usb0:/");fail_reserve=0;
+  assert(strstr(message,"Reserving space (-5)")&&!handles&&write_calls==writes&&access("usb0:/GAME.ISO",F_OK)&&matchesLarge("mc0:/GAME.ISO",big,sizeof(big)));}
  assert(!listings_live); /* every folder level freed its listing */
  puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics; "
       "lost or over-long udpfs: copies fail and keep a Move's source");

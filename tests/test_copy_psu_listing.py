@@ -195,6 +195,8 @@ static int lseek_fail_udpfs;
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);if(lseek_fail_udpfs&&whence==SEEK_CUR&&!strncmp(fd_name[fd],"udpfs:",6))return -EIO;return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);if(named(fd,read_fail_name))return -EIO;int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
+#define GEN_RESERVE_MIN_BYTES 0x100000
+static int genReserveContiguous(int fd,const char *path,u64 size){(void)path;(void)size;assert(fd_open[fd]);return 0;}
 static int genRmdir(char *p){return rmdir(p)?-errno:0;}
 static int genRemove(char *p){if(udpfs_stale_for(p)==UDPFS_TAIL)return -EBUSY;return unlink(p)?-errno:0;}
 /* Like genRenameNoReplace(): no rename on host or where genCanRenamePath() refuses

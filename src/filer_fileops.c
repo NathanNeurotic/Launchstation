@@ -2,6 +2,7 @@
 #include "filer_size_cache.h"
 #include "filer_shared.h"
 #include "init.h"
+#include "bdmfs_reserve.h"
 
 #ifdef ULE_DEBUG_BUILD
 #ifndef FILEOP_TRACE
@@ -766,6 +767,44 @@ int genWrite(int fd, void *buf, int size)
 }
 //------------------------------
 //endfunc genWrite
+//--------------------------------------------------------------
+/* Asks the FAT/exFAT driver to give a file that was just created, and is still empty, one unbroken
+ * run of clusters of its final size (include/bdmfs_reserve.h). Without this the driver takes the
+ * next free cluster for every write, so a large file is spread over the holes that deleted files
+ * left, and Neutrino refuses game images in more than 64 pieces. Returns 1 when the run was
+ * reserved. Returns 0 when it was not (another kind of device, a small file, or no free run that
+ * long): the file is still empty and is written as before. Returns -EIO when the volume failed
+ * while the run was being allocated: the allocation may be half written, so do not write the file. */
+int genReserveContiguous(int fd, const char *path, u64 size)
+{
+#ifdef EXFAT
+	static const char *const devices[] = {"mass", "usb", "ata", "mx4sio", "cf", "ilink"};
+	unsigned int i;
+
+	if (fd < 0 || path == NULL || size < GEN_RESERVE_MIN_BYTES)
+		return 0;
+	for (i = 0; i < sizeof(devices) / sizeof(devices[0]); i++) {
+		const char *unit = path + strlen(devices[i]);
+
+		if (strncmp(path, devices[i], strlen(devices[i])))
+			continue;
+		while (*unit >= '0' && *unit <= '9')
+			unit++;
+		if (*unit == ':') {
+			int result = fileXioIoctl2(fd, BDMFS_IOCTL2_RESERVE, &size, sizeof(size), NULL, 0);
+
+			return result == BDMFS_RESERVE_OK ? 1 : (result == -EIO ? -EIO : 0);
+		}
+	}
+#else
+	(void)fd;
+	(void)path;
+	(void)size;
+#endif
+	return 0;
+}
+//------------------------------
+//endfunc genReserveContiguous
 //--------------------------------------------------------------
 int genClose(int fd)
 {
