@@ -11,6 +11,12 @@ int menuTitleUpdateAsync(int force);
 /* Restore a live software clock when unsaved Settings edits are discarded. */
 void menuTitleClockSnapshot(void);
 void menuTitleClockRestore(void);
+/* Settings > System > Time zone: index 0 is the console's own zone, 1..count the listed zones. */
+int menuTitleClockZoneCount(void);
+int menuTitleClockZoneMinutes(int index);
+int menuTitleClockZoneIndex(int minutes);
+int menuTitleConsoleZoneMinutes(void);
+void menuTitleClockZoneChanged(void);
 int menuTitleSoftwareClockActive(void);
 /* Checkpoint the running software clock without restarting its second. */
 int menuTitleSoftwareClockCheckpoint(char *out, size_t out_size);

@@ -142,6 +142,8 @@ enum SetId {
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
 	S_TEMP_UNITS,
+	S_CLOCK_ZONE,
+	S_CLOCK_SUMMER,
 	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
@@ -773,6 +775,8 @@ static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
     {ST_ACTION, S_CLOCK, "Set PS2 Clock", "Set the date and time by hand, from the Internet where available, or with the software clock for a dead CMOS battery."},
+    {ST_CHOICE, S_CLOCK_ZONE, "Time zone", "The zone the clock is shown in. Console follows the time zone and summer time in the console's own System Configuration. The clock itself is not changed."},
+    {ST_CHOICE, S_CLOCK_SUMMER, "Summer time", "Adds one hour to the chosen time zone. Not used while Time zone is Console."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHSTATION.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHSTATION.CNF immediately to another location; dashboard and network settings are saved separately."},
@@ -1095,6 +1099,26 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_TAB_FILES:
 		case S_TAB_TOOLS:
 			*cur = !(dashCfg.disabled_tabs & tabSettingBit(id));
+			return 2;
+		case S_CLOCK_ZONE: {
+			/* "Console (UTC-05:00)": shows the console's own zone, so a wrong one is plain to see. */
+			static char zone_text[40][32];
+			static const char *zone_names[40];
+			int n = menuTitleClockZoneCount(), i, m, a;
+
+			if (n > 39)
+				n = 39;
+			for (i = 0; i <= n; i++) {
+				m = i ? menuTitleClockZoneMinutes(i) : menuTitleConsoleZoneMinutes();
+				a = m < 0 ? -m : m;
+				snprintf(zone_text[i], sizeof(zone_text[i]), i ? "UTC%c%02d:%02d" : "Console (UTC%c%02d:%02d)", m < 0 ? '-' : '+', a / 60, a % 60);
+				zone_names[i] = zone_text[i];
+			}
+			*names = zone_names, *cur = menuTitleClockZoneIndex(dashCfg.clock_zone);
+			return n + 1;
+		}
+		case S_CLOCK_SUMMER:
+			*cur = dashCfg.clock_summer;
 			return 2;
 		case S_TEMP_UNITS: {
 			static const char *const units[] = {"Celsius", "Fahrenheit"};
@@ -1806,6 +1830,14 @@ static void setChoice(int id, int v)
 			break;
 		case S_TEMP_UNITS:
 			dashCfg.temp_fahrenheit = v;
+			break;
+		case S_CLOCK_ZONE:
+			dashCfg.clock_zone = menuTitleClockZoneMinutes(v);
+			menuTitleClockZoneChanged();
+			break;
+		case S_CLOCK_SUMMER:
+			dashCfg.clock_summer = v;
+			menuTitleClockZoneChanged();
 			break;
 		case S_ICON_BACKING:
 			dashCfg.icon_backing = v;
@@ -2606,6 +2638,7 @@ static void settingsRevert(void)
 		dashCfg = snap_dash;
 		padRumbleEnable(dashCfg.rumble);
 		menuTitleClockRestore();
+		menuTitleClockZoneChanged();
 		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)

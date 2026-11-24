@@ -80,6 +80,7 @@ static int software_clock_active;
 static int menuTitleSoftwareClockActive(void) { return software_clock_active; }
 static void menuTitleClockSnapshot(void) { clock_snapshots++; }
 static void menuTitleClockRestore(void) { clock_restores++; }
+static void menuTitleClockZoneChanged(void) {}
 static int rumble_gate = -1; static void padRumbleEnable(int on) { rumble_gate = on; }
 static void updateScreenMode(void) {}
 static int dashWorkerAwaitAll(const char *s) { (void)s; return 1; }

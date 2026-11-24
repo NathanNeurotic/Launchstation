@@ -201,7 +201,53 @@ static int decodeTimezoneOffsetMinutes(int raw_offset)
 	return value;
 }
 
+/* Settings > System > Time zone. Minutes east of UTC; index 0 of the Settings row is the console's own. */
+static const short clock_zones[] = {-720, -660, -600, -570, -540, -480, -420, -360, -300, -240, -210, -180, -120, -60, 0,
+                                    60, 120, 180, 210, 240, 270, 300, 330, 345, 360, 390, 420, 480, 525, 540, 570, 600,
+                                    630, 660, 720, 765, 780, 840};
+#define CLOCK_ZONES ((int)(sizeof(clock_zones) / sizeof(clock_zones[0])))
+
+int menuTitleClockZoneCount(void)
+{
+	return CLOCK_ZONES;
+}
+
+int menuTitleClockZoneMinutes(int index)
+{
+	return (index >= 1 && index <= CLOCK_ZONES) ? clock_zones[index - 1] : DASH_CLOCK_ZONE_CONSOLE;
+}
+
+/* 1..count for a zone on the list, 0 for the console's own or anything else. */
+int menuTitleClockZoneIndex(int minutes)
+{
+	int i;
+
+	for (i = 0; i < CLOCK_ZONES; i++)
+		if (clock_zones[i] == minutes)
+			return i + 1;
+	return 0;
+}
+
+static void readOsdClockFormatsConsole(int *use_12h, int *date_format, int *local_offset_minutes);
+
+/* The console's own zone with its summer time, in minutes east of UTC. */
+int menuTitleConsoleZoneMinutes(void)
+{
+	int use_12h, date_format, offset;
+
+	readOsdClockFormatsConsole(&use_12h, &date_format, &offset);
+	return offset;
+}
+
+/* A chosen time zone replaces the console's zone and summer time; the formats stay the console's. */
 static void readOsdClockFormats(int *use_12h, int *date_format, int *local_offset_minutes)
+{
+	readOsdClockFormatsConsole(use_12h, date_format, local_offset_minutes);
+	if (menuTitleClockZoneIndex(dashCfg.clock_zone) > 0)
+		*local_offset_minutes = dashCfg.clock_zone + (dashCfg.clock_summer ? 60 : 0);
+}
+
+static void readOsdClockFormatsConsole(int *use_12h, int *date_format, int *local_offset_minutes)
 {
 	ConfigParam config;
 	Config2Param config2;
@@ -471,6 +517,21 @@ static int updateClock(u64 tick_ms, int force, int care_time, int care_date)
 	}
 
 	return 0;
+}
+
+/* The time zone setting changed: show the hardware clock in the new zone. The software clock
+ * holds local time as typed, so it only takes the new offset for conversions. */
+void menuTitleClockZoneChanged(void)
+{
+	int use_12h, date_format, offset;
+
+	readOsdClockFormats(&use_12h, &date_format, &offset);
+	osd_local_offset_minutes = offset;
+	osd_local_offset_cached = 1;
+	title_clock.local_offset_minutes = offset;
+	if (!active_software_seed[0])
+		title_clock.initialized = 0;
+	updateClock(Timer(), 1, 1, 1);
 }
 
 /* Keep the running software-clock state across Settings previews / Discard. */

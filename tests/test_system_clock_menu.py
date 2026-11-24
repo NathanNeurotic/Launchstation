@@ -14,6 +14,8 @@ assert labels == [
     "Language",
     "Memory card backup files",
     "Set PS2 Clock",
+    "Time zone",
+    "Summer time",
     "PS2 Temperature Units (50K and later)",
     "Configuration folder",
     "Save launch & tool settings to...",
