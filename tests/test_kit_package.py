@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
         if kit_path.startswith("POPS/") and f"{kit.RIPTOPL_EXAMPLE}/{kit_path}" not in payloads:
             payloads["ship/" + kit_path] = ("pops:" + kit_path).encode() * 7
     payloads["ship/EMBER/ember.elf"] = b"\x7fELF" + bytes(range(256)) * 16
-    payloads["ship/EMBER/LICENSE-BETA.txt"] = b"Ember beta licence\r\n"
+    payloads["ship/EMBER/LICENSE.txt"] = b"Ember licence\r\n"
     payloads["ship/EMBER/you must place a ps1 bios file here for ember to work"] = b""
     payloads["ship/EMBER/games/this file can be deleted"] = b""
     payloads["ship/POPS/UDPFS-NOTICES/PROVENANCE.json"] = b"{}"
@@ -262,7 +262,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d + b"x" if n == "POPS/CHEATS.TXT" else d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, b"" if n == "neutrino/config/system.toml" else d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "PS2-Servers.url" else n, d)), psu, manifest)
-    expect(ValueError, kit.verify, doctored(lambda n, d: ("EMBER/bios.bin" if n == "EMBER/LICENSE-BETA.txt" else n, d)), psu, manifest)
+    expect(ValueError, kit.verify, doctored(lambda n, d: ("EMBER/bios.bin" if n == "EMBER/LICENSE.txt" else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d.replace(b"284", b"285") if n == "KIT-MANIFEST.json" else d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n.replace("APPS/", "") if n.startswith("APPS/") else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/smb_fhi.irx" else n, d)), psu, manifest)

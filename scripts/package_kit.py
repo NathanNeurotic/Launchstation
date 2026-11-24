@@ -69,7 +69,7 @@ EXTERNAL_REQUIRED = (
     "POPS/POPSTARTER.ELF", "POPS/POPSTARTER.KELF", "POPS/CHEATS.TXT", "POPS/TROJAN_7.BIN",
     "POPS/IGR_BG.TM2", "POPS/IGR_NO.TM2", "POPS/IGR_YES.TM2", "POPS/IPCONFIG.DAT", "POPS/UDPFSCONFIG.DAT",
     "POPS/UDPFS-NOTICES/PROVENANCE.json", "POPS/UDPFS-NOTICES/LICENSE",
-    "EMBER/ember.elf", "EMBER/LICENSE-BETA.txt", "EMBER/games/Per-Game-Folder/GAME FILES",
+    "EMBER/ember.elf", "EMBER/LICENSE.txt", "EMBER/games/Per-Game-Folder/GAME FILES",
 ) + tuple(f"POPS/{module}.{suffix}" for suffix in ("usbexfat", "mx4sio", "mmce", "ata", "ilink", "udpfs")
           for module in ("usbd.irx", "usbhdfsd.irx")) + tuple(
     f"POPS/POPSTARTER VERSIONS/{version}/POPSTARTER.ELF"

@@ -73,7 +73,7 @@ LAUNCHSTATION.ELF, and no game, BIOS or key is included.
 
 Credits for the bundled externals (none of them is Launchstation's work):
   Ember        created by Gageformer. Included unmodified and complete with its
-               licence (EMBER/LICENSE-BETA.txt), as that licence permits for a
+               licence (EMBER/LICENSE.txt), as that licence permits for a
                free launcher. Official release page:
                https://github.com/Gageformer/Ember/releases (project page:
                https://github.com/Gageformer/Ember, also the link in

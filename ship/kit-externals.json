@@ -2,8 +2,8 @@
   "comment": "Kit externals pinned to one RiptOPL commit; regenerate with scripts/package_kit.py refresh-pin.",
   "source": {
     "repository": "NathanNeurotic/RiptOPL",
-    "commit": "4832d22cb0bd76feffc5af625cc30da28c552476",
-    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/4832d22cb0bd76feffc5af625cc30da28c552476"
+    "commit": "e0cbfec4291d81abe7e0fc4f94eb08590121345b",
+    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/e0cbfec4291d81abe7e0fc4f94eb08590121345b"
   },
   "files": {
     "EMBER/Ember Official Webpage.url": {
@@ -11,15 +11,15 @@
       "sha256": "ceda73dde169fc4f683c7babbb11b9c0f3872340d9a6b859078cac1a6d502b31",
       "size": 120
     },
-    "EMBER/LICENSE-BETA.txt": {
-      "path": "ship/EMBER/LICENSE-BETA.txt",
-      "sha256": "15ecbb3e77e0624e4c364aa10c92352bdd1017b102eeb53f7c9d6599ec40d522",
-      "size": 5869
+    "EMBER/LICENSE.txt": {
+      "path": "ship/EMBER/LICENSE.txt",
+      "sha256": "b751fc390f9148b0b9936821923e69c87b187574e97aa2ff7d883da1a6ccfd87",
+      "size": 14161
     },
     "EMBER/ember.elf": {
       "path": "ship/EMBER/ember.elf",
-      "sha256": "94f8b2576010405e2f7b90c4a1adde073ddaebe2d0aec34e0bc2be7951d34295",
-      "size": 1611956
+      "sha256": "2e0ba0e07903a6c4dd9943ab73ece2838a9c13f17ca33b514a4149847cc2d5b4",
+      "size": 1820212
     },
     "EMBER/games/Per-Game-Folder/GAME FILES": {
       "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/EMBER/games/Per-Game-Folder/GAME FILES",
@@ -238,8 +238,8 @@
     },
     "POPS/usbhdfsd.irx.ilink": {
       "path": "ship/POPS/usbhdfsd.irx.ilink",
-      "sha256": "9cd849ea7f06d72f3ee6015032dfd91d6fcb1332e87d5acde306cb42b5d4313d",
-      "size": 27769
+      "sha256": "a5c741565a9015283610e400401c3bbdea94d3e9c54ce483897f6dba725ab544",
+      "size": 27833
     },
     "POPS/usbhdfsd.irx.mmce": {
       "path": "ship/POPS/usbhdfsd.irx.mmce",
