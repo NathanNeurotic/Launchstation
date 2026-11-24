@@ -174,8 +174,8 @@ static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);
 static int genRmdir(char *p){return rmdir(p)?-errno:0;}
 #define GEN_RESERVE_MIN_BYTES 0x100000
 /* the request goes out once per large file, to a destination that is open and still empty */
-static int reserve_calls;
-static int genReserveContiguous(int fd,const char *path,u64 size){struct stat st;assert(fd_kind[fd]==2&&fd_generation[fd]==generation&&path&&size>=GEN_RESERVE_MIN_BYTES);assert(!fstat(fd,&st)&&st.st_size==0);reserve_calls++;return 0;}
+static int reserve_calls,fail_reserve;
+static int genReserveContiguous(int fd,const char *path,u64 size){struct stat st;assert(fd_kind[fd]==2&&fd_generation[fd]==generation&&path&&size>=GEN_RESERVE_MIN_BYTES);assert(!fstat(fd,&st)&&st.st_size==0);reserve_calls++;return fail_reserve?-EIO:0;}
 static int move_deletes;
 static int genRemove(char *p){if(browser_cut&&!strncmp(p,clipPath,strlen(clipPath)))move_deletes++;if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
 static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
@@ -481,7 +481,12 @@ int main(void){
   assert(!message[0]&&!handles&&reserve_calls==asked+1&&matchesLarge("usb0:/GAME.ISO",big,sizeof(big)));
   reset();put("mc0:/SMALL.BIN",big,1048575);unlink("usb0:/SMALL.BIN");strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"SMALL.BIN");
   message[0]=0;subfunc_Paste(message,"usb0:/");
-  assert(!message[0]&&!handles&&reserve_calls==asked+1&&matchesLarge("usb0:/SMALL.BIN",big,1048575));}
+  assert(!message[0]&&!handles&&reserve_calls==asked+1&&matchesLarge("usb0:/SMALL.BIN",big,1048575));
+  /* A volume that fails while the run is allocated stops the copy: nothing is written, the
+   * destination is removed and the source stays. */
+  reset();unlink("usb0:/GAME.ISO");strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.ISO");fail_reserve=1;
+  int writes=write_calls;message[0]=0;subfunc_Paste(message,"usb0:/");fail_reserve=0;
+  assert(strstr(message,"Reserving space (-5)")&&!handles&&write_calls==writes&&access("usb0:/GAME.ISO",F_OK)&&matchesLarge("mc0:/GAME.ISO",big,sizeof(big)));}
  assert(!listings_live); /* every folder level freed its listing */
  puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics; "
       "lost or over-long udpfs: copies fail and keep a Move's source");

@@ -773,7 +773,8 @@ int genWrite(int fd, void *buf, int size)
  * next free cluster for every write, so a large file is spread over the holes that deleted files
  * left, and Neutrino refuses game images in more than 64 pieces. Returns 1 when the run was
  * reserved. Returns 0 when it was not (another kind of device, a small file, or no free run that
- * long): the file is still empty and is written as before. */
+ * long): the file is still empty and is written as before. Returns -EIO when the volume failed
+ * while the run was being allocated: the allocation may be half written, so do not write the file. */
 int genReserveContiguous(int fd, const char *path, u64 size)
 {
 #ifdef EXFAT
@@ -789,8 +790,11 @@ int genReserveContiguous(int fd, const char *path, u64 size)
 			continue;
 		while (*unit >= '0' && *unit <= '9')
 			unit++;
-		if (*unit == ':')
-			return fileXioIoctl2(fd, BDMFS_IOCTL2_RESERVE, &size, sizeof(size), NULL, 0) == BDMFS_RESERVE_OK;
+		if (*unit == ':') {
+			int result = fileXioIoctl2(fd, BDMFS_IOCTL2_RESERVE, &size, sizeof(size), NULL, 0);
+
+			return result == BDMFS_RESERVE_OK ? 1 : (result == -EIO ? -EIO : 0);
+		}
 	}
 #else
 	(void)fd;

@@ -3,7 +3,8 @@
 Runs the FatFs sources of the FAT/exFAT driver Launchstation builds (iop/bdmfs_fatfs) on the
 host, on a volume in memory with holes left by deleted files (tests/contiguous_copy_host.c).
 Without the reservation the copy is spread over the holes, in more pieces than Neutrino's 64;
-with it the copy is in one piece. Also checks that the build and the copy path use the request.
+with it the copy is in one piece. Free space at the two ends of a volume is not taken for
+one run (FatFs's own search did, see ORIGIN.md). Also checks that the build and the copy path use the request.
 The only build difference from the PS2 module is FF_USE_MKFS, to format the test volume.
 This does not run the PS2 driver glue, a real card, i.LINK or a console.
 """
@@ -44,11 +45,13 @@ assert copy.index('out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREA
 assert ask < copy.index('while (size > 0) {  // ----- The main copying loop starts here')
 fileops = (root / 'src/filer_fileops.c').read_text()
 gen = fileops[fileops.index('int genReserveContiguous('):fileops.index('//endfunc genReserveContiguous')]
-assert 'fileXioIoctl2(fd, BDMFS_IOCTL2_RESERVE, &size, sizeof(size), NULL, 0) == BDMFS_RESERVE_OK' in gen
+assert 'int result = fileXioIoctl2(fd, BDMFS_IOCTL2_RESERVE, &size, sizeof(size), NULL, 0);' in gen
+assert 'return result == BDMFS_RESERVE_OK ? 1 : (result == -EIO ? -EIO : 0);' in gen
 for device in ('"mass"', '"usb"', '"ata"', '"mx4sio"', '"cf"', '"ilink"'):
     assert device in gen, device
 receiver = (root / 'src/pc_game_receiver.c').read_text()
-assert 'if (!genReserveContiguous(out, dest, item->size)) {' in receiver
+assert 'if (genReserveContiguous(out, dest, item->size) <= 0) {' in receiver
+assert 'if (reserve.result < 0) {' in copy[ask:]
 
 with tempfile.TemporaryDirectory() as tmp:
     tmp = Path(tmp)
@@ -69,4 +72,6 @@ for name, (plain, reserved, nofit) in results.items():
     assert plain > 64, (name, plain)   # the reported failure: more pieces than Neutrino accepts
     assert reserved == 1, (name, reserved)
     assert nofit > 1, (name, nofit)    # no long enough run: unchanged behaviour, not an error
+    # free space at both ends of a volume is never taken for one run, and oversized sizes are refused
+    assert name + ' ends-not-joined ok\n' in out, name
 print('contiguous copy OK')

@@ -83,19 +83,21 @@ static void copyChunkRun(void *arg)
 }
 
 /* Before the first write: one unbroken run of clusters for the whole file, where the destination
- * is a FAT or exFAT volume with room for one. Best effort, the copy is the same either way. */
+ * is a FAT or exFAT volume with room for one. Without one the copy is written as before. Only a
+ * volume that failed during the allocation stops the copy. */
 typedef struct
 {
 	int out_fd;
 	const char *out;
 	u64 size;
+	int result;
 } CopyReserve;
 
 static void copyReserveRun(void *arg)
 {
 	CopyReserve *r = (CopyReserve *)arg;
 
-	genReserveContiguous(r->out_fd, r->out, r->size);
+	r->result = genReserveContiguous(r->out_fd, r->out, r->size);
 }
 
 /* The copy buffer size for a file of 'size' bytes from 'in' to 'out'.
@@ -1411,12 +1413,19 @@ non_PSU_RESTORE_init:
 	copy_diag.total = size;
 	//Here the output file has been opened, indicated by 'out_fd'
 	if (PM_flag[recurses] != PM_PSU_BACKUP && size >= GEN_RESERVE_MIN_BYTES) {  //a .psu holds many entries
-		CopyReserve reserve = {out_fd, out, size};
+		CopyReserve reserve = {out_fd, out, size, 0};
 
 		//Finding the run reads the allocation table, which can take seconds on a slow, full card
 		filerCopyDiagStage("Reserving space");
 		if (!DashFileProgress("Pasting file", file.name, size, size) || !DashFileTransferChunk(copyReserveRun, &reserve))
 			copyReserveRun(&reserve);
+		if (reserve.result < 0) {  //the volume failed: its allocation table may be half written
+			genClose(out_fd);
+			genRemove(out);
+			out_fd = -1;
+			ret = reserve.result;
+			goto copy_file_exit;
+		}
 	}
 
 	buffSize = copyBufferSize(in, out, size);  //Determine the block size

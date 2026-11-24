@@ -17,6 +17,17 @@ file one unbroken run of clusters of its final size.
 - `src/fs_driver.c`, `src/include/fs_driver.h`: the `ioctl2` case, under the filesystem lock,
   for a handle open for writing only.
 
+- `src/fatfs/ff.c`: two corrections to FatFs's search for a free run, each marked
+  "Launchstation". The search walks the volume in a circle, and upstream counted free clusters
+  at the end of the volume and free clusters at its start as one run although they are not
+  neighbours (`f_expand` for FAT32, `find_bitmap` for exFAT). The count now restarts where the
+  walk wraps to the first cluster.
+- `src/reserve.c` also refuses, with answer 0, a size larger than the volume, because FatFs
+  keeps the cluster count in 32 bits and a huge exFAT size would wrap it to a small one.
+
+A disk error during the request answers `-EIO`; the file manager then stops the copy and removes
+the unfinished file instead of writing on.
+
 Why: FatFs's ordinary allocator takes the next free cluster after the last one it handed out,
 one cluster at a time, and never looks for a run long enough for the file. On a volume with
 holes left by deleted files, a large file is spread over those holes. Neutrino reads game
@@ -29,7 +40,8 @@ The directory entry keeps size 0 until the file is closed, as with ordinary writ
 short by power loss is not left looking complete.
 
 `tests/test_contiguous_copy.py` runs these FatFs sources on the host on FAT32 and exFAT volumes
-with holes: 82 and 81 runs without the request, 1 with it. That is a host test of the allocator.
+with holes: 82 and 81 runs without the request, 1 with it. It also checks that free space at the two ends of a volume is not
+taken for one run, and that an oversized request is refused. That is a host test of the allocator.
 It is not a console, card or i.LINK test.
 
 Remove this copy when the SDK driver offers contiguous allocation itself.

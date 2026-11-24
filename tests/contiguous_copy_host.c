@@ -248,10 +248,88 @@ static void scenario(const char *label, BYTE format, unsigned megabytes, unsigne
     printf("%s plain=%d reserved=%d nofit=%d\n", label, plain, fixed, nofit);
 }
 
+/* Free space at both ends of the volume and none long enough in between: 8 MB at the front, 6 MB
+ * at the end, with the allocation hint just before the end. A 12 MB request must be refused. The
+ * two ends are not one run, although a scan that wraps from the last cluster to the first sees
+ * them one after the other. */
+static void wrap_scenario(const char *label, BYTE format, unsigned megabytes, unsigned cluster)
+{
+    static FATFS fs;
+    static BYTE work[64 * KB];
+    MKFS_PARM opt = {format | FM_SFD, 1, 0, 0, cluster};
+    int reserved;
+    FIL f;
+    DWORD before, head_start;
+    unsigned long long mid;
+
+    disk_sectors = (LBA_t)megabytes * MB / SECTOR;
+    free(disk);
+    disk = calloc((size_t)disk_sectors, SECTOR);
+    CHECK(disk);
+    CHECK(f_mkfs("0:", &opt, work, sizeof(work)) == FR_OK);
+    CHECK(f_mount(&fs, "0:", 1) == FR_OK);
+    write_file("0:/HEAD.BIN", 8 * MB, 700, 0, &reserved);
+    mid = (unsigned long long)free_clusters() * cluster - 6 * MB;
+    write_file("0:/MID.BIN", mid, 701, 0, &reserved);
+    CHECK(f_open(&f, "0:/HEAD.BIN", FA_READ) == FR_OK);
+    head_start = f.obj.sclust;
+    f_close(&f);
+    CHECK(f_unlink("0:/HEAD.BIN") == FR_OK);
+    before = free_clusters();
+    CHECK((unsigned long long)before * cluster == 14 * MB);
+
+    CHECK(f_open(&f, "0:/GAME.ISO", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK);
+    CHECK(fs_reserve_contiguous(&f, 12 * MB) == 0);
+    CHECK(f_size(&f) == 0 && f.obj.sclust == 0);
+    /* The same with every cluster in front of the 8 MB hole free too, so the free space starts at
+     * the volume's first cluster. Formatters put the root folder or the exFAT bitmap there, so
+     * those are marked free by hand here and put back. The end of the volume and its start are
+     * still not one run. */
+    {
+        DWORD saved[64], lead = head_start - 2;
+        CHECK(lead >= 1 && lead <= 64);
+        for (DWORD c = 0; c < lead; c++) {
+            if (format == FM_EXFAT) CHECK(change_bitmap(&fs, 2 + c, 1, 0) == FR_OK);
+            else CHECK((saved[c] = get_fat(&f.obj, 2 + c)) >= 2 && put_fat(&fs, 2 + c, 0) == FR_OK);
+        }
+        /* The longest real run is now those clusters plus 8 MB. */
+        CHECK(fs_reserve_contiguous(&f, 8 * MB + (unsigned long long)(lead + 1) * cluster) == 0);
+        CHECK(f_size(&f) == 0 && f.obj.sclust == 0);
+        for (DWORD c = 0; c < lead; c++) {
+            if (format == FM_EXFAT) CHECK(change_bitmap(&fs, 2 + c, 1, 1) == FR_OK);
+            else CHECK(put_fat(&fs, 2 + c, saved[c]) == FR_OK);
+        }
+    }
+    /* More clusters than the volume has, and a size whose cluster count does not fit 32 bits. */
+    CHECK(fs_reserve_contiguous(&f, (unsigned long long)megabytes * MB) == 0);
+    CHECK(fs_reserve_contiguous(&f, 0x100000000ULL * cluster + 1 * MB) == 0);
+    CHECK(f_size(&f) == 0 && f.obj.sclust == 0);
+    CHECK(f_close(&f) == FR_OK && f_unlink("0:/GAME.ISO") == FR_OK);
+    CHECK(free_clusters() == before);
+
+    /* Nothing was taken from either end: each still holds a file of exactly its size, in one run,
+     * and the run at the end reaches the last cluster of the volume. */
+    write_file("0:/TAIL.BIN", 6 * MB, 702, 1, &reserved);
+    CHECK(reserved && fragments("0:/TAIL.BIN") == 1);
+    CHECK(f_open(&f, "0:/TAIL.BIN", FA_READ) == FR_OK);
+    CHECK(f.obj.sclust + 6 * MB / cluster == fs.n_fatent);
+    f_close(&f);
+    write_file("0:/HEAD2.BIN", 8 * MB, 703, 1, &reserved);
+    CHECK(reserved && fragments("0:/HEAD2.BIN") == 1);
+    CHECK(free_clusters() == 0);
+    verify_file("0:/MID.BIN", mid, 701);
+    verify_file("0:/TAIL.BIN", 6 * MB, 702);
+    verify_file("0:/HEAD2.BIN", 8 * MB, 703);
+    CHECK(f_mount(NULL, "0:", 0) == FR_OK);
+    printf("%s ends-not-joined ok\n", label);
+}
+
 int main(void)
 {
     scenario("FAT32", FM_FAT32, 112, 1024);
     scenario("exFAT", FM_EXFAT, 112, 4096);
+    wrap_scenario("FAT32", FM_FAT32, 112, 1024);
+    wrap_scenario("exFAT", FM_EXFAT, 112, 4096);
     free(disk);
     return 0;
 }
