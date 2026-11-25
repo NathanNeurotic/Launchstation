@@ -142,8 +142,9 @@ static int storageState(const char *mount)
  * the cached drive mask (paced, non-blocking) every 500 ms until the hotplug
  * baseline is armed. After that, check once each time the Devices list is
  * opened (dashDevicesRequestUsbRecheck), and never on a timer: a stick that
- * mounts late is still listed the next time the list is shown, and an idle
- * dashboard with one stick does no USB I/O. */
+ * mounts late, or one that was pulled out, shows the next time the list is
+ * opened, whatever the number of sticks. A change made while the list stays
+ * open waits for that, and an idle dashboard does no USB I/O. */
 #define DEV_USB_RESCAN_MS 500
 static u64 usb_rescan_next;
 static int usb_rescan_changed;
@@ -243,8 +244,8 @@ void dashDevicesPoll(void)
 		dev_snapshot = now;
 		view_changed = 1;
 	}
-	if ((!dev_hotplug_armed || usb_recheck_requested) && filerUsbDriversLoaded() &&
-	    (filerUsbDriveMask() & 3) != 3 && Timer() >= usb_rescan_next &&
+	if ((usb_recheck_requested || (!dev_hotplug_armed && (filerUsbDriveMask() & 3) != 3)) &&
+	    filerUsbDriversLoaded() && Timer() >= usb_rescan_next &&
 	    !dashWorkerQueued(DASH_JOB_DEVICE)) {
 		usb_recheck_requested = 0;
 		usb_rescan_next = Timer() + DEV_USB_RESCAN_MS;
