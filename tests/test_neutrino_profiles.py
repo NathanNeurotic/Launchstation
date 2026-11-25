@@ -60,6 +60,7 @@ code = r'''
 #define TRUE 1
 #define FALSE 0
 #define NEUTRINO_GAME_ID_SIZE 12
+#define NEUTRINO_PROFILE_MAX_SIZE 2048
 #define MX4SIO 1
 #define MMCE 1
 static int mx4sio_driver_running, mmce_stack, dev_stack=1, fileMode=0777;
@@ -79,7 +80,7 @@ enum { NEUTRINO_COMPAT_COUNT = 5, NEUTRINO_VIDEO_COUNT = 6, NEUTRINO_VIDEO_COMPA
 enum { NEUTRINO_VIDEO_MODE = NEUTRINO_COMPAT_COUNT, NEUTRINO_VIDEO_COMPATIBILITY,
        NEUTRINO_DEBUG_COLORS, NEUTRINO_LOGO, NEUTRINO_RUN, NEUTRINO_CANCEL };
 typedef struct { int unused; } NEUTRINO_OPTION_ARGS;
-static char content[4][512];
+static char content[4][NEUTRINO_PROFILE_MAX_SIZE + 1];
 static int fail_write, truncate_write, allow_wait=1;
 static int read_denied, read_attempts, fail_reads_after, stat_result;
 typedef struct { int unused; } iox_stat_t;
@@ -106,6 +107,7 @@ static char *dashLoadTextFile(const char *path, int max_size, int *len) {
     if (len != NULL) *len=n;
     return buf;
 }
+#define dashLoadWholeTextFile dashLoadTextFile
 static int dashWriteFile(const char *path, const void *data, int size) {
     int k=lookup(path);
     if (k==3) {
@@ -114,7 +116,7 @@ static int dashWriteFile(const char *path, const void *data, int size) {
         if (dev_torn) { size /= 2; memcpy(content[3],data,(size_t)size); content[3][size]=0; return -1; }
     }
     if (fail_write) return -1;
-    assert(size > 0 && size < 512);
+    assert(size > 0 && size <= NEUTRINO_PROFILE_MAX_SIZE);
     if (truncate_write) size /= 2;
     memcpy(content[k],data,(size_t)size);
     content[k][size]=0;
@@ -149,7 +151,9 @@ static void dashModalSetEdit(int (*edit)(int, int, void *), void *arg) { modal_e
 static void dashModalSetEditPopupRows(const unsigned char *rows) { (void)rows; }
 static int dashModalMenu(const char *title, const char *detail, DashMenuItem *items, int count, int selected) {
     (void)title; (void)detail; (void)items; (void)count; (void)selected;
-    if (menu_script == 1) {
+    if (menu_script == 1 || menu_script == 3) {
+        if (menu_script == 3)
+            strcpy(content[3],"#NO_VMC\n$NeutrinoVideo=0\n$End=1\n");
         modal_edit(NEUTRINO_VIDEO_MODE + 1, 1, modal_edit_arg);
         return 0;
     }
@@ -229,6 +233,7 @@ int main(void)
     /* Round trip through the OPL-style file. */
     assert(profileSave(id,&a));
     assert(strstr(content[3],"$Compatibility=") && strstr(content[3],"$VMC_0=My Game"));
+    assert(strstr(content[3],"#NO_VMC") == NULL);
     assert(profileLoad(id,&got) && !memcmp(&got,&a,sizeof(got)));
     assert(profileSave(id,&b));
     assert(profileLoad(id,&got) && !memcmp(&got,&b,sizeof(got)));
@@ -332,21 +337,41 @@ int main(void)
             assert(profileSave(id,&a)==0 && dev_writes==0 && !content[2][0] && !content[3][0]);
         }
     }
-    /* Real Games settings: an unrelated edit preserves both hand-written VMC fields. */
+    /* Game settings keeps the marker, ordinary comments and both hand-written VMC fields. */
     clear_slots();
-    strcpy(content[3],"$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
+    strcpy(content[3],"# note\r\n$Compatibility=0\n$NeutrinoVideo=0\n#NO_VMC\n$VMC_0=First Card\n"
+                      "  # card settings = manual \t\r\n$VMC_1=Second Card\n$End=1\n");
     menu_script=1;
     assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==1);
+    assert(strstr(content[3],"# note\r\n#NO_VMC\n  # card settings = manual \t\r\n$Compatibility=0\n") == content[3]);
     assert(strstr(content[3],"$VMC_0=First Card") && strstr(content[3],"$VMC_1=Second Card"));
     assert(strstr(content[3],"$NeutrinoVideo=1"));
-    /* The launch-options save route preserves the same fields. */
-    clear_slots();
-    strcpy(content[3],"$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
+    /* A second save via launch options preserves the comments exactly once. */
     menu_script=2;
     memset(&got,0,sizeof(got));
     (void)showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso");
     assert(strstr(content[3],"$VMC_0=First Card") && strstr(content[3],"$VMC_1=Second Card"));
-    assert(strstr(content[3],"$NeutrinoVideo=1"));
+    assert(strstr(content[3],"$NeutrinoVideo=2"));
+    assert(strstr(content[3],"# note\r\n#NO_VMC\n  # card settings = manual \t\r\n$Compatibility=0\n") == content[3]);
+    assert(strstr(strstr(content[3],"$Compatibility="),"#NO_VMC") == NULL);
+    assert(strstr(content[3],"$End=1\n")[7] == '\0');
+
+    /* An external editor can add the marker while the settings menu is open. */
+    clear_slots();
+    strcpy(content[3],"$NeutrinoVideo=0\n$End=1\n");
+    menu_script=3;
+    assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==1);
+    assert(strstr(content[3],"#NO_VMC\n") == content[3]);
+    assert(strstr(content[3],"$NeutrinoVideo=1\n"));
+
+    /* A valid input can have too little room for the regenerated keys. Preserve the original. */
+    clear_slots();
+    content[3][0] = '#';
+    memset(content[3] + 1, 'x', NEUTRINO_PROFILE_MAX_SIZE - 9);
+    strcpy(content[3] + NEUTRINO_PROFILE_MAX_SIZE - 8, "\n$End=1\n");
+    assert(profileLoad(id,&got));
+    assert(!profileSave(id,&a) && dev_writes == 0);
+    assert(strlen(content[3]) == NEUTRINO_PROFILE_MAX_SIZE);
     /* An unreadable hand edit is never replaced with defaults by either save route. */
     clear_slots();
     strcpy(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n");
@@ -365,12 +390,13 @@ int main(void)
     read_denied=1; menu_script=1;
     assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==0);
     assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n"));
-    /* A successful validation read supplies the settings used by the editor; a second-read failure cannot erase VMC names. */
+    /* A failed save-time read cannot erase comments or VMC names. */
     clear_slots();
-    strcpy(content[3],"$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
+    strcpy(content[3],"#NO_VMC\n$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
     fail_reads_after=1; menu_script=1;
-    (void)editNeutrinoGameProfile(id,"mass:/DVD/Game.iso");
-    assert(strstr(content[3],"$VMC_0=First Card") && strstr(content[3],"$VMC_1=Second Card"));
+    assert(!editNeutrinoGameProfile(id,"mass:/DVD/Game.iso"));
+    assert(dev_writes == 0 && !strcmp(content[3],"#NO_VMC\n$Compatibility=0\n$NeutrinoVideo=0\n"
+                                              "$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n"));
     /* Existing files with transient stat/read errors stay off-limits to saving. */
     {
         const int errors[]={-EIO,-ENODEV,-ETIMEDOUT,-EBUSY};
