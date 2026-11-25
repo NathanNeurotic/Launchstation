@@ -29,6 +29,8 @@ static int preparePopstarterCandidateLaunch(POPSTARTER_CANDIDATE_LIST *c,char *s
 static void LaunchArgsClear(void){}
 static int LaunchArgsLoadFromBuffer(const char *s,const char *g,int n,char *m,size_t mn){(void)s;(void)m;(void)mn;assert(n==11 && !strcmp(g,"Game folder"));return 1;}
 static int buildEmberGameID(const char *p,char *id,size_t n){assert(stage==0 && setting && strstr(p,"Game"));snprintf(id,n,"SLUS_123.45");ids++;return identity_ok;}
+static int net_ok=1,net_calls;
+static int prepareEmberNetworkIop(const char *e){assert(stage==0 && strstr(e,"ember.elf"));net_calls++;return net_ok;}
 static int CleanUpForEmberExec(void){assert(stage==0);if(!cleanup_ok)return 0;stage=1;setting=NULL;return 1;}
 static int prepareEmberUsbHandoffIop(const char *e,const char *p,char *out,size_t n){(void)e;(void)p;assert(stage==1 && !signals);stage=2;snprintf(out,n,"mass1:/Ember/ember.elf");return remount_ok;}
 static void ExecOSD(int n,void *args){(void)n;(void)args;osd++;}
@@ -48,7 +50,9 @@ int main(void){char msg[200];
  assert(!LaunchEmberGame("usb0:/Ember/games/Game/Game.cue",msg,sizeof(msg)) && !signals && !launches && !osd);
  cleanup_ok=1;stage=ids=signals=launches=0;config.disable_ember=1;
  assert(!LaunchEmberGame("usb0:/Ember/games/Game/Game.cue",msg,sizeof(msg)) && !ids && !signals && !launches);
- config.disable_ember=0;elf_ok=0;
+ config.disable_ember=0;setting=&config;stage=ids=signals=launches=osd=net_calls=0;net_ok=0;
+ assert(!LaunchEmberGame("usb0:/Ember/games/Game/Game.cue",msg,sizeof(msg)) && net_calls==1 && stage==0 && !signals && !launches && !osd);
+ net_ok=1;ids=0;elf_ok=0;
  assert(!LaunchEmberGame("usb0:/Ember/games/Game/Game.cue",msg,sizeof(msg)) && !ids && !signals && !launches);
 }
 '''
