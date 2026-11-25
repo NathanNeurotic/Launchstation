@@ -611,6 +611,7 @@ void mx_sio2_start_tx_dma(uint8_t *buffer)
 static void sd_detect()
 {
     uint16_t results;
+    int lost = 0;
 
     mx_sio2_lock(INTR_NONE);
 
@@ -636,13 +637,18 @@ static void sd_detect()
             if ((sdcard.initialized == 1) && (results != SPISD_RESULT_OK)) {
                 /* recovery failed, disconnect from BDM */
                 M_DEBUG("Recovery failed, disconnecting from bdm.\n");
-                bdm_disconnect_bd(&bd);
                 sdcard.initialized = 0;
+                lost = 1;
             }
         }
     }
 
     mx_sio2_unlock(INTR_NONE);
+
+    /* Disconnect only after the unlock: the unmount takes the filesystem lock, and a file
+     * operation holding that lock may be waiting for the SIO2 lock. */
+    if (lost)
+        bdm_disconnect_bd(&bd);
 }
 
 static void sd_detect_thread(void *arg)
