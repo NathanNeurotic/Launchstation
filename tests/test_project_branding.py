@@ -33,7 +33,9 @@ assert "israpps/wLaunchELF_ISR/issues" not in issue
 
 # Rebranding must never erase the project's direct-base attribution.
 assert "wLaunchELF_R3Z" in readme
-assert "Direct base: wLaunchELF_R3Z" in credits
+# The About sheet is links plus one wall of names (no headings): the base keeps its link and its author.
+assert "github.com/saildot4k/wLaunchELF_R3Z" in credits
+assert "Saildot4K" in credits
 
 # Validate the docs website, current repository path, and tab icon.
 manifest = (root / "docs-site/manifest.json").read_text(encoding="utf-8")
