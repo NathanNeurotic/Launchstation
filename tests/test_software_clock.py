@@ -53,6 +53,7 @@ start = header.rfind("typedef struct", 0, end)
 settings_type = header[start:end]
 c = c.replace("typedef struct { char software_clock[24]; } ClockConfig;", """
 #define DASH_PATH_MAX 256
+#define DASH_CLOCK_ZONE_CONSOLE 0x7FFF
 #define DASH_MAX_SCAN 12
 #define DASH_MAX_RECENT 16
 #define DASH_DEVA_ALL 127

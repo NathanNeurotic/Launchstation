@@ -260,6 +260,7 @@ void dashStoreDefaults(void)
 	dashCfg.home_shortcuts = 1;
 	dashCfg.icon_backing = 0;
 	dashCfg.show_unavailable_devices = 1;
+	dashCfg.clock_zone = DASH_CLOCK_ZONE_CONSOLE;
 	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
 	dashCfg.mmce_backup_keep = 10;
 	dashCfg.mmce_backup_format = 0; /* native .mcd */
@@ -378,6 +379,10 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.rumble = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_TemperatureFahrenheit"))
 		dashCfg.temp_fahrenheit = clampInt(value, 0, 1, 0);
+	else if (!stricmp(key, "Dash_ClockZone"))
+		dashCfg.clock_zone = strictClampInt(value, -720, 840, DASH_CLOCK_ZONE_CONSOLE); /* off the list: used as Console */
+	else if (!stricmp(key, "Dash_ClockSummer"))
+		dashCfg.clock_summer = strictClampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
 		dashCfg.show_unavailable_devices = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_DevAuto"))
@@ -609,6 +614,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_IGRAfter = %d\r\n"
 	                "Dash_IGRAfterPath = %s\r\n"
 	                "Dash_TemperatureFahrenheit = %d\r\n"
+	                "Dash_ClockZone = %d\r\n"
+	                "Dash_ClockSummer = %d\r\n"
 	                "Dash_Vibration = %d\r\n",
 	                c->enabled, c->start_section, c->view, c->effects, c->bg_detail,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
@@ -617,7 +624,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->home_shortcuts, c->icon_backing, c->disabled_tabs & DASH_TAB_MASK, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format, c->mmce_backup_saves,
 	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
-	                c->igr_after, c->igr_after_path, c->temp_fahrenheit, c->rumble);
+	                c->igr_after, c->igr_after_path, c->temp_fahrenheit, c->clock_zone, c->clock_summer, c->rumble);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */

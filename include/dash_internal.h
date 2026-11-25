@@ -575,6 +575,8 @@ enum DashIgrAfter {
 	DASH_IGR_AFTER_COUNT
 };
 
+#define DASH_CLOCK_ZONE_CONSOLE 0x7FFF /* DashSettings.clock_zone: follow the console */
+
 typedef struct
 {
 	int enabled;
@@ -601,6 +603,8 @@ typedef struct
 	int icon_backing;            /* control/quick-action backing shapes */
 	int disabled_tabs;           /* bitmask of disabled DASH_SEC_* tabs */
 	int temp_fahrenheit;         /* 0 = Celsius, 1 = Fahrenheit */
+	int clock_zone;              /* minutes east of UTC, or DASH_CLOCK_ZONE_CONSOLE: the console's own zone and summer time */
+	int clock_summer;            /* 1 adds an hour to a chosen clock_zone */
 	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
