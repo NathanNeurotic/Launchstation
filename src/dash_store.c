@@ -105,7 +105,7 @@ int dashKvParse(char *text, DashKvCallback cb, void *user)
 	return count;
 }
 
-char *dashLoadTextFile(const char *path, int max_size, int *out_len)
+static char *loadTextFile(const char *path, int max_size, int *out_len, int whole)
 {
 	char fixed[MAX_PATH];
 	int fd, size, rd, total;
@@ -138,7 +138,7 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 		total += rd;
 	}
 	genClose(fd);
-	if (total != size) {
+	if (total <= 0 || (whole && total != size)) {
 		free(buf);
 		return NULL;
 	}
@@ -146,6 +146,17 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 	if (out_len != NULL)
 		*out_len = total;
 	return buf;
+}
+
+char *dashLoadTextFile(const char *path, int max_size, int *out_len)
+{
+	return loadTextFile(path, max_size, out_len, 0);
+}
+
+/* NULL unless every byte was read: a read error cannot pass off part of a file as all of it. */
+char *dashLoadWholeTextFile(const char *path, int max_size, int *out_len)
+{
+	return loadTextFile(path, max_size, out_len, 1);
 }
 
 int dashWriteFile(const char *path, const void *data, int size)

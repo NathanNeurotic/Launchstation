@@ -107,6 +107,7 @@ static char *dashLoadTextFile(const char *path, int max_size, int *len) {
     if (len != NULL) *len=n;
     return buf;
 }
+#define dashLoadWholeTextFile dashLoadTextFile
 static int dashWriteFile(const char *path, const void *data, int size) {
     int k=lookup(path);
     if (k==3) {

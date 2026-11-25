@@ -675,6 +675,7 @@ void dashStoreClearRecent(void);
 typedef int (*DashKvCallback)(const char *key, char *value, void *user);
 int dashKvParse(char *text, DashKvCallback cb, void *user);
 char *dashLoadTextFile(const char *path, int max_size, int *out_len);
+char *dashLoadWholeTextFile(const char *path, int max_size, int *out_len);
 int dashWriteFile(const char *path, const void *data, int size);
 void dashStrCopy(char *dst, const char *src, int dst_size);
 char *dashTrim(char *s);

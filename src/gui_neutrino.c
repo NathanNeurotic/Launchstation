@@ -413,7 +413,7 @@ static int profileReadAt(const char *path, NEUTRINO_LAUNCH_OPTIONS *out, char *c
 	char *text;
 	int len, ok;
 
-	text = dashLoadTextFile(path, NEUTRINO_PROFILE_MAX_SIZE, &len);
+	text = dashLoadWholeTextFile(path, NEUTRINO_PROFILE_MAX_SIZE, &len);
 	if (text == NULL) {
 		iox_stat_t stat;
 		return genGetStat(path, &stat) == -ENOENT ? 0 : -1;
