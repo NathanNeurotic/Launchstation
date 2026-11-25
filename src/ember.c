@@ -302,7 +302,8 @@ static int ensureLocalEmber(const char *umbrella, char *ember_elf, size_t ember_
  * ember.elf, and Ember's own SPU buffers and PADMAN come after that. Before a
  * network launch, reboot the IOP with the core stack and reload only this
  * share's driver. The first connection can come before the Ethernet link is
- * up, so try a few times. 1: ready (or no reboot was allowed), 0: share lost.
+ * up (auto-negotiation takes about 3 s), so retry once a second for up
+ * to 8 s. 1: ready (or no reboot was allowed), 0: share lost.
  */
 static int prepareEmberNetworkIop(const char *ember_elf)
 {
@@ -320,10 +321,11 @@ static int prepareEmberNetworkIop(const char *ember_elf)
 	rebootIopAndReloadCoreStackSilent();
 	if (isSmbDriverLoaded(version))
 		return 1; /* the reboot was refused: launch as before */
-	for (tries = 0; tries < 4; tries++) {
+	for (tries = 0; tries < 8; tries++) {
 		if (load_smb(version) && readableFile(ember_elf))
 			return 1;
 		smbSharesForget(); /* lets the next attempt connect at once */
+		DelayThread(1000000);
 	}
 	return 0;
 }
