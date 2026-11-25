@@ -25,7 +25,7 @@ typedef struct
 	char text[128];
 } SheetLine;
 
-#define SHEET_MAX 48
+#define SHEET_MAX 56 /* About has 54 lines; sheetAdd drops any past this */
 
 typedef struct
 {
@@ -174,10 +174,23 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "Eric Price (aka 'E P')");
 	sheetAdd(&s, SL_TEXT, "Ronald Andersson (aka 'dlanor')");
 	sheetAdd(&s, SL_HEAD, "Other contributors");
-	sheetAdd(&s, SL_TEXT, "techwritescode");
+	sheetAdd(&s, SL_TEXT, "techwritescode, oMrRexD");
 	sheetAdd(&s, SL_TEXT, "Polo35, radad, Drakonite, sincro");
 	sheetAdd(&s, SL_TEXT, "kthu, Slam-Tilt, chip, pixel, Hermes, PCM720");
 	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
+	sheetAdd(&s, SL_HEAD, "Code used in this build");
+	sheetAdd(&s, SL_TEXT, "Rick Gaiser - Neutrino SMAP driver");
+	sheetAdd(&s, SL_TEXT, "ps2-mmce mmceman (thanks Wisi, Maximus32)");
+	sheetAdd(&s, SL_TEXT, "jimmikaelkael - smbman and vmcman");
+	sheetAdd(&s, SL_TEXT, "Jesper Svennevid - ps2ftpd");
+	sheetAdd(&s, SL_TEXT, "Tord Lindstrom (pukko), adresd - PS2Link");
+	sheetAdd(&s, SL_TEXT, "Marcus R. Brown - atad; Neovanglist - gsKit");
+	sheetAdd(&s, SL_TEXT, "ChaN - FatFs; Project Nayuki - QR codes");
+	sheetAdd(&s, SL_HEAD, "Companion programs");
+	sheetAdd(&s, SL_TEXT, "krHACKen - POPStarter; Gageformer - Ember");
+	sheetAdd(&s, SL_TEXT, "israpps, Okeanos86 - BDM Assault");
+	sheetAdd(&s, SL_TEXT, "CosmicScale - HDD-OSD Icon Generator");
+	sheetAdd(&s, SL_TEXT, "pcm720 - UDPFSD, OSDMenu; xfwcfw - KELFTool");
 	sheetAdd(&s, SL_HEAD, "Testers");
 	sheetAdd(&s, SL_TEXT, "zackcage6, Fifthfox");
 	sheetAdd(&s, SL_HEAD, "Releases");
@@ -187,6 +200,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_MUTED, "Ancestral project: LaunchELF v3.41 by Mirakichi");
 	sheetAdd(&s, SL_MUTED, "Dashboard text: Roboto (Apache License 2.0)");
 	sheetAdd(&s, SL_MUTED, "Emotion Engine Regular/Bold: Pixel Sagas");
+	sheetAdd(&s, SL_MUTED, "Icons: Material Design Icons (Pictogrammers)");
 	{
 		char title[64];
 		snprintf(title, sizeof(title), "Official Launchstation %s", ULE_VERSION);
