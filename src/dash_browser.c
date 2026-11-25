@@ -481,6 +481,8 @@ static void listMisc(void)
 	}
 }
 
+static int fb_root_refresh; /* set while dashBrowserRefreshRoot rebuilds the root */
+
 static void openDir(const char *dir, const char *select)
 {
 	FbListJob *j;
@@ -509,8 +511,9 @@ static void openDir(const char *dir, const char *select)
 	}
 
 	/* Showing the Devices list: check USB once, so a stick that mounted since
-	 * the last look joins it. A rebuild after that check finds nothing new. */
-	if (dir[0] == '\0')
+	 * the last look joins it. A rebuild in place (dashBrowserRefreshRoot, which
+	 * the check itself calls on a change) does not ask again. */
+	if (dir[0] == '\0' && !fb_root_refresh)
 		dashDevicesRequestUsbRecheck();
 
 	fb.gen++;
@@ -3802,7 +3805,9 @@ void dashBrowserRefreshRoot(void)
 	keep[0] = '\0';
 	if (fb.sel < fb.ndevs)
 		dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
+	fb_root_refresh = 1;
 	openDir("", keep[0] ? keep : NULL);
+	fb_root_refresh = 0;
 }
 
 void dashFileBrowserTabClose(void)

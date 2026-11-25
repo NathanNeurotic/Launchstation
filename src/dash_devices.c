@@ -247,9 +247,9 @@ void dashDevicesPoll(void)
 	if ((usb_recheck_requested || (!dev_hotplug_armed && (filerUsbDriveMask() & 3) != 3)) &&
 	    filerUsbDriversLoaded() && Timer() >= usb_rescan_next &&
 	    !dashWorkerQueued(DASH_JOB_DEVICE)) {
-		usb_recheck_requested = 0;
 		usb_rescan_next = Timer() + DEV_USB_RESCAN_MS;
-		dashWorkerSubmit("usb rescan", DASH_JOB_DEVICE, usbMaskRescanJob, usbMaskRescanDone, NULL);
+		if (dashWorkerSubmit("usb rescan", DASH_JOB_DEVICE, usbMaskRescanJob, usbMaskRescanDone, NULL) > 0)
+			usb_recheck_requested = 0; /* a full queue keeps the request for the next try */
 	}
 	if (view_changed)
 		dashAppsRebuildView();

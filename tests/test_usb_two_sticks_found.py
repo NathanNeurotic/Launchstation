@@ -41,7 +41,7 @@ if 'SifExecModuleBuffer(module, size, 0, NULL, &ret);' not in init:
 
 dash = (root / 'src/dash_devices.c').read_text(encoding='utf-8')
 m = re.search(r'if \((\(usb_recheck_requested \|\| \(!dev_hotplug_armed && \(filerUsbDriveMask\(\) & 3\) != 3\)\)[^{]*?)\)\s*\{\s*'
-              r'usb_recheck_requested = 0;\s*usb_rescan_next = Timer\(\) \+ DEV_USB_RESCAN_MS;', dash, re.S)
+              r'usb_rescan_next = Timer\(\) \+ DEV_USB_RESCAN_MS;\s*if \(dashWorkerSubmit\([^;]*\) > 0\)\s*usb_recheck_requested = 0;', dash, re.S)
 if not m:
     fail('after hotplug is armed the USB rescan must run only on a Devices-list request, and consume it')
 if 'ARMED_MS' in dash:
@@ -49,7 +49,7 @@ if 'ARMED_MS' in dash:
 
 browser = (root / 'src/dash_browser.c').read_text(encoding='utf-8')
 if not re.search(r"static void openDir\(const char \*dir, const char \*select\)\n\{.*?"
-                 r"if \(dir\[0\] == '\\0'\)\s*dashDevicesRequestUsbRecheck\(\);", browser, re.S):
+                 r"if \(dir\[0\] == '\\0' && !fb_root_refresh\)\s*dashDevicesRequestUsbRecheck\(\);", browser, re.S):
     fail('opening the Devices list (openDir("")) must request one USB re-check')
 
 print('OK: USBD scans both root ports at load; the Devices list re-checks USB when it is opened')
