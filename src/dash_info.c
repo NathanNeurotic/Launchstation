@@ -25,7 +25,7 @@ typedef struct
 	char text[128];
 } SheetLine;
 
-#define SHEET_MAX 56 /* About has 54 lines; sheetAdd drops any past this */
+#define SHEET_MAX 48
 
 typedef struct
 {
@@ -149,58 +149,28 @@ void dashShowAbout(void)
 	s.n = 0;
 	sheetAdd(&s, SL_MUTED, "commit %s", GIT_HASH);
 	sheetAdd(&s, SL_GAP, NULL);
-	sheetAdd(&s, SL_HEAD, "This build");
-	sheetAdd(&s, SL_TEXT, "Maintained by NathanNeurotic / Ripto");
-	sheetAdd(&s, SL_HEAD, "Direct base: wLaunchELF_R3Z");
-	sheetAdd(&s, SL_TEXT, "R3Z3N / Saildot4K");
-	sheetAdd(&s, SL_TEXT, "github.com/saildot4k/wLaunchELF_R3Z");
-	sheetAdd(&s, SL_HEAD, "Fork creator");
-	sheetAdd(&s, SL_TEXT, "johnson-cooper");
-	sheetAdd(&s, SL_TEXT, "github.com/johnson-cooper");
-	sheetAdd(&s, SL_TEXT, "Created this fork and handed it to Ripto");
-	sheetAdd(&s, SL_TEXT, "to maintain and continue improving");
-	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
-	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
-	sheetAdd(&s, SL_HEAD, "SMB and NFS network shares");
-	sheetAdd(&s, SL_TEXT, "Ronnie Sahlberg - usmb2 (smb:), unfs4 (nfs:)");
-	sheetAdd(&s, SL_TEXT, "and libsmb2 (SMB server for memory cards)");
-	sheetAdd(&s, SL_TEXT, "github.com/sahlberg");
-	sheetAdd(&s, SL_HEAD, "PC CARD CompactFlash reference");
-	sheetAdd(&s, SL_TEXT, "mihhru - PS2CF");
-	sheetAdd(&s, SL_TEXT, "github.com/mihhru/PS2CF");
-	sheetAdd(&s, SL_HEAD, "wLaunchELF");
-	sheetAdd(&s, SL_TEXT, "Project maintainers: sp193 & AKuHAK");
-	sheetAdd(&s, SL_HEAD, "uLaunchELF");
-	sheetAdd(&s, SL_TEXT, "Eric Price (aka 'E P')");
-	sheetAdd(&s, SL_TEXT, "Ronald Andersson (aka 'dlanor')");
-	sheetAdd(&s, SL_HEAD, "Other contributors");
-	sheetAdd(&s, SL_TEXT, "techwritescode, oMrRexD");
-	sheetAdd(&s, SL_TEXT, "Polo35, radad, Drakonite, sincro");
-	sheetAdd(&s, SL_TEXT, "kthu, Slam-Tilt, chip, pixel, Hermes, PCM720");
-	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
-	sheetAdd(&s, SL_HEAD, "Code used in this build");
-	sheetAdd(&s, SL_TEXT, "Rick Gaiser - Neutrino SMAP driver");
-	sheetAdd(&s, SL_TEXT, "ps2-mmce mmceman (thanks Wisi, Maximus32)");
-	sheetAdd(&s, SL_TEXT, "jimmikaelkael - smbman and vmcman");
-	sheetAdd(&s, SL_TEXT, "Jesper Svennevid - ps2ftpd");
-	sheetAdd(&s, SL_TEXT, "Tord Lindstrom (pukko), adresd - PS2Link");
-	sheetAdd(&s, SL_TEXT, "Marcus R. Brown - atad; Neovanglist - gsKit");
-	sheetAdd(&s, SL_TEXT, "ChaN - FatFs; Project Nayuki - QR codes");
-	sheetAdd(&s, SL_HEAD, "Companion programs");
-	sheetAdd(&s, SL_TEXT, "krHACKen - POPStarter; Gageformer - Ember");
-	sheetAdd(&s, SL_TEXT, "israpps, Okeanos86 - BDM Assault");
-	sheetAdd(&s, SL_TEXT, "CosmicScale - HDD-OSD Icon Generator");
-	sheetAdd(&s, SL_TEXT, "pcm720 - UDPFSD, OSDMenu; xfwcfw - KELFTool");
-	sheetAdd(&s, SL_HEAD, "Testers");
-	sheetAdd(&s, SL_TEXT, "zackcage6, Fifthfox");
-	sheetAdd(&s, SL_HEAD, "Releases");
-	sheetAdd(&s, SL_TEXT, "github.com/ps2homebrew/wLaunchELF/releases");
+	/* links first, then one wall of names (no headings); docs/THIRD_PARTY_CREDITS.md says who did what */
 	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/Launchstation/releases");
+	sheetAdd(&s, SL_TEXT, "github.com/ps2homebrew/wLaunchELF/releases");
+	sheetAdd(&s, SL_TEXT, "github.com/saildot4k/wLaunchELF_R3Z");
+	sheetAdd(&s, SL_TEXT, "github.com/johnson-cooper");
+	sheetAdd(&s, SL_TEXT, "github.com/sahlberg");
+	sheetAdd(&s, SL_TEXT, "github.com/mihhru/PS2CF");
 	sheetAdd(&s, SL_GAP, NULL);
-	sheetAdd(&s, SL_MUTED, "Ancestral project: LaunchELF v3.41 by Mirakichi");
+	sheetAdd(&s, SL_TEXT, "NathanNeurotic, adresd, AKuHAK, Alex Parrado");
+	sheetAdd(&s, SL_TEXT, "ChaN, chip, dlanor, Drakonite, Eric Price");
+	sheetAdd(&s, SL_TEXT, "Fifthfox, Gageformer, Hermes, israpps");
+	sheetAdd(&s, SL_TEXT, "Jesper Svennevid, jimmikaelkael");
+	sheetAdd(&s, SL_TEXT, "johnson-cooper, krHACKen, kthu");
+	sheetAdd(&s, SL_TEXT, "Marcus R. Brown, mihhru, Mirakichi, Nayuki");
+	sheetAdd(&s, SL_TEXT, "Neovanglist, Okeanos86, oMrRexD, PCM720");
+	sheetAdd(&s, SL_TEXT, "pixel, Polo35, radad, Rick Gaiser");
+	sheetAdd(&s, SL_TEXT, "Ronnie Sahlberg, Saildot4K, sincro, Slam-Tilt");
+	sheetAdd(&s, SL_TEXT, "sp193, techwritescode, TnA, Tord Lindstrom");
+	sheetAdd(&s, SL_TEXT, "Wisi, zackcage6");
+	sheetAdd(&s, SL_GAP, NULL);
 	sheetAdd(&s, SL_MUTED, "Dashboard text: Roboto (Apache License 2.0)");
 	sheetAdd(&s, SL_MUTED, "Emotion Engine Regular/Bold: Pixel Sagas");
-	sheetAdd(&s, SL_MUTED, "Icons: Material Design Icons (Pictogrammers)");
 	{
 		char title[64];
 		snprintf(title, sizeof(title), "Official Launchstation %s", ULE_VERSION);
