@@ -508,6 +508,11 @@ static void openDir(const char *dir, const char *select)
 		dir = usb_dir;
 	}
 
+	/* Showing the Devices list: check USB once, so a stick that mounted since
+	 * the last look joins it. A rebuild after that check finds nothing new. */
+	if (dir[0] == '\0')
+		dashDevicesRequestUsbRecheck();
+
 	fb.gen++;
 	fb.n = 0;
 	fb.nmarked = 0;

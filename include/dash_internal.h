@@ -816,6 +816,7 @@ void dashDevicesInit(void);
 void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
+void dashDevicesRequestUsbRecheck(void); /* one USB re-check when the Devices list opens */
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
 void dashDevicesRefreshMemoryCards(DashDevice *devs, int count); /* cached poll, no I/O */

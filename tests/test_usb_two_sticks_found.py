@@ -5,9 +5,10 @@ Checks the two changes this depends on:
      both root ports and runs the root-hub change handler once under the driver lock, and
      writes no PORT_RESET of its own (the attach path resets one port at a time). Same
      change as RiptOPL PR 529.
-  2. src/dash_devices.c: the paced USB mask rescan keeps running after the hotplug baseline
-     is armed while fewer than two units are mounted, so a second stick that mounts late
-     still joins the Devices list.
+  2. src/dash_devices.c: once the hotplug baseline is armed, the USB mask is re-checked
+     only when the Devices list is opened (openDir("") requests it), never on a timer, and
+     only while fewer than two units are mounted. A second stick that mounts late still
+     joins the list the next time it is shown, and an idle dashboard does no USB I/O.
 Every place Launchstation starts USBD passes no options.
 """
 from pathlib import Path
@@ -39,13 +40,18 @@ if 'SifExecModuleBuffer(module, size, 0, NULL, &ret);' not in init:
     fail('emberStartIrx no longer loads modules without options')
 
 dash = (root / 'src/dash_devices.c').read_text(encoding='utf-8')
-m = re.search(r'if \((filerUsbDriversLoaded\(\)[^{]*?)\)\s*\{\s*usb_rescan_next = Timer\(\) \+ \(dev_hotplug_armed \? '
-              r'DEV_USB_RESCAN_ARMED_MS : DEV_USB_RESCAN_MS\);', dash, re.S)
+m = re.search(r'if \((\(!dev_hotplug_armed \|\| usb_recheck_requested\)[^{]*?)\)\s*\{\s*'
+              r'usb_recheck_requested = 0;\s*usb_rescan_next = Timer\(\) \+ DEV_USB_RESCAN_MS;', dash, re.S)
 if not m:
-    fail('the USB rescan is not paced by DEV_USB_RESCAN_ARMED_MS once hotplug is armed')
-if 'dev_hotplug_armed' in m.group(1):
-    fail('the USB rescan still stops once hotplug is armed: a late second stick is never listed')
+    fail('after hotplug is armed the USB rescan must run only on a Devices-list request, and consume it')
 if '(filerUsbDriveMask() & 3) != 3' not in m.group(1):
     fail('the USB rescan must stop once both units are mounted')
+if 'ARMED_MS' in dash:
+    fail('no timed USB re-check may run once hotplug is armed')
 
-print('OK: USBD scans both root ports at load; the Devices list keeps looking for a second stick')
+browser = (root / 'src/dash_browser.c').read_text(encoding='utf-8')
+if not re.search(r"static void openDir\(const char \*dir, const char \*select\)\n\{.*?"
+                 r"if \(dir\[0\] == '\\0'\)\s*dashDevicesRequestUsbRecheck\(\);", browser, re.S):
+    fail('opening the Devices list (openDir("")) must request one USB re-check')
+
+print('OK: USBD scans both root ports at load; the Devices list re-checks USB when it is opened')

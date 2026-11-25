@@ -139,14 +139,20 @@ static int storageState(const char *mount)
 
 /* A second USB stick can enumerate after the boot probe's short acceptance
  * window. While fewer than two USB units are mounted, let the worker refresh
- * the cached drive mask (paced, non-blocking): every 500 ms while the hotplug
- * baseline is still settling, then every 2 s. Before, the rescan stopped once
- * hotplug was armed, and a second stick that mounted later than that was never
- * listed: the Devices row for usb0 opens usb0 directly and never rescans. */
+ * the cached drive mask (paced, non-blocking) every 500 ms until the hotplug
+ * baseline is armed. After that, check once each time the Devices list is
+ * opened (dashDevicesRequestUsbRecheck), and never on a timer: a stick that
+ * mounts late is still listed the next time the list is shown, and an idle
+ * dashboard with one stick does no USB I/O. */
 #define DEV_USB_RESCAN_MS 500
-#define DEV_USB_RESCAN_ARMED_MS 2000
 static u64 usb_rescan_next;
 static int usb_rescan_changed;
+static int usb_recheck_requested;
+
+void dashDevicesRequestUsbRecheck(void)
+{
+	usb_recheck_requested = 1;
+}
 
 static void usbMaskRescanJob(void *arg)
 {
@@ -237,9 +243,11 @@ void dashDevicesPoll(void)
 		dev_snapshot = now;
 		view_changed = 1;
 	}
-	if (filerUsbDriversLoaded() && (filerUsbDriveMask() & 3) != 3 &&
-	    Timer() >= usb_rescan_next && !dashWorkerQueued(DASH_JOB_DEVICE)) {
-		usb_rescan_next = Timer() + (dev_hotplug_armed ? DEV_USB_RESCAN_ARMED_MS : DEV_USB_RESCAN_MS);
+	if ((!dev_hotplug_armed || usb_recheck_requested) && filerUsbDriversLoaded() &&
+	    (filerUsbDriveMask() & 3) != 3 && Timer() >= usb_rescan_next &&
+	    !dashWorkerQueued(DASH_JOB_DEVICE)) {
+		usb_recheck_requested = 0;
+		usb_rescan_next = Timer() + DEV_USB_RESCAN_MS;
 		dashWorkerSubmit("usb rescan", DASH_JOB_DEVICE, usbMaskRescanJob, usbMaskRescanDone, NULL);
 	}
 	if (view_changed)
