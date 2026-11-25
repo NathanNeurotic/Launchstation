@@ -5,10 +5,10 @@ import tempfile
 
 root=Path(__file__).resolve().parents[1]
 s=(root/'src/dash_hdd_install.c').read_text()
-def function(signature):
- a=s.index(signature);b=s.index('{',a)+1;depth=1
- while depth: depth+=(s[b]=='{')-(s[b]=='}');b+=1
- return s[a:b]+'\n'
+def function(signature,source=s):
+ a=source.index(signature);b=source.index('{',a)+1;depth=1
+ while depth: depth+=(source[b]=='{')-(source[b]=='}');b+=1
+ return source[a:b]+'\n'
 code=r'''
 #include <assert.h>
 #include <stdio.h>
@@ -102,5 +102,64 @@ int main(void){
 '''
 with tempfile.TemporaryDirectory(prefix='hdd-log-view-') as directory:
  d=Path(directory);(d/'check.c').write_text(code)
+ subprocess.run(['gcc','-std=c99','-Wall','-Wextra','-Werror','-I',str(root/'include'),str(d/'check.c'),'-o',str(d/'check')],check=True)
+ subprocess.run([str(d/'check')],check=True,timeout=10)
+
+# Exercise the actual finalization path after an IOP reset. The ATA filesystem
+# must be restored before the log-saving job runs; no network is required.
+finish = r'''
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "hdd_install.h"
+#define EXFAT
+#define DASH_IN_OK 1
+#define DASH_IN_BACK 2
+typedef struct {unsigned pressed;} DashInput;
+typedef void (*DashLoadingView)(const char *);
+static DashLoadingView debug_previous_view;
+static int debug_open=1,debug_review,debug_result,debug_top;
+static int drivers,saves,fail_driver,phase,stopped;
+static char last_line[256],saved_line[256];
+static int loadHddModules(void){drivers=1;return 1;}
+static int loadAtaModules(void){assert(drivers==1);drivers=2;return !fail_driver;}
+void hddInstallLog(const char *fmt,...){va_list args;va_start(args,fmt);vsnprintf(last_line,sizeof(last_line),fmt,args);va_end(args);}
+void hddInstallProgress(const char *s,int done,int total){assert(s&&!done&&!total);}
+int hddInstallMountStage(HddInstall*in){assert(drivers==(in->jail?2:1));return 0;}
+int hddInstallUnmountStage(HddInstall*in){assert(in);return 0;}
+void hddInstallLogFlush(HddInstall*in){assert(in&&drivers==2);strcpy(saved_line,last_line);saves++;}
+static int dashWorkerSubmit(const char*s,int flags,void(*fn)(void*),void(*done)(void*),void*arg){assert(s&&!flags&&!done&&drivers==2);fn(arg);return 1;}
+int dashHddInstallAwait(int id,const char*s){assert(id==1&&s);return 1;}
+void hddInstallPhase(unsigned p){assert(p==HDD_INSTALL_PHASE_COMPLETE);phase++;}
+void hddInstallLogStop(void){stopped++;}
+static void dashLoadingEnd(void){}
+static void dashInputFlush(void){}
+static void dashInputPoll(DashInput*in){in->pressed=DASH_IN_OK;}
+static void debugInput(DashInput*in){assert(in);}
+static void dashVisualUpdate(void){}
+static void debugDraw(const char*s){assert(s);}
+static void dashLoadingSetView(DashLoadingView view){assert(view==debug_previous_view);}
+'''
+log_source=(root/'src/hdd_install_log.c').read_text()
+finish+=function('void hddInstallLogResult(',log_source)
+finish+=function('static void debugSave(')+function('void dashHddInstallDebugEnd(')
+finish+=r'''
+static void reset(void){debug_open=1;drivers=saves=phase=stopped=fail_driver=0;last_line[0]=saved_line[0]=0;}
+int main(void){
+ HddInstall in={0};in.owned=in.stage_ready=in.jail=1;
+ reset();dashHddInstallDebugEnd(&in,0);assert(drivers==2&&saves==1&&phase==1&&stopped==1&&!debug_open);
+ assert(!strcmp(saved_line,HDD_INSTALL_LOG_COMPLETE));
+ reset();strcpy(in.error,"test failure");dashHddInstallDebugEnd(&in,-EIO);
+ assert(saves==1&&!phase&&!strcmp(saved_line,"Installation incomplete."));
+ reset();fail_driver=1;dashHddInstallDebugEnd(&in,0);assert(!saves&&!strcmp(last_line,HDD_INSTALL_LOG_COMPLETE));
+ reset();dashHddInstallDebugEnd(&in,-502);assert(!drivers&&!saves&&!strcmp(last_line,"Installation incomplete."));
+ reset();in.owned=0;dashHddInstallDebugEnd(&in,-ECANCELED);assert(!drivers&&!saves&&!strcmp(last_line,"Installation cancelled."));
+ puts("PASS: final success/failure/cancel log lines and ATA/HDD restoration before final log save after IOP reset");
+}
+'''
+with tempfile.TemporaryDirectory(prefix='hdd-log-finish-') as directory:
+ d=Path(directory);(d/'check.c').write_text(finish)
  subprocess.run(['gcc','-std=c99','-Wall','-Wextra','-Werror','-I',str(root/'include'),str(d/'check.c'),'-o',str(d/'check')],check=True)
  subprocess.run([str(d/'check')],check=True,timeout=10)

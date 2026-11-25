@@ -76,6 +76,13 @@ void hddInstallLog(const char *s,...){assert(s);}
 code += (root / 'src/hdd_install_resume.c').read_text()
 code += (root / 'src/hdd_install_resume_ps2.c').read_text().replace('#include "launchelf.h"', '')
 code += r'''
+static int available(int jail){
+ HddInstall probe={0};
+ mounted=!jail;
+ int result=hddInstallResumeAvailable(&probe,jail?"ata0:":"pfs2:",jail);
+ mounted=0;hddInstallRelease(&probe);
+ return result;
+}
 static void original(HddInstall *in,int jail){
  memset(in,0,sizeof(*in));in->flags=3;in->jail=jail;in->owned=in->stage_ready=1;
  strcpy(in->stage,jail?"ata0:/PSBBN_DP_TEMP_1":"pfs2:/PSBBN_DP_TEMP");
@@ -92,6 +99,7 @@ int main(int argc,char **argv){
   in.downloaded_assets|=1<<HI_HOSD;fail_after=31;written=0;
   assert(hddInstallResumeSave(&in)==-EIO); /* torn seq 3 cannot replace seq 2 */
   fail_after=-1;hddInstallResumeEnd();mounted=0;
+  assert(available(jail)==1); /* valid owned checkpoint without a log */
   assert(!hddInstallResumeLoad(&loaded,&plan,&sequence)&&sequence==2&&loaded.resumed&&!loaded.recovery_attempts);
   assert(!strcmp(in.stage,loaded.stage));
   assert(loaded.downloaded_assets==(1u<<HI_MBR)&&!memcmp(&plan,&actual,sizeof(plan))&&!loaded.ca_data);
@@ -111,7 +119,12 @@ int main(int argc,char **argv){
    strcpy(pfs_path,"hdd0:PP.LAUNCHER");assert(!verifyDisk(&loaded,&plan));
    hddInstallRelease(&loaded);memset(&loaded,0,sizeof(loaded));
   }
+  in.committed=in.applied=in.manifest_ready=1;memset(in.commit,'a',40);
+  mounted=!jail;hddInstallResumeBegin(&in,&actual,sequence);
+  assert(!hddInstallResumeSave(&in));hddInstallResumeEnd();mounted=0;
+  assert(available(jail)==1); /* a committed checkpoint still needs cleanup */
   mounted=!jail;assert(!hddInstallResumeRemove(&in));mounted=0;
+  assert(!available(jail));
   assert(hddInstallResumeLoad(&loaded,&plan,&sequence)==-ENOENT);hddInstallRelease(&loaded);
  }
  HddInstall in={0},out={0};HddFormatPlan p;unsigned seq;
@@ -136,7 +149,7 @@ int main(int argc,char **argv){
   strcpy(in.launcher_files[0].path,bad[i]);assert(hddInstallResumeEncode(&in,&actual,1,buffer,sizeof(buffer))<0);
  }
  hddInstallRelease(&in);
- puts("PASS: little-endian bounded journals, CRC/truncation rejection, torn-write fallback, durable close/flush checkpoints, restart reload, drive/owner/serial checks and restricted runtime paths");
+ puts("PASS: durable checkpoints, log-independent Resume visibility, numbered staging, committed cleanup, ownership and restricted runtime paths");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='hdd-installer-resume-') as directory:

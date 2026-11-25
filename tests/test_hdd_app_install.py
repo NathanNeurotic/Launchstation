@@ -42,6 +42,7 @@ code = r'''
 #define MAX_PATH 1025
 #define MAX_RECURSE 16
 #define APP_MAX_ASSET (512*1024)
+#define APP_TEMP "ata0:/LAUNCHSTATION_APP_TEMP"
 #define MOUNT_LIMIT 4
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_O_WRONLY O_WRONLY
@@ -128,7 +129,7 @@ for signature in ("static int join(", "static int flush(", "static int finish(",
                   "static int releasePfs(", "static int identity(", "static int checkOwner(", "static int writeOwner(",
                   "static void pendingName(", "static int readJournal(", "static int checkpoint(", "static int mountPartition(",
                   "static int unmountPartition(", "static int partitionOwner(",
-                  "static int validateTarget(",
+                  "static int existingPartition(", "static int validateTarget(", "static int stageRestartable(",
                   "static int apiCommit(", "static void progress(", "static int download(", "static int assets(", "static int copyFile(",
                   "static int copyTree(", "static int removeTree(", "static int renameAbsent(",
                   "static int pendingPartition(", "static int installHeader(", "static int stageAppFiles(", "static void apply("):
@@ -142,13 +143,14 @@ static void setup(AppInstall *in,int update){
     strcpy(in->stage,"ata0:/stage");strcpy(in->target,"ata0:/APPS/APP_TEST");strcpy(in->pending,"+LSAPP.12345678");strcpy(in->settings,"PS2X\ntitle0=Test app\n");
     static SaveArchiveEntry entry;memset(&entry,0,sizeof(entry));strcpy(entry.name,"BOOT.ELF");entry.data=payload;entry.size=sizeof(payload);entry.mode=0x8497;
     in->save.files=&entry;in->save.count=1;in->app.elf[0]=0;in->app.elf_count=1;
-    in->package_size=4096;in->crc=0x12345678;in->journal.package_crc=in->crc;in->journal.package_size=in->package_size;in->journal.update=update;strcpy(in->journal.boot,"BOOT.ELF");
+    in->package_size=4096;in->crc=0x12345678;in->journal.package_crc=in->crc;in->journal.package_size=in->package_size;in->journal.update=!!update;strcpy(in->journal.boot,"BOOT.ELF");
     rawFile("ata0:/stage/JACKET.PNG","PNG",3);rawFile("ata0:/stage/LIST.ICO","LIST",4);rawFile("ata0:/stage/DELETE.ICO","DELETE",6);
     if(update){
         assert(!mkdir(in->target,0700));unsigned current=in->crc;in->crc=0x87654321;assert(!writeOwner(in,in->target,1));in->crc=current;
         rawFile("ata0:/APPS/APP_TEST/BOOT.ELF","old app",7);rawFile("ata0:/APPS/APP_TEST/USER.CFG","keep",4);
         assert(!mkdir("ata0:/APPS/APP_TEST/config",0700));rawFile("ata0:/APPS/APP_TEST/config/extra.cfg","keep2",5);
         assert(!mkdir("part/PP.APP_TEST",0700));assert(!mkdir("part/PP.APP_TEST/res",0700));assert(!writeOwner(in,"part/PP.APP_TEST/res",0));
+        if(update==7){assert(!rename("part/PP.APP_TEST","part/PP.APP_TEST.HIDDEN"));assert(!validateTarget(in)&&!strcmp(in->installed_partition,"PP.APP_TEST.HIDDEN"));}
     }
     assert(!checkpoint(in,HA_STAGED));operation=0;create_count=format_count=header_count=0;
 }
@@ -158,11 +160,24 @@ static void verify(AppInstall*in,int update){
     assert(!readFile("ata0:/APPS/APP_TEST/BOOT.ELF",&data,&n,100)&&n==sizeof(payload)&&!memcmp(data,payload,n));free(data);
     if(update){assert(access("ata0:/APPS/APP_TEST/USER.CFG",F_OK)==0&&access("ata0:/APPS/APP_TEST/config/extra.cfg",F_OK)==0);assert(!create_count&&!format_count);}
     else assert(create_count==1&&format_count>=1);
-    assert(!access("part/PP.APP_TEST/res/LSAPP.ID",F_OK)&&access("part/+LSAPP.12345678",F_OK)<0);
+    assert(!access(update==7?"part/PP.APP_TEST.HIDDEN/res/LSAPP.ID":"part/PP.APP_TEST/res/LSAPP.ID",F_OK)&&access("part/+LSAPP.12345678",F_OK)<0);
     assert(header_count>=1);
 }
 int main(int argc,char**argv){
     assert(argc==3);int update=atoi(argv[1]),crash=atoi(argv[2]);
+
+    if(update==8){
+        AppInstall *in=calloc(1,sizeof(*in));setup(in,0);
+        rawFile("ata0:/stage/PACKAGE.NEW.PSU","partial",7);
+        assert(!stageRestartable(in->stage));
+        assert(!mkdir("ata0:/stage/NEW",0700));
+        assert(stageRestartable(in->stage)==-EEXIST);
+        assert(!rmdir("ata0:/stage/NEW"));
+        rawFile("ata0:/stage/UNRELATED","keep",4);
+        assert(stageRestartable(in->stage)==-EEXIST);
+        assert(!access("ata0:/stage/UNRELATED",F_OK));
+        free(in);return 0;
+    }
     if(update==4){
         AppInstall*in=calloc(1,sizeof(*in));setup(in,0);
         static unsigned char package[4096];memset(package,0x55,sizeof(package));in->package=package;
@@ -212,10 +227,13 @@ int main(int argc,char**argv){
     }
     if(update==2){
         AppInstall*in=calloc(1,sizeof(*in));setup(in,0);asset_case=crash;
+        if(asset_case==6)assert(!mkdir("ata0:/stage/DP-TEMPLATE.TXT",0700));
         int ret=assets(in);
         if(asset_case==2||asset_case==3)assert(ret<0&&downloads==2&&metadata_requests==1);
         else if(asset_case==4)assert(ret<0&&downloads==1);
         else if(asset_case==5)assert(ret<0&&downloads==4);
+        else if(asset_case==6)assert(ret==-EISDIR&&!downloads&&metadata_requests==1&&
+                                     !strcmp(in->location,"ata0:/stage/DP-TEMPLATE.TXT"));
         else {assert(ret==0&&!strncmp(in->settings,"PS2X\n",5));assert(downloads==(asset_case==1?9u:4u));assert(metadata_requests==(asset_case==1?2u:1u));}
         assert(!create_count&&!format_count&&!header_count);free(in);return 0;
     }
@@ -238,18 +256,19 @@ with tempfile.TemporaryDirectory(prefix="hdd-app-install-") as tmp:
     tmp = Path(tmp)
     (tmp / "test.c").write_text(code)
     subprocess.run(["gcc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-I", str(root / "include"),
-                    str(root / "src/hdd_app.c"), str(tmp / "test.c"), "-lz", "-o", str(tmp / "test")], check=True)
-    for case in range(6):
+                    str(root / "src/hdd_app.c"), str(root / "src/save_archive.c"), str(root / "src/save_lzari.c"),
+                    str(root / "src/save_sign.c"), str(tmp / "test.c"), "-lz", "-o", str(tmp / "test")], check=True)
+    for case in range(7):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             subprocess.run([str(tmp / "test"), "2", str(case)], cwd=work, check=True)
-    for case in range(3, 7):
+    for case in (3, 4, 5, 6, 8):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             subprocess.run([str(tmp / "test"), str(case), "0"], cwd=work, check=True)
-    for update in (0, 1):
+    for update in (0, 1, 7):
         with tempfile.TemporaryDirectory(dir=tmp) as work:
             output = subprocess.check_output([str(tmp / "test"), str(update), "0"], cwd=work, text=True)
         operations = int(re.search(r"operations=(\d+)", output)[1])
         for crash in range(1, operations + 1):
             with tempfile.TemporaryDirectory(dir=tmp) as work:
                 subprocess.run([str(tmp / "test"), str(update), str(crash)], cwd=work, check=True, stdout=subprocess.DEVNULL)
-    print("PASS: app assets, atomic cache verification, pending ownership, refreshed user files and safe publication replay")
+    print("PASS: app assets, cache verification, protected staging, pending ownership, hidden launcher updates and interruption replay")

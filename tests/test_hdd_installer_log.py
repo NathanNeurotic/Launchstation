@@ -75,6 +75,10 @@ int main(int argc,char**argv){
  hddInstallLogStop();hddInstallPhase(HDD_INSTALL_PHASE_COMPLETE);hddInstallLogSnapshot(&snapshot);assert(snapshot.overall==999); /* failed/stopped session */
  hddInstallLogStart();hddInstallPhase(HDD_INSTALL_PHASE_COMPLETE);hddInstallLogSnapshot(&snapshot);
  assert(snapshot.overall==1000&&!strcmp(snapshot.phase,"Complete")&&snapshot.done==snapshot.total);
+ hddInstallLogResult(-EIO);hddInstallLogSnapshot(&snapshot);assert(hddInstallLogRead(snapshot.next-1,line)&&strstr(line,"Installation incomplete."));
+ hddInstallLogResult(-ECANCELED);hddInstallLogSnapshot(&snapshot);assert(hddInstallLogRead(snapshot.next-1,line)&&strstr(line,"Installation cancelled."));
+ hddInstallLogResult(0);hddInstallLogSnapshot(&snapshot);assert(hddInstallLogRead(snapshot.next-1,line)&&strstr(line,HDD_INSTALL_LOG_COMPLETE));
+ hddInstallLogFlush(&in);
  hddInstallLogStop();
  puts("PASS: timestamped wrapped lines, live progress/idle time, bounded history, short writes, disk-error recovery and no file I/O under the log lock");
 }
@@ -87,3 +91,4 @@ with tempfile.TemporaryDirectory(prefix='hdd-log-') as directory:
  assert 'https://archive.org/' in log and 'older lines left the RAM buffer' in log and 'row 599' in log and 'LOG WRITE ERROR' in log
  assert 'must not appear' not in log
  assert 'done=' not in log and 'total=' not in log and log.count('Downloading system.tar.gz')==1
+ assert log.splitlines()[-1].endswith('Installation finished successfully.')

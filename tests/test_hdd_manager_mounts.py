@@ -40,6 +40,7 @@ typedef int HddHeaderSourcePartition;
 #define MAX_PATH 1024
 #define MAX_PARTITIONS 64
 #define FIO_MT_RDWR 0
+#define FIO_MT_RDONLY 1
 #define APA_TYPE_FREE 0
 #define APA_TYPE_MBR 1
 #define APA_TYPE_PFS 0x100
@@ -48,6 +49,7 @@ typedef int HddHeaderSourcePartition;
 #define PDIOC_ZONEFREE 12
 #define PDIOC_ZONESZ 13
 #define HDIOC_READSECTOR 14
+#define FIO_S_ISREG(mode) (((mode) & 0xf000) == 0x2000)
 '''
 for macro, text in (("MOUNT_LIMIT", header), ("SECTORS_PER_MB", source), ("HDD_MB", source)):
     code += re.search(r"^#define " + macro + r" .+$", text, re.M).group() + "\n"
@@ -65,6 +67,7 @@ static unsigned fail_unmount;
 static int live_scans, scan_position, busy, submissions, ftp_running;
 static u64 now;
 static int driver_status, read_error, format_reads;
+static int hosd_stat_result, hosd_directory;
 static u32 driver_sectors;
 static unsigned char format_boot[512], format_mbr[512];
 static u32 format_volume_lba;
@@ -80,10 +83,11 @@ static int slotFor(const char *dev) {
     for (int i = 0; i < MOUNT_LIMIT; i++) if (!strcmp(mountedParty[i], dev)) return i;
     return -1;
 }
+int hddInstallRecoveryFault(void){return 0;}
 static int isFtpServerRunning(void) { return ftp_running; }
 static int fileXioMount(const char *pfs, const char *dev, int mode) {
     int i = pfs[3] - '0';
-    assert(mode == FIO_MT_RDWR && i >= 0 && i < MOUNT_LIMIT);
+    assert((mode == FIO_MT_RDWR || mode == FIO_MT_RDONLY) && i >= 0 && i < MOUNT_LIMIT);
     mounts++;
     if (mount_error) return mount_error;
     if (driver_mounts[i][0]) return -EBUSY;
@@ -103,6 +107,14 @@ static void unmountParty(int i) {
 }
 typedef struct { unsigned mode; u32 size; int private_0; } Stat;
 typedef struct { char name[MAX_NAME]; Stat stat; } iox_dirent_t;
+typedef Stat iox_stat_t;
+static int fileXioGetStat(const char *path, iox_stat_t *stat) {
+    int slot = path[3] - '0';
+    assert(slot >= 0 && slot < MOUNT_LIMIT && !strcmp(driver_mounts[slot], "hdd0:__system"));
+    assert(!strcmp(path + 4, ":/osdmenu/hosdmenu.elf"));
+    stat->mode = hosd_directory ? 0x1000 : 0x2000;
+    return hosd_stat_result;
+}
 static int hddCheckPresent(void) { return driver_status < 3 ? 0 : -1; }
 static int hddCheckFormatted(void) { return driver_status == 0 ? 0 : -1; }
 static int fileXioDopen(const char *dev) {
@@ -157,7 +169,7 @@ static int dashWorkerSubmit(const char *label, int flags, void (*run)(void *), v
 }
 '''
 for signature in ("static int pfsRetainedLimit(", "static int pfsMakeRoom(", "static int pfsMountForInfo(",
-                  "static int hddReadFormatSector(", "static void scanRun(", "static void pfsRun(",
+                  "static int hddReadFormatSector(", "static void scanRun(", "static void pfsRun(", "static int pfsProbeMount(", "static int pfsProbeClose(", "static void systemAppRun(",
                   "static HddJob *jobNew(", "static void hddJobFree(",
                   "static int findPart("):
     code += function(signature)
@@ -246,6 +258,17 @@ static void preMount(int i, int part) {
     dashStrCopy(driver_mounts[i], mountedParty[i], sizeof(driver_mounts[i])); latestMount = i;
 }
 int main(void) {
+    HddJob hosd = {0};
+    reset(); systemAppRun(&hosd); assert(hosd.ret == 1 && !mountedCount() && mounts == 1 && unmounts == 1);
+    hosd_stat_result = -ENOENT; systemAppRun(&hosd); assert(!hosd.ret && !mountedCount());
+    hosd_stat_result = -EIO; systemAppRun(&hosd); assert(hosd.ret == -EIO && !mountedCount());
+    hosd_stat_result = 0; hosd_directory = 1; systemAppRun(&hosd); assert(!hosd.ret);
+    reset(); mount_error = -EINVAL; systemAppRun(&hosd); assert(hosd.ret == -EINVAL && !mountedCount());
+    reset(); for (int i = 0; i < MOUNT_LIMIT; i++) preMount(i, i);
+    Party_vmcIndex[0] = 0; systemAppRun(&hosd);
+    assert(hosd.ret == -EBUSY && mountedCount() == MOUNT_LIMIT && !unmounts);
+    assert(slotFor("hdd0:+TEST0") == 0 && slotFor("hdd0:+TEST3") == 3);
+    puts("PASS: HOSDMenu probes release borrowed slots and preserve unrelated and VMC mounts");
     reset();
     for (int i = 0; i < 20; i++) {
         probe(i); assert(mountedCount() == (i < 4 ? i + 1 : 4));

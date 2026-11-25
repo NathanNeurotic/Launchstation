@@ -86,7 +86,7 @@ static int dashWorkerSubmit(const char *s,int flags,void(*run)(void*),void(*done
  assert(s&&flags==1&&run&&!done);if(worker_error)return -1;run(arg);worker_runs++;return 1;
 }
 int dashHddInstallAwait(int id,const char *title){assert(id==1&&title);return 1;}
-static int dashModalChoice(const char *title,const char *const *items,int count,int initial){
+static int dashModalSelect(const char *title,const char *const *items,int count,int initial){
  assert(!strcmp(title,"PSBBN language")&&count==4&&initial==0&&!strcmp(items[0],"English")&&!strcmp(items[3],"New language"));
  return cancel_choice?-1:3;
 }

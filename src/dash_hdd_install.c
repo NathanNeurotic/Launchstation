@@ -20,19 +20,19 @@ int dashHddInstallChoose(HddInstall *in, int jail)
         };
         static const unsigned flags[] = {0, HDD_INSTALL_APPS, HDD_INSTALL_HOSD, HDD_INSTALL_HOSD | HDD_INSTALL_APPS};
         static const char *const jail_profiles[] = {
-            "Format only", "Install PSBBN DP, MBR, HOSDMenu and apps"
+            "Format only", "Install PSBBN DP (Experimental), MBR, HOSDMenu and apps"
         };
-        int selected = dashModalChoice("Software after formatting", jail ? jail_profiles : profiles, jail ? 2 : 4, 0);
+        int selected = dashModalSelect("Software after formatting", jail ? jail_profiles : profiles, jail ? 2 : 4, 0);
         if (selected < 0) return 0;
         in->flags = jail && selected ? HDD_INSTALL_PSBBN | HDD_INSTALL_HOSD | HDD_INSTALL_APPS : flags[selected];
         if (in->flags & HDD_INSTALL_PSBBN) {
             static const char *const launchers[] = {"Open PS2 Loader (OPL)", "Neutrino (NHDDL)"};
-            selected = dashModalChoice("Default game launcher (both installed)", launchers, 2, 0);
+            selected = dashModalSelect("Default game launcher (both installed)", launchers, 2, 0);
             if (selected < 0) return 0;
             in->game_launcher = (unsigned)selected;
         }
         if (in->flags & HDD_INSTALL_PSBBN)
-            dashModalMessage(DI_INFO, "PSBBN DP installation",
+            dashModalMessage(DI_INFO, "PSBBN DP installation (Experimental)",
                 "Requires a compatible Sony Network Adapter. Choose Music and Contents sizes next. Standalone PS2 Linux is optional; PSBBN always needs its own system partitions. Downloads are stored on the new HDD after formatting.", NULL);
     }
 #endif
@@ -50,7 +50,7 @@ static int installSize(const char *title, unsigned maximum)
         items[count] = labels[count]; count++;
     }
     if (!count) return -1;
-    selected = dashModalChoice(title, items, count, 0);
+    selected = dashModalSelect(title, items, count, 0);
     return selected < 0 ? -1 : 1024 << selected;
 }
 #endif
@@ -65,7 +65,7 @@ int dashHddInstallConfigure(HddInstall *in, unsigned max_extent)
     value = installSize("Contents partition size", max_extent);
     if (value < 0) return 0;
     in->contents_mb = value;
-    value = dashModalChoice("Install standalone PS2 Linux", linux, 2, 0);
+    value = dashModalSelect("Install standalone PS2 Linux", linux, 2, 0);
     if (value < 0) return 0;
     in->flags &= ~HDD_INSTALL_PS2LINUX;
     in->linux_home_mb = 0;
@@ -131,7 +131,7 @@ int dashHddInstallPrepare(HddInstall *in)
             labels[i] = choices.languages[i].name;
             if (!strcmp(choices.languages[i].code, "eng")) initial = i;
         }
-        selected = dashModalChoice("PSBBN language", labels, choices.count, initial);
+        selected = dashModalSelect("PSBBN language", labels, choices.count, initial);
         if (selected < 0) { hddInstallRelease(in); return -ECANCELED; }
         in->language = choices.languages[selected];
         hddInstallLog("PSBBN language: %s (%s); repository %.7s", in->language.name, in->language.code, in->commit);
@@ -287,7 +287,7 @@ void dashHddInstallDebugBegin(HddInstall *in, const HddFormatPlan *plan)
                   in->music_mb, in->contents_mb, in->flags & HDD_INSTALL_PS2LINUX ? "On" : "Off", in->linux_home_mb, in->reserved_mb);
     hddInstallLog("Game launchers: install OPL + NHDDL/Neutrino; default %s", hddInstallGameName(in->game_launcher));
     hddInstallStatus("Preparing installer; the HDD has not been erased yet", 0, 0);
-    dashLoadingBegin("PSBBN DP installer log");
+    dashLoadingBegin("PSBBN DP installer log (Experimental)");
 }
 void dashHddInstallRecoveryFailed(void)
 {
@@ -330,9 +330,19 @@ static void debugSave(void *context)
 void dashHddInstallDebugEnd(HddInstall *in, int result)
 {
     if (!debug_open) return;
+    int save_log = in->owned && in->stage_ready && result != HDD_INSTALL_ATA_TIMEOUT;
+    /* MBR installation can reset the IOP just before this final save. Reload
+     * storage on the UI thread so the ATA installation log is reachable again. */
+    if (save_log && !loadHddModules()) save_log = 0;
+#ifdef EXFAT
+    if (save_log && in->jail && !loadAtaModules()) save_log = 0;
+#endif
+    if (!save_log && in->owned && in->stage_ready)
+        hddInstallLog("Final log could not be saved; installation status follows in RAM");
     hddInstallLog("SESSION %s: result=%d", result == -ECANCELED ? "CANCELLED" : result < 0 ? "FAILED" : "COMPLETE", result);
-    if (in->error[0]) hddInstallLog("ERROR detail: %s", in->error);
-    if (in->owned && in->stage_ready && result != HDD_INSTALL_ATA_TIMEOUT) {
+    if (result < 0 && in->error[0]) hddInstallLog("ERROR detail: %s", in->error);
+    hddInstallLogResult(result);
+    if (save_log) {
         int id = dashWorkerSubmit("Saving installer log", 0, debugSave, NULL, in);
         if (id > 0) dashHddInstallAwait(id, "Saving installer log");
         else hddInstallLog("ERROR log-save job could not be queued");
@@ -349,7 +359,7 @@ void dashHddInstallDebugEnd(HddInstall *in, int result)
             if (input.pressed & (DASH_IN_OK | DASH_IN_BACK)) break;
             debugInput(&input);
             dashVisualUpdate();
-            debugDraw(result < 0 ? "PSBBN DP installer failed" : "PSBBN DP installer complete");
+            debugDraw(result < 0 ? "PSBBN DP installer failed (Experimental)" : "PSBBN DP installer complete (Experimental)");
         }
     }
     dashLoadingSetView(debug_previous_view); debug_open = 0;

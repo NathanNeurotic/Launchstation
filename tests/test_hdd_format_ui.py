@@ -49,7 +49,7 @@ static int fileXioDevctl(const char *dev, int op, void *a, int alen, void *b, in
     assert(!strcmp(dev, "hdd0:") && (op == HDIOC_TOTALSECTOR || op == HDIOC_MAXSECTOR) && !a && !alen && !b && !blen);
     return op == HDIOC_TOTALSECTOR ? total : 2048 * 2048;
 }
-static int dashModalChoice(const char *title, const char *const *options, int count, int current) {
+static int dashModalSelect(const char *title, const char *const *options, int count, int current) {
     assert(!strcmp(title, "Format HDD") && count == 3 && current == 0);
     assert(!strcmp(options[0], "APA") && !strcmp(options[1], "exFAT") && strstr(options[2], "APA Jail"));
     return selected;
@@ -237,7 +237,13 @@ int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, const char *has
     (void)plan; (void)mbr; (void)hash; (void)started; (void)populate; (void)context; return 0;
 }
 '''
-vmc_code += job_types + "\n" + vmc_unmount + "\n" + job + r'''
+vmc_code += job_types + r'''
+int hddInstallResumeAvailable(HddInstall *in,const char *device,int jail){(void)in;(void)device;(void)jail;return 0;}
+static int unmountForRename(const char *p){(void)p;return 0;}
+static void systemAppRun(HddJob*j){j->ret=-ENOENT;}
+static int pfsProbeMount(const char*p,char d[16],int*slot){(void)p;(void)d;(void)slot;return -ENOENT;}
+static int pfsProbeClose(int slot,int result){(void)slot;return result;}
+''' + vmc_unmount + "\n" + job + r'''
 int main(void) {
     HddJob j = {0};
     j.op = HOP_FORMAT;

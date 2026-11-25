@@ -67,6 +67,9 @@ int main(void) {
     const char cfg[]="title = My app\r\nboot = other.elf\r\n";
     save.count=4;entry(files+3,"title.cfg",cfg,sizeof(cfg)-1);
     assert(hddAppInspect(&save,&app)==0 && !strcmp(app.boot,"OTHER.ELF") && !strcmp(app.title,"My app"));
+    /* POPSLOADER includes .pldrs beside its loader, POPSTARTER and title.cfg. */
+    save.count=5;entry(files+4,".pldrs","PROFILE=1\n",10);
+    assert(!hddAppInspect(&save,&app) && app.elf_count==2 && !strcmp(app.boot,"OTHER.ELF"));
     const char script[]="#!/bin/bash\ncreate_icon_sys() {\n    cat > \"$icon_sys_filename\" <<EOL\nPS2X\ntitle0=$title\ntitle1=$publisher\nbgcola=58\nEOL\n}\n";
     assert(hddAppIconSettings(script,&app,settings)>0 && !strcmp(settings,"PS2X\ntitle0=My app\ntitle1=Homebrew\nbgcola=58\n"));
     headerTest(cnf,settings);
@@ -83,6 +86,7 @@ int main(void) {
     strcpy(save.folder.name,"APP_1234567890123456789012345678");
     assert(!hddAppInspect(&save,&app) && strlen(app.partition)==31);
     assert(!hddAppLeaf("../../bad") && !hddAppLeaf("file:") && !hddAppLeaf("file.") && !hddAppLeaf("file "));
+    assert(hddAppLeaf(".pldrs") && !hddAppLeaf(".") && !hddAppLeaf("..") && !hddAppLeaf("../.pldrs"));
     HddAppJournal j={.sequence=17,.phase=HA_MOVE_OLD,.update=1,.package_crc=0x12345678,.package_size=8192},decoded;
     strcpy(j.boot,"BOOT.ELF");unsigned char bytes[HDD_APP_JOURNAL_SIZE];
     assert(!hddAppJournalEncode(&j,bytes) && !hddAppJournalDecode(&decoded,bytes));
