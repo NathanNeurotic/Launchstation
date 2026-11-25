@@ -3693,14 +3693,8 @@ static void browserRefreshRootCards(void)
 		pollRootMemoryCardDevices();
 		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
 		/* a card answered, or left, behind a multitap: add or drop its row */
-		if (dashDevicesMultitapChanged(fb.devs, fb.ndevs)) {
-			char keep[sizeof(fb.devs[0].browse)];
-
-			keep[0] = '\0';
-			if (fb.sel < fb.ndevs)
-				dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
-			openDir("", keep[0] ? keep : NULL);
-		}
+		if (dashDevicesMultitapChanged(fb.devs, fb.ndevs))
+			dashBrowserRefreshRoot(); /* a rebuild in place: no USB re-check */
 	}
 }
 
