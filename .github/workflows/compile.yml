@@ -54,6 +54,7 @@ jobs:
           python3 tests/test_hex_editor.py
           python3 tests/test_mc_folder_icon.py
           python3 tests/test_font_weight.py
+          python3 tests/test_mx4sio_detect_unlock.py
           python3 tests/test_scanlines.py
           python3 tests/test_pad_rumble.py
           python3 tests/test_fresh_install_defaults.py

@@ -45,3 +45,8 @@ time through an aligned bounce buffer; the alignment test casts through
 Launchstation copy: taken unchanged from NathanNeurotic/RiptOPL
 `modules/mx4sio_bd` (PR 378 branch) and built by the `mx4sio_bd_fork` target in
 ps2.yaml, embedded under the SDK name `mx4sio_bd` in place of the sdk-core binary.
+
+Card detect unmount order (local): `sd_detect()` calls `bdm_disconnect_bd()` only
+after `mx_sio2_unlock()`. The unmount takes the bdmfs_fatfs filesystem lock, and a
+file operation holding that lock may be waiting for the SIO2 lock, so disconnecting
+under the SIO2 lock could deadlock. Checked by `tests/test_mx4sio_detect_unlock.py`.
