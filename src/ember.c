@@ -1,6 +1,7 @@
 #include "popstarter_internal.h"
 #include "init.h"
 #include "main_gameid.h"
+#include "smb_shares.h"
 
 #define EMBER_NAME_MAX 180
 #define EMBER_BIOS_SIZE (512 * 1024)
@@ -294,6 +295,39 @@ static int ensureLocalEmber(const char *umbrella, char *ember_elf, size_t ember_
 	return 1;
 }
 
+/*
+ * A keep-IOP launch inherits every driver the dashboard started. With the
+ * storage devices auto-started (USB, HDD, exFAT, MX4SIO...), the IOP has too
+ * little memory left: LOADFILE needs one free 64 KiB block after opening
+ * ember.elf, and Ember's own SPU buffers and PADMAN come after that. Before a
+ * network launch, reboot the IOP with the core stack and reload only this
+ * share's driver. The first connection can come before the Ethernet link is
+ * up, so try a few times. 1: ready (or no reboot was allowed), 0: share lost.
+ */
+static int prepareEmberNetworkIop(const char *ember_elf)
+{
+	int version, tries;
+
+	if (!strncmp(ember_elf, SMB_DEVICE_V1, strlen(SMB_DEVICE_V1)))
+		version = SMB_PATH_V1;
+	else if (!strncmp(ember_elf, SMB_DEVICE_V2, strlen(SMB_DEVICE_V2)))
+		version = SMB_PATH_V2;
+	else if (!strncmp(ember_elf, SMB_DEVICE_NFS, strlen(SMB_DEVICE_NFS)))
+		version = SMB_PATH_NFS;
+	else
+		return 1;
+
+	rebootIopAndReloadCoreStackSilent();
+	if (isSmbDriverLoaded(version))
+		return 1; /* the reboot was refused: launch as before */
+	for (tries = 0; tries < 4; tries++) {
+		if (load_smb(version) && readableFile(ember_elf))
+			return 1;
+		smbSharesForget(); /* lets the next attempt connect at once */
+	}
+	return 0;
+}
+
 int LaunchEmberGame(const char *path, char *message, size_t message_size)
 {
 	POPSTARTER_CANDIDATE_LIST candidates;
@@ -358,6 +392,13 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	 * USB may then change mount numbers. ID lookup never changes launch args. */
 	if (setting != NULL && !setting->cdrom_disable_gameid)
 		show_game_id = buildEmberGameID(path, game_id, sizeof(game_id));
+
+	if (!prepareEmberNetworkIop(ember_elf)) {
+		LaunchArgsClear();
+		setEmberMessage(message, message_size,
+		                "Ember could not reconnect to the network share", ember_elf);
+		return 0;
+	}
 
 	if (!CleanUpForEmberExec()) {
 		LaunchArgsClear();
