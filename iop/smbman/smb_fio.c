@@ -570,63 +570,38 @@ io_unlock:
 //--------------------------------------------------------------
 static void FileTimeToDate(u64 FileTime, u8 *datetime)
 {
-    u8 daysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int i;
-    u64 time;
-    u16 years, days;
-    u8 leapdays, months, hours, minutes, seconds;
-
-    time = FileTime / 10000000; // convert to seconds from 100-nanosecond intervals
-
-    years = (u16)(time / ((u64)60 * 60 * 24 * 365)); // hurray for interger division
-    time -= years * ((u64)60 * 60 * 24 * 365);       // truncate off the years
-
-    leapdays = (years / 4) - (years / 100) + (years / 400);
-    years += 1601; // add base year from FILETIME struct;
-
-    days = (u16)(time / (60 * 60 * 24));
-    time -= (unsigned int)days * (60 * 60 * 24);
-    days -= leapdays;
-
-    if ((years % 4) == 0 && ((years % 100) != 0 || (years % 400) == 0))
-        daysPerMonth[1]++;
-
-    months = 0;
-    for (i = 0; i < 12; i++) {
-        if (days > daysPerMonth[i]) {
-            days -= daysPerMonth[i];
-            months++;
-        } else
-            break;
-    }
-
-    if (months >= 12) {
-        months -= 12;
-        years++;
-    }
-    hours = (u8)(time / (60 * 60));
-    time -= (u16)hours * (60 * 60);
-
-    minutes = (u8)(time / 60);
-    time -= minutes * 60;
-
-    seconds = (u8)(time);
+    /* FILETIME counts 100 ns units from 1601-01-01. Split off the time of
+     * day, then turn the day count into a civil date with the era method
+     * (days counted from 0000-03-01; 1601-01-01 is day 584694). The old
+     * code took leap days off the day of the year and wrapped below zero,
+     * so 2026-11-24 showed as 2028/01/110. */
+    u64 secs = FileTime / 10000000;
+    u32 rem  = (u32)(secs % 86400);
+    u32 z    = (u32)(secs / 86400) + 584694;
+    u32 era  = z / 146097;
+    u32 doe  = z - era * 146097;
+    u32 yoe  = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    u32 doy  = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    u32 mp   = (5 * doy + 2) / 153;
+    u32 day  = doy - (153 * mp + 2) / 5 + 1;
+    u32 mon  = (mp < 10) ? mp + 3 : mp - 9;
+    u32 year = yoe + era * 400 + (mon <= 2);
 
     datetime[0] = 0;
-    datetime[1] = seconds;
-    datetime[2] = minutes;
-    datetime[3] = hours;
-    datetime[4] = days + 1;
-    datetime[5] = months + 1;
-    datetime[6] = (u8)(years & 0xFF);
-    datetime[7] = (u8)((years >> 8) & 0xFF);
+    datetime[1] = (u8)(rem % 60);
+    datetime[2] = (u8)((rem / 60) % 60);
+    datetime[3] = (u8)(rem / 3600);
+    datetime[4] = (u8)day;
+    datetime[5] = (u8)mon;
+    datetime[6] = (u8)(year & 0xFF);
+    datetime[7] = (u8)((year >> 8) & 0xFF);
 }
 
 static void smb_statFiller(const PathInformation_t *info, iox_stat_t *stat)
 {
     FileTimeToDate(info->Created, stat->ctime);
     FileTimeToDate(info->LastAccess, stat->atime);
-    FileTimeToDate(info->Change, stat->mtime);
+    FileTimeToDate(info->LastWrite, stat->mtime);
 
     stat->size   = (int)(info->EndOfFile & 0xffffffff);
     stat->hisize = (int)((info->EndOfFile >> 32) & 0xffffffff);
