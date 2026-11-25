@@ -481,6 +481,8 @@ static void listMisc(void)
 	}
 }
 
+static int fb_root_refresh; /* set while dashBrowserRefreshRoot rebuilds the root */
+
 static void openDir(const char *dir, const char *select)
 {
 	FbListJob *j;
@@ -507,6 +509,12 @@ static void openDir(const char *dir, const char *select)
 		usb_dir[3] = '0' + unit; /* prepareUsbRootBrowse returns units 0 or 1 */
 		dir = usb_dir;
 	}
+
+	/* Showing the Devices list: check USB once, so a stick that mounted since
+	 * the last look joins it. A rebuild in place (dashBrowserRefreshRoot, which
+	 * the check itself calls on a change) does not ask again. */
+	if (dir[0] == '\0' && !fb_root_refresh)
+		dashDevicesRequestUsbRecheck();
 
 	fb.gen++;
 	fb.n = 0;
@@ -3685,14 +3693,8 @@ static void browserRefreshRootCards(void)
 		pollRootMemoryCardDevices();
 		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
 		/* a card answered, or left, behind a multitap: add or drop its row */
-		if (dashDevicesMultitapChanged(fb.devs, fb.ndevs)) {
-			char keep[sizeof(fb.devs[0].browse)];
-
-			keep[0] = '\0';
-			if (fb.sel < fb.ndevs)
-				dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
-			openDir("", keep[0] ? keep : NULL);
-		}
+		if (dashDevicesMultitapChanged(fb.devs, fb.ndevs))
+			dashBrowserRefreshRoot(); /* a rebuild in place: no USB re-check */
 	}
 }
 
@@ -3797,7 +3799,9 @@ void dashBrowserRefreshRoot(void)
 	keep[0] = '\0';
 	if (fb.sel < fb.ndevs)
 		dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
+	fb_root_refresh = 1;
 	openDir("", keep[0] ? keep : NULL);
+	fb_root_refresh = 0;
 }
 
 void dashFileBrowserTabClose(void)
