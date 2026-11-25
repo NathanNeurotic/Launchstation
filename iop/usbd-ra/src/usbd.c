@@ -19,6 +19,8 @@
 #include "hub.h"
 #include "usbio.h"
 
+void handleRhsc(void); // hcd.c
+
 #include "stdio.h"
 #include "sysclib.h"
 #include "thsemap.h"
@@ -403,7 +405,24 @@ int _start(int argc, char *argv[])
     sema.max     = 1;
     usbdSema     = CreateSema(&sema);
 
-    hcdInit();
+    /* Launchstation (same change as RiptOPL PR 529): when loaded without options (every load
+       here), look at the root-hub ports once after start-up. An IOP reboot does not reset the USB
+       root hub. A stick left plugged in across one can stay connected with its change bits already
+       cleared by the driver that ran before (the loader, or the previous IOP session), so this
+       driver gets no root-hub interrupt for it; or it can stay enabled at the address the old
+       driver gave it, and answer when the new driver gives that address to the other stick. Both
+       ports are disabled first (writing PORT_CONNECTION is OHCI's ClearPortEnable). handleRhsc()
+       is the interrupt's own handler: it sees each connected port and starts the normal attach,
+       whose port resets go one at a time (delayResets), so two sticks are never both at address 0.
+       Current ps2sdk usbd reaches the same end by resetting both root ports at IOP reboot
+       (usbdRebootInner, hub_resets.c). */
+    if (hcdInit() == 0 && argc < 2) {
+        memPool.ohciRegs->HcRhPortStatus[0] = BIT(PORT_CONNECTION);
+        memPool.ohciRegs->HcRhPortStatus[1] = BIT(PORT_CONNECTION);
+        usbdLock();
+        handleRhsc();
+        usbdUnlock();
+    }
 
     dbg_printf("Init done\n");
     return MODULE_RESIDENT_END;
