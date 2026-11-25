@@ -138,7 +138,7 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 		total += rd;
 	}
 	genClose(fd);
-	if (total <= 0) {
+	if (total != size) {
 		free(buf);
 		return NULL;
 	}
