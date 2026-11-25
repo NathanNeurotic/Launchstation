@@ -380,9 +380,9 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_TemperatureFahrenheit"))
 		dashCfg.temp_fahrenheit = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ClockZone"))
-		dashCfg.clock_zone = clampInt(value, -720, 840, DASH_CLOCK_ZONE_CONSOLE); /* off the list: used as Console */
+		dashCfg.clock_zone = strictClampInt(value, -720, 840, DASH_CLOCK_ZONE_CONSOLE); /* off the list: used as Console */
 	else if (!stricmp(key, "Dash_ClockSummer"))
-		dashCfg.clock_summer = clampInt(value, 0, 1, 0);
+		dashCfg.clock_summer = strictClampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
 		dashCfg.show_unavailable_devices = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_DevAuto"))

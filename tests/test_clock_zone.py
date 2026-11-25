@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix="clock-zone-") as d:
     subprocess.run([shutil.which("gcc") or shutil.which("cc"), "-std=c11", "-Wall", "-Wextra", "-Werror", str(path / "zone.c"), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 
-assert 'clampInt(value, -720, 840, DASH_CLOCK_ZONE_CONSOLE)' in store and '"Dash_ClockZone = %d\\r\\n"' in store
+assert 'strictClampInt(value, -720, 840, DASH_CLOCK_ZONE_CONSOLE)' in store and 'strictClampInt(value, 0, 1, 0)' in store and '"Dash_ClockZone = %d\\r\\n"' in store
 assert "dashCfg.clock_zone = DASH_CLOCK_ZONE_CONSOLE;" in store   # default: as before the setting existed
 assert settings.count("menuTitleClockZoneChanged();") == 3         # both rows and Discard
 print("clock zone ok")
