@@ -342,55 +342,6 @@ static int loadEmbeddedPayload(char *elf_path, int argc, char *argv[], int reset
 	return 0;
 }
 
-/* Fallback when IOP LOADFILE cannot load the file (it opened ember.elf over
- * SMB and gave up before its first read on a console with many drivers
- * resident): read the file into the top of EE RAM with fileXio and load it
- * from there. The buffer must not overlap any segment it will be copied to. */
-static int readFileToTop(const char *path, u32 *elf_addr)
-{
-	Elf32_Ehdr *eh;
-	Elf32_Phdr *ph;
-	u32 addr, size, done;
-	int fd, ret, i;
-
-	fd = fileXioOpen(path, FIO_O_RDONLY);
-	if (fd < 0)
-		return fd;
-	ret = fileXioLseek(fd, 0, SEEK_END);
-	if (ret <= (int)sizeof(Elf32_Ehdr) || fileXioLseek(fd, 0, SEEK_SET) != 0) {
-		fileXioClose(fd);
-		return -EIO;
-	}
-	size = (u32)ret;
-	addr = (GetMemorySize() - size) & ~63;
-	if (addr < USER_MEM_START_ADDR) {
-		fileXioClose(fd);
-		return -ENOMEM;
-	}
-	for (done = 0; done < size; done += ret) {
-		ret = fileXioRead(fd, (void *)(addr + done), size - done);
-		if (ret <= 0)
-			break;
-	}
-	fileXioClose(fd);
-	if (done != size)
-		return -EIO;
-
-	eh = (Elf32_Ehdr *)addr;
-	if (eh->e_phoff + (u32)eh->e_phnum * sizeof(Elf32_Phdr) > size)
-		return -ENOEXEC;
-	ph = (Elf32_Phdr *)(addr + eh->e_phoff);
-	for (i = 0; i < eh->e_phnum; i++) {
-		if (ph[i].p_type != PT_LOAD)
-			continue;
-		if (ph[i].p_offset + ph[i].p_filesz > size || ph[i].p_vaddr < USER_MEM_START_ADDR ||
-		    ph[i].p_vaddr + ph[i].p_memsz > addr)
-			return -ENOEXEC;
-	}
-	*elf_addr = addr;
-	return 0;
-}
-
 static int loadFilePayload(char *elf_path, int argc, char *argv[], int reset_iop, int dev9_cleanup)
 {
 	static t_ExecData elfdata;
@@ -406,19 +357,8 @@ static int loadFilePayload(char *elf_path, int argc, char *argv[], int reset_iop
 		ret = SifLoadElfEncrypted(elf_path, &elfdata);
 	SifLoadFileExit();
 
-	if (ret != 0 || elfdata.epc == 0 || (elfdata.epc & 0x3) != 0) {
-		u32 elf_addr, entry;
-
-		FlushCache(0);
-		if (readFileToTop(elf_path, &elf_addr) < 0 || loadELFImage(elf_addr, &entry) < 0)
-			return -ENOENT;
-		cleanupDev9ForLaunch(dev9_cleanup);
-		if (reset_iop)
-			resetIOP();
-		SifExitRpc();
-		ExecPS2((void *)entry, NULL, argc, argv);
-		return 0;
-	}
+	if (ret != 0 || elfdata.epc == 0 || (elfdata.epc & 0x3) != 0)
+		return -ENOENT;
 
 	FlushCache(0);
 	FlushCache(2);
