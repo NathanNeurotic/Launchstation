@@ -91,7 +91,7 @@ NEUTRINO_REQUIRED = (
 # still holds after Neutrino's IOP reset. Pinned by SHA-256.
 NEUTRINO_ILINK_DIR = ROOT / "ship" / "neutrino-ilink"
 NEUTRINO_ILINK = {
-    "modules/iLinkman.irx": "918d3343243787a8784244ecf8c9a6423c5464caa1f4f78abf9d262116318cf4",
+    "modules/iLinkman.irx": "4b8a89ed700370d23bb59932a98d6553dbe3189616a0478cb46372bbe67216a0",
     "modules/IEEE1394_bd_mini.irx": "acaebcb288d6a812763db4a561e6a9dde56a53e1093cb0898a352b96c3cce9bf",
 }
 # Their provenance and AFL-2.0 licence travel with them in the kit.
