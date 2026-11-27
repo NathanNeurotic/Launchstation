@@ -32,7 +32,7 @@
 
 <h2 id="cores">POPStarter and Ember together</h2>
 <table><thead><tr><th>Format/layout</th><th>Launcher</th></tr></thead><tbody><tr><td><code>POPS/*.VCD</code></td><td>POPStarter</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.CUE</code></td><td>Ember</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.BIN</code></td><td>Ember</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.EXE</code></td><td>Ember</td></tr></tbody></table>
-<p><b>Disable Ember support</b> (default Off) refuses Ember launches before any image, BIOS or driver is touched; POPStarter and Neutrino are disabled independently.</p>
+<p><b>Disable Ember support</b> (default Off) refuses Ember launches before any image, BIOS or driver is touched; POPStarter, Neutrino and RiptOPL are disabled independently.</p>
 
 <h2 id="gameid">RetroGem Game ID</h2>
 <p>With <b>Game ID launch signal for discs</b> on, a CUE/BIN launch derives the disc&rsquo;s ID the same way a VCD does (the data track&rsquo;s <code>SYSTEM.CNF</code> serial, then the shared PS1 timestamp database, then the file-name fallback) and draws the RetroGem signal after cleanup and, on USB, after the successful remount. A standalone <code>.EXE</code> without a matching same-name CUE gets no ID. Lookup is read-only. No MMCE card switch is sent. Details: <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/EMBER-RETROGEM.md">Ember RetroGem Game ID</a>.</p>

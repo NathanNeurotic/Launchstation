@@ -46,6 +46,7 @@ typedef unsigned char u8;
 enum { GAME_PS2, GAME_VCD, GAME_EMBER };
 #define EMBER_GAMES_MAX 256
 #define sceMcFileAttrSubdir 0x20
+#define NEUTRINO_GAME_ID_SIZE 12
 enum { DASH_ART_UNKNOWN, DASH_ART_FOUND, DASH_ART_NONE };
 #define DASH_APP_GAME (1 << 6)
 #define DASH_APP_GAME_ID_PENDING (1 << 7)

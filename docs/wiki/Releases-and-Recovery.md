@@ -8,7 +8,7 @@
 | --- | --- |
 | `APP_LAUNCHSTATION-<build>.zip` | Standard PS2 controller build; extract the app folder. |
 | `APP_LAUNCHSTATION.psu` | The same standard app for memory-card installation with **Extract PSU**. |
-| `APP_LAUNCHSTATION-DS-<build>.zip` | Adds inherited DS34 drivers for PS3/PS4 DualShock USB/Bluetooth controllers. |
+| `APP_LAUNCHSTATION-DS-<build>.zip` | Adds inherited DS34 drivers for PS3/PS4 DualShock USB/Bluetooth controllers, and a driver for Xbox One / Series pads over USB (GIP). |
 | `APP_LAUNCHSTATION-DS.psu` | The same DS34 app for memory-card installation. |
 | `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF` | Packed executables without their sidecar files. |
 | `BOOT.ELF`, `BOOT2.ELF` | Byte-identical copies of the standard ELF under alternate boot names. |
