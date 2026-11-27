@@ -313,6 +313,7 @@ typedef struct
 	int disable_ember;
 	int disable_popstarter;
 	int disable_neutrino;
+	int disable_riptopl;
 	int Menu_Frame;
 	int timeout;
 	int Hide_Paths;

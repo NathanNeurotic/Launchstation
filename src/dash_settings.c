@@ -99,6 +99,7 @@ enum SetId {
 	S_DISABLE_EMBER,
 	S_DISABLE_POPSTARTER,
 	S_DISABLE_NEUTRINO,
+	S_DISABLE_RIPTOPL,
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
@@ -350,6 +351,7 @@ static const SetItem loader_items[] = {
     {ST_CHOICE, S_DISABLE_EMBER, "Disable Ember support", "Off (default): CUE/BIN/EXE game routes use Ember. On: refuse Ember image launches without loading devices."},
     {ST_CHOICE, S_DISABLE_POPSTARTER, "Disable POPStarter support", "Off (default): VCD launches use POPStarter. On: refuse automatic VCD launches."},
     {ST_CHOICE, S_DISABLE_NEUTRINO, "Disable Neutrino support", "Off (default): ISO launches use Neutrino. On: refuse automatic PS2 ISO launches."},
+    {ST_CHOICE, S_DISABLE_RIPTOPL, "Disable RiptOPL support", "Off (default): a game can be set to start with RiptOPL, and a disc in the drive is listed in Games. On: no RiptOPL entries, and the drive is never read for Games."},
 };
 
 static const SetItem device_items[] = {
@@ -1256,6 +1258,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_DISABLE_NEUTRINO:
 			*cur = setting->disable_neutrino ? 1 : 0;
 			return 2;
+		case S_DISABLE_RIPTOPL:
+			*cur = setting->disable_riptopl ? 1 : 0;
+			return 2;
 		case S_GAMEID:
 			*cur = setting->app_gameid ? 1 : 0;
 			return 2;
@@ -1982,6 +1987,9 @@ static void setChoice(int id, int v)
 					break;
 				case S_DISABLE_NEUTRINO:
 					setting->disable_neutrino = v;
+					break;
+				case S_DISABLE_RIPTOPL:
+					setting->disable_riptopl = v;
 					break;
 				case S_GAMEID:
 					setting->app_gameid = v;

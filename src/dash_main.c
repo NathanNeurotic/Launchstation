@@ -643,7 +643,7 @@ void dashLaunchDisc(const char *title, const char *game_id)
 	memcpy(&copy, app, sizeof(copy));
 	dashStrCopy(path, copy.path, sizeof(path));
 	/* A GAMES entry for a disc: starting it is the next step (RiptOPL), so say so instead of launching. */
-	if (!strncmp(path, "cdrom0:", 7)) {
+	if (!strcmp(path, "cdrom0:/DISC") && !(setting != NULL && setting->disable_riptopl)) {
 		dashLaunchDisc(copy.title, copy.category);
 		return;
 	}

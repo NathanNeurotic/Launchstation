@@ -325,7 +325,7 @@ static void scanStart(int with_disc)
 		if (devs[i].state == DASH_DEV_READY && IsNeutrinoGameDevice(devs[i].browse))
 			dashStrCopy(s->roots[s->nroots++], devs[i].browse, sizeof(s->roots[0]));
 	/* The disc is read here, on the UI thread, as the Start disc tool does; the worker only lists it. */
-	s->disc_present = with_disc ? discReadId(s->disc_id, sizeof(s->disc_id)) : 0;
+	s->disc_present = (with_disc && !(setting != NULL && setting->disable_riptopl)) ? discReadId(s->disc_id, sizeof(s->disc_id)) : 0;
 	scan_job = s;
 	if (dashWorkerSubmit("Looking for games", DASH_JOB_SCAN | DASH_JOB_VISIBLE, scanRun, scanDone, s) < 0) {
 		scan_job = NULL;
@@ -450,7 +450,7 @@ static void gamesMenu(void)
 		if (IsNeutrinoIsoPath(g->path))
 			items[n].icon = DI_SETTINGS, items[n].label = "Game settings", items[n].detail = "Neutrino options",
 			act[n++] = M_SETTINGS;
-		if (IsNeutrinoIsoPath(g->path) || isDisc(g))
+		if ((IsNeutrinoIsoPath(g->path) || isDisc(g)) && !(setting != NULL && setting->disable_riptopl))
 			items[n].icon = DI_SETTINGS, items[n].label = "RiptOPL settings", items[n].detail = "loader and pad options",
 			act[n++] = M_RIPTOPL_SET;
 		items[n].icon = DI_INFO, items[n].label = "Details", act[n++] = M_DETAILS;

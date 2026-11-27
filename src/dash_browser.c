@@ -2981,7 +2981,7 @@ static void actionsMenu(void)
 		ADD(isDir(f) ? DI_FOLDER : DI_PLAY, isDir(f) ? "Open" : "Open / start",
 		    open_disabled ? "Direct launch unsupported" : NULL, open_disabled, F_OPEN);
 		/* A separate loader next to Neutrino, set per game in RiptOPL settings; Open / start follows it. */
-		if (!isDir(f) && fb.nmarked == 0 && IsNeutrinoIsoPath(f->name))
+		if (!isDir(f) && fb.nmarked == 0 && IsNeutrinoIsoPath(f->name) && !(setting != NULL && setting->disable_riptopl))
 			ADD(DI_SETTINGS, "RiptOPL settings", "loader and pad options", 0, F_RIPTOPL);
 	}
 	if (in_folder) {

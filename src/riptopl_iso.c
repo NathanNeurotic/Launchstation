@@ -128,6 +128,10 @@ static int findRiptopl(const char *iso_path, char *out, size_t out_size)
 
 int RiptoplPrepareIsoLaunch(const char *iso_path, char *elf_path, size_t elf_size, char *message, size_t message_size)
 {
+	if (setting != NULL && setting->disable_riptopl) {
+		setMessage(message, message_size, "RiptOPL support disabled in Launching settings", NULL);
+		return 0;
+	}
 	char gameID[NEUTRINO_GAME_ID_SIZE], args[600];
 	const char *kind, *media = NULL, *name = NULL;
 	int n;
@@ -191,6 +195,10 @@ int RiptoplPrepareDiscLaunch(char *elf_path, size_t elf_size, const char *arg_li
 	char buf[96];
 	int len;
 
+	if (setting != NULL && setting->disable_riptopl) {
+		setMessage(message, message_size, "RiptOPL support disabled in Launching settings", NULL);
+		return 0;
+	}
 	if (!RiptoplFindElf(elf_path, elf_size)) {
 		setMessage(message, message_size, "RIPTOPL.ELF not found (set its path in Settings > Disc & image loaders)", NULL);
 		return 0;

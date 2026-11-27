@@ -218,6 +218,9 @@ int riptoplGameUsesRiptopl(const char *iso_path)
 	char gameID[NEUTRINO_GAME_ID_SIZE], cfg[MAX_PATH], text[CFG_MAX];
 	RiptoplGameSettings s;
 
+	/* With RiptOPL off every game stays on Neutrino, whatever an old CFG says. */
+	if (setting != NULL && setting->disable_riptopl)
+		return 0;
 	if (!IsNeutrinoIsoPath(iso_path))
 		return 0;
 	if (!prepareNeutrinoGameID(iso_path, gameID, sizeof(gameID)))
