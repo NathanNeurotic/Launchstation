@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-27T18:22:17+00:00",
+  "updated_at": "2026-11-27T21:19:43+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 3902,
+  "total_downloads": 3910,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -11011,7 +11011,7 @@
       "release": "latest"
     },
     "797216092": {
-      "downloads": 32,
+      "downloads": 40,
       "name": "LAUNCHSTATION-1285.zip",
       "release": "latest"
     },
