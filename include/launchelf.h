@@ -88,6 +88,7 @@
 #include "cdvd_macro.h"
 #include "iop/ds34usb/ee/libds34usb.h"
 #include "iop/ds34bt/ee/libds34bt.h"
+#include "iop/gipusb/ee/libgipusb.h"
 
 #include <sio.h>
 #include <sior_rpc.h>
@@ -306,6 +307,8 @@ typedef struct
 	char popstarter_file[MAX_PATH];
 	char ember_dir[MAX_PATH];
 	char neutrino_file[MAX_PATH];
+	char riptopl_file[MAX_PATH];
+	char riptopl_disc_file[MAX_PATH]; /* the RiptOPL build that boots discs (needs DISC_MODE) */
 	/* Opt-out gates for automatic game-image handlers. Old CNFs default to enabled. */
 	int disable_ember;
 	int disable_popstarter;

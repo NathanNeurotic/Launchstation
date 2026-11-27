@@ -7,6 +7,7 @@
 
 /* Read from ISO9660 SYSTEM.CNF without switching or loading drivers. */
 int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len);
+int gameIdFromSystemCnf(const char *cnf, char *gameID);
 
 #ifdef MMCE
 /* Only use a pre-existing MMCE stack; never invalidate the ISO/ELF device. */

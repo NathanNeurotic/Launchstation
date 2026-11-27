@@ -626,6 +626,8 @@ char *configBuildSaveText(int *out_size)
 	        "POPSTARTER_ELF = %s\r\n"
 	        "EMBER_DIR = %s\r\n"
 	        "NEUTRINO_ELF = %s\r\n"
+	        "RIPTOPL_ELF = %s\r\n"
+	        "RIPTOPL_DISC_ELF = %s\r\n"
 	        "Disable_EMBER = %d\r\n"
 	        "Disable_POPSTARTER = %d\r\n"
 	        "Disable_NEUTRINO = %d\r\n"
@@ -658,6 +660,8 @@ char *configBuildSaveText(int *out_size)
 	        setting->popstarter_file,  //POPSTARTER_ELF
 	        setting->ember_dir,        //EMBER_DIR
 	        setting->neutrino_file,    //NEUTRINO_ELF
+	        setting->riptopl_file,     //RIPTOPL_ELF
+	        setting->riptopl_disc_file, //RIPTOPL_DISC_ELF
 	        setting->disable_ember,
 	        setting->disable_popstarter,
 	        setting->disable_neutrino,
@@ -837,6 +841,8 @@ void initConfig(void)
 	setting->popstarter_file[0] = '\0';
 	setting->ember_dir[0] = '\0';
 	setting->neutrino_file[0] = '\0';
+	setting->riptopl_file[0] = '\0';
+	setting->riptopl_disc_file[0] = '\0';
 	setting->disable_ember = 0;
 	setting->disable_popstarter = 0;
 	setting->disable_neutrino = 0;
@@ -1077,6 +1083,10 @@ int loadConfig(char *mainMsg, char *CNF)
 			strcpy(setting->ember_dir, value);
 		else if (!strcmp(name, "NEUTRINO_ELF"))
 			strcpy(setting->neutrino_file, value);
+		else if (!strcmp(name, "RIPTOPL_ELF"))
+			strcpy(setting->riptopl_file, value);
+		else if (!strcmp(name, "RIPTOPL_DISC_ELF"))
+			strcpy(setting->riptopl_disc_file, value);
 		else if (!strcmp(name, "Disable_EMBER"))
 			setting->disable_ember = (atoi(value) != 0);
 		else if (!strcmp(name, "Disable_POPSTARTER"))

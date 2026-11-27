@@ -1128,6 +1128,15 @@ float dashSectionAnim(void); /* 0..1 section-transition clock */
  * DASH_LAUNCH_PENDING_ARGS = start with the arguments already loaded */
 #define DASH_LAUNCH_PENDING_ARGS 2
 void dashLaunchApp(DashApp *app, int with_args_prompt);
+/* Start a PS2 ISO through RiptOPL (a separate loader choice next to Neutrino). */
+void dashLaunchIsoWithRiptopl(const char *iso_path, const char *title);
+/* Per-game RiptOPL settings (loader and pad options), and whether a game is set to start on RiptOPL. */
+void dashRiptoplSettings(const char *iso_path, const char *title);
+void dashRiptoplDiscSettings(const char *game_id, const char *title);
+int riptoplDiscArgLine(const char *game_id, char *out, size_t cap);
+int riptoplGameUsesRiptopl(const char *iso_path);
+/* Start the disc in the drive through RiptOPL (its own boot, with its pad emulator). */
+void dashLaunchDisc(const char *title, const char *game_id);
 void dashRunMisc(const char *misc_path);
 /* Native information screens (dash_info.c) */
 void dashShowAbout(void);
@@ -1137,6 +1146,7 @@ void dashShowSystemInfo(void);
 void dashConsoleIdentityInit(void); /* read once at startup, worker idle */
 void dashConsoleSummaryText(char *out, size_t out_size);
 void dashShowFontViewer(void);
+void dashControllerTester(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
 typedef struct
 {

@@ -94,6 +94,8 @@ enum SetId {
 	S_POPS_PATH,
 	S_EMBER_DIR,
 	S_NEUTRINO_PATH,
+	S_RIPTOPL_PATH,
+	S_RIPTOPL_DISC_PATH,
 	S_DISABLE_EMBER,
 	S_DISABLE_POPSTARTER,
 	S_DISABLE_NEUTRINO,
@@ -343,6 +345,8 @@ static const SetItem loader_items[] = {
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
     {ST_PATH, S_EMBER_DIR, "Ember directory", "Folder containing ember.elf, bios.bin and games/. CUE/BIN/EXE routes to Ember automatically; VCD still uses POPStarter."},
     {ST_PATH, S_NEUTRINO_PATH, "Neutrino", "Neutrino ELF used to start PS2 ISO images. Empty: game device, then mc0:/mc1:/neutrino/."},
+    {ST_PATH, S_RIPTOPL_PATH, "RiptOPL", "RIPTOPL.ELF used by Start with RiptOPL. Empty: APPS/RIPTOPL-GIP on the game's device, then the memory cards."},
+    {ST_PATH, S_RIPTOPL_DISC_PATH, "RiptOPL for discs", "RIPTOPL.ELF of the RetroAchievements edition, the one that can start a disc with the pad emulator. Empty: the RiptOPL above, then the memory cards."},
     {ST_CHOICE, S_DISABLE_EMBER, "Disable Ember support", "Off (default): CUE/BIN/EXE game routes use Ember. On: refuse Ember image launches without loading devices."},
     {ST_CHOICE, S_DISABLE_POPSTARTER, "Disable POPStarter support", "Off (default): VCD launches use POPStarter. On: refuse automatic VCD launches."},
     {ST_CHOICE, S_DISABLE_NEUTRINO, "Disable Neutrino support", "Off (default): ISO launches use Neutrino. On: refuse automatic PS2 ISO launches."},
@@ -2112,6 +2116,12 @@ static int pathInfo(int id, PathSpec *p)
 			return 1;
 		case S_NEUTRINO_PATH:
 			p->field = setting->neutrino_file, p->size = sizeof(setting->neutrino_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_RIPTOPL_PATH:
+			p->field = setting->riptopl_file, p->size = sizeof(setting->riptopl_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_RIPTOPL_DISC_PATH:
+			p->field = setting->riptopl_disc_file, p->size = sizeof(setting->riptopl_disc_file), p->ext = "ELF", p->mc_alias = 1;
 			return 1;
 		case S_MMCE_BACKUP_PATH:
 			p->field = dashCfg.igr_backup_path, p->size = sizeof(dashCfg.igr_backup_path), p->mode = DASH_PICK_FOLDER;

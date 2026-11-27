@@ -14,6 +14,7 @@
 
 
 static char padBuf_t[2][256] __attribute__((aligned(64)));
+u8 gipRumbleTestLevel = 0; // set by the controller tester to check vibration on the GIP pad
 struct padButtonStatus buttons_t[4];
 u32 padtype_t[4];
 u32 paddata, paddata_t[4];
@@ -21,7 +22,7 @@ u32 old_pad = 0, old_pad_t[4] = {0, 0, 0, 0};
 int ret[4] = {0, 0, 0, 0};
 u32 new_pad, new_pad_t[4];
 u32 joy_value = 0;
-static int test_joy = 0;
+
 
 int semPoll,semRunning,semFinish;
 int isRunning;
@@ -99,6 +100,18 @@ void padPollingThread(void *args)
 		if (ds34usb_get_status(0) & DS34USB_STATE_RUNNING) {
 			ret[3] = ds34usb_get_data(0, (u8 *)&buttons_t[3].btns);
 			ds34usb_set_rumble(0, padRumbleLevel(), padRumbleLevel());
+			if (ret[3] != 0) {
+				paddata_t[3] = 0xffff ^ buttons_t[3].btns;
+			}
+		} else if (gipusb_get_status(0) & GIPUSB_STATE_RUNNING) {
+			// Xbox One / Series pad. Shares the USB slot: a DS3/DS4 pad takes priority.
+			ret[3] = gipusb_get_data(0, (u8 *)&buttons_t[3].btns);
+			{
+				u8 lvl = (u8)padRumbleLevel();
+				if (gipRumbleTestLevel > lvl)
+					lvl = gipRumbleTestLevel; /* Controller tester: vibration check */
+				gipusb_set_rumble(0, lvl, lvl);
+			}
 			if (ret[3] != 0) {
 				paddata_t[3] = 0xffff ^ buttons_t[3].btns;
 			}
@@ -219,31 +232,34 @@ int readpad_no_KB(void)
 
 	for (port = 0; port < 4; port++) {
 		if (ret[port] != 0) {
-			if ((padtype_t[port] == 2) && (1 & (test_joy++))) {  // DualShock && time for joy scan
+			// DualShock stick scan, same as pad.c: OR into the held mask on every call.
+			// Replacing the mask (=) or scanning every other call made the buttons
+			// disappear and retrigger while a stick was held.
+			if (padtype_t[port] == 2) {  // DualShock
 				joy_value = 0;
 				if (buttons_t[port].rjoy_h >= 0xbf) {
-					paddata_t[port] = PAD_R3_H1;
+					paddata_t[port] |= PAD_R3_H1;
 					joy_value = buttons_t[port].rjoy_h - 0xbf;
 				} else if (buttons_t[port].rjoy_h <= 0x40) {
-					paddata_t[port] = PAD_R3_H0;
+					paddata_t[port] |= PAD_R3_H0;
 					joy_value = -(buttons_t[port].rjoy_h - 0x40);
 				} else if (buttons_t[port].rjoy_v <= 0x40) {
-					paddata_t[port] = PAD_R3_V0;
+					paddata_t[port] |= PAD_R3_V0;
 					joy_value = -(buttons_t[port].rjoy_v - 0x40);
 				} else if (buttons_t[port].rjoy_v >= 0xbf) {
-					paddata_t[port] = PAD_R3_V1;
+					paddata_t[port] |= PAD_R3_V1;
 					joy_value = buttons_t[port].rjoy_v - 0xbf;
 				} else if (buttons_t[port].ljoy_h >= 0xbf) {
-					paddata_t[port] = PAD_L3_H1;
+					paddata_t[port] |= PAD_L3_H1;
 					joy_value = buttons_t[port].ljoy_h - 0xbf;
 				} else if (buttons_t[port].ljoy_h <= 0x40) {
-					paddata_t[port] = PAD_L3_H0;
+					paddata_t[port] |= PAD_L3_H0;
 					joy_value = -(buttons_t[port].ljoy_h - 0x40);
 				} else if (buttons_t[port].ljoy_v <= 0x40) {
-					paddata_t[port] = PAD_L3_V0;
+					paddata_t[port] |= PAD_L3_V0;
 					joy_value = -(buttons_t[port].ljoy_v - 0x40);
 				} else if (buttons_t[port].ljoy_v >= 0xbf) {
-					paddata_t[port] = PAD_L3_V1;
+					paddata_t[port] |= PAD_L3_V1;
 					joy_value = buttons_t[port].ljoy_v - 0xbf;
 				}
 			}
@@ -486,6 +502,7 @@ static int setupPadUntil(u64 deadline)
 	int usb_ready = ds34usb_init(deadline);
 	int bt_ready = ds34bt_init(deadline);
 	if (deadline && (!usb_ready || !bt_ready)) return 0;
+	gipusb_init(); /* Xbox One / Series pads; not part of the ready check, so a missing one never fails startup */
 
 	for (port = 0; port < 2; port++) {
 		padtype_t[port] = 0;  // Assume that we don't have a proper PS2 controller

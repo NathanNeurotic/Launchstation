@@ -14,8 +14,9 @@ if __name__ == "__main__":
     parser.add_argument("standard")
     parser.add_argument("ds34")
     args = parser.parse_args()
-    required = {"padPollingThread", "ds34usb_init", "ds34bt_init",
-                "ds34usb_irx", "size_ds34usb_irx", "ds34bt_irx", "size_ds34bt_irx"}
+    required = {"padPollingThread", "ds34usb_init", "ds34bt_init", "gipusb_init",
+                "ds34usb_irx", "size_ds34usb_irx", "ds34bt_irx", "size_ds34bt_irx",
+                "gipusb_irx", "size_gipusb_irx"}
     standard = symbols(args.nm, args.standard)
     enabled = symbols(args.nm, args.ds34)
     if required & standard:

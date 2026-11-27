@@ -2893,6 +2893,7 @@ static void actionsMenu(void)
 	static int sv_idx[MAX_ENTRY];
 	enum {
 		F_OPEN,
+		F_RIPTOPL,
 		F_COPY,
 		F_CUT,
 		F_PASTE,
@@ -2979,6 +2980,9 @@ static void actionsMenu(void)
 		}
 		ADD(isDir(f) ? DI_FOLDER : DI_PLAY, isDir(f) ? "Open" : "Open / start",
 		    open_disabled ? "Direct launch unsupported" : NULL, open_disabled, F_OPEN);
+		/* A separate loader next to Neutrino, set per game in RiptOPL settings; Open / start follows it. */
+		if (!isDir(f) && fb.nmarked == 0 && IsNeutrinoIsoPath(f->name))
+			ADD(DI_SETTINGS, "RiptOPL settings", "loader and pad options", 0, F_RIPTOPL);
 	}
 	if (in_folder) {
 		ADD(DI_COPY, "Copy", fb.nmarked ? marked : NULL, !has_target || !en[COPY], F_COPY);
@@ -3132,6 +3136,10 @@ static void actionsMenu(void)
 	switch (ids[r]) {
 		case F_OPEN:
 			activate();
+			break;
+		case F_RIPTOPL:
+			if (f != NULL && fullPath(f, path, sizeof(path)))
+				dashRiptoplSettings(path, f->name);
 			break;
 		case F_COPY:
 			opCopy(0);

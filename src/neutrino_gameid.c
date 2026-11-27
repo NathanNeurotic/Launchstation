@@ -198,6 +198,12 @@ static int parseIsoGameID(const char *cnf, char *gameID)
 	return 0;
 }
 
+/* The game ID of a disc, read from its SYSTEM.CNF text (BOOT2 line). */
+int gameIdFromSystemCnf(const char *cnf, char *gameID)
+{
+	return cnf != NULL && gameID != NULL && parseIsoGameID(cnf, gameID);
+}
+
 int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len)
 {
 	char cnf[ISO_CNF_SIZE + 1] __attribute__((aligned(16)));
