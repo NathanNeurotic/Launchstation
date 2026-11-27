@@ -276,6 +276,7 @@ jobs:
           python3 tests/test_file_stat_errors.py
           python3 tests/test_update_sas_timestamps.py
           python3 tests/test_launch_iop_override.py
+          python3 tests/test_usb_launch_live_device.py
           python3 tests/test_launch_driver_messages.py
           python3 tests/test_cursor_sound_ticks.py
           python3 tests/test_ps2browser_card_update.py

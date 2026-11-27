@@ -746,8 +746,11 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 		handoff_path = normalizeExecArg0Path(selected_path, exec_arg0, sizeof(exec_arg0));
 	snprintf(exec_target, sizeof(exec_target), "%s", filename);
 	cleanup_hdd_launch = !preserve_devices && isHddPartyPath(party);
-	if (exec_kind == 1 && handoff_path != NULL && !strncmp(handoff_path, "mass", 4))
-		snprintf(exec_target, sizeof(exec_target), "%s", handoff_path);
+	/* The loader reads the ELF from exec_target on this IOP, so it must stay
+	 * the live path the file was found on (usb0:, ata0:, ...). The massN:
+	 * handoff name counts every FAT/exFAT volume in mount order: with an
+	 * internal exFAT drive mounted first, mass0: is that drive, not the USB
+	 * stick (issue 439). massN: is only the child's argv[0] below. */
 	DPRINTF("RunLoaderElf: exec_kind=%d reboot_iop=%d target='%s' handoff='%s' party='%s'\n",
 	        exec_kind, reboot_iop_elf_load, filename,
 	        (handoff_path != NULL) ? handoff_path : "",
