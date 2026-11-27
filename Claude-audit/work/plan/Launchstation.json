@@ -1,0 +1,8672 @@
+{
+ "repo": "Launchstation",
+ "commit": "8155d14cb69bffae7c0827cde4ab3eab312b8755",
+ "chunks": [
+  {
+   "id": "launch-core-01",
+   "tier": "core",
+   "label": "ee_libs/hdd, ee_libs/iopreboot, ee_libs/tcpips +2 more",
+   "lines": 3595,
+   "files": [
+    {
+     "path": "ee_libs/hdd/include/libhdd.h",
+     "lines": 91,
+     "kind": "source",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "ee_libs/hdd/libhdd.c",
+     "lines": 569,
+     "kind": "source",
+     "start": 1,
+     "end": 569,
+     "part": false
+    },
+    {
+     "path": "ee_libs/iopreboot/SifIopRebootBuffer.c",
+     "lines": 246,
+     "kind": "source",
+     "start": 1,
+     "end": 246,
+     "part": false
+    },
+    {
+     "path": "ee_libs/iopreboot/patch_romdrv_set_rom1_info.c",
+     "lines": 57,
+     "kind": "source",
+     "start": 1,
+     "end": 57,
+     "part": false
+    },
+    {
+     "path": "ee_libs/tcpips/ps2ipc.c",
+     "lines": 815,
+     "kind": "source",
+     "start": 1,
+     "end": 815,
+     "part": false
+    },
+    {
+     "path": "igr/wle_igr.c",
+     "lines": 268,
+     "kind": "source",
+     "start": 1,
+     "end": 268,
+     "part": false
+    },
+    {
+     "path": "include/cdvd_macro.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "include/cloud_google_roots.h",
+     "lines": 102,
+     "kind": "source",
+     "start": 1,
+     "end": 102,
+     "part": false
+    },
+    {
+     "path": "include/config_private.h",
+     "lines": 86,
+     "kind": "source",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "include/dash.h",
+     "lines": 73,
+     "kind": "source",
+     "start": 1,
+     "end": 73,
+     "part": false
+    },
+    {
+     "path": "include/dash_autotest.h",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "include/dash_font_data.h",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "include/dash_internal.h",
+     "lines": 1195,
+     "kind": "source",
+     "start": 1,
+     "end": 1195,
+     "part": false
+    },
+    {
+     "path": "include/draw_private.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-02",
+   "tier": "core",
+   "label": "include, include/snippets, loader +1 more",
+   "lines": 2017,
+   "files": [
+    {
+     "path": "include/editor_private.h",
+     "lines": 112,
+     "kind": "source",
+     "start": 1,
+     "end": 112,
+     "part": false
+    },
+    {
+     "path": "include/filer_internal.h",
+     "lines": 19,
+     "kind": "source",
+     "start": 1,
+     "end": 19,
+     "part": false
+    },
+    {
+     "path": "include/filer_shared.h",
+     "lines": 136,
+     "kind": "source",
+     "start": 1,
+     "end": 136,
+     "part": false
+    },
+    {
+     "path": "include/ftp_protocol.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "include/launchelf.h",
+     "lines": 763,
+     "kind": "source",
+     "start": 1,
+     "end": 763,
+     "part": false
+    },
+    {
+     "path": "include/list_scroll.h",
+     "lines": 22,
+     "kind": "source",
+     "start": 1,
+     "end": 22,
+     "part": false
+    },
+    {
+     "path": "include/nfsman.h",
+     "lines": 32,
+     "kind": "source",
+     "start": 1,
+     "end": 32,
+     "part": false
+    },
+    {
+     "path": "include/pccf_control.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "include/psu_types.h",
+     "lines": 42,
+     "kind": "source",
+     "start": 1,
+     "end": 42,
+     "part": false
+    },
+    {
+     "path": "include/smb2man.h",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "include/smbd_devctl.h",
+     "lines": 12,
+     "kind": "source",
+     "start": 1,
+     "end": 12,
+     "part": false
+    },
+    {
+     "path": "include/wle_igr_config.h",
+     "lines": 13,
+     "kind": "source",
+     "start": 1,
+     "end": 13,
+     "part": false
+    },
+    {
+     "path": "include/snippets/readCD.h",
+     "lines": 52,
+     "kind": "source",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "loader/linkfile",
+     "lines": 143,
+     "kind": "othertext",
+     "start": 1,
+     "end": 143,
+     "part": false
+    },
+    {
+     "path": "loader/loader.c",
+     "lines": 446,
+     "kind": "source",
+     "start": 1,
+     "end": 446,
+     "part": false
+    },
+    {
+     "path": "src/chkesr.c",
+     "lines": 60,
+     "kind": "source",
+     "start": 1,
+     "end": 60,
+     "part": false
+    },
+    {
+     "path": "include/cloud_google.h",
+     "lines": 83,
+     "kind": "source",
+     "start": 1,
+     "end": 83,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-03",
+   "tier": "core",
+   "label": "src",
+   "lines": 3003,
+   "files": [
+    {
+     "path": "src/cloud_google.c",
+     "lines": 1635,
+     "kind": "source",
+     "start": 1,
+     "end": 1635,
+     "part": false
+    },
+    {
+     "path": "include/cloud_http.h",
+     "lines": 56,
+     "kind": "source",
+     "start": 1,
+     "end": 56,
+     "part": false
+    },
+    {
+     "path": "src/cloud_http.c",
+     "lines": 1312,
+     "kind": "source",
+     "start": 1,
+     "end": 1312,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-04",
+   "tier": "core",
+   "label": "src",
+   "lines": 3198,
+   "files": [
+    {
+     "path": "src/config.c",
+     "lines": 1782,
+     "kind": "source",
+     "start": 1,
+     "end": 1782,
+     "part": false
+    },
+    {
+     "path": "src/config_advanced.c",
+     "lines": 329,
+     "kind": "source",
+     "start": 1,
+     "end": 329,
+     "part": false
+    },
+    {
+     "path": "src/config_network.c",
+     "lines": 362,
+     "kind": "source",
+     "start": 1,
+     "end": 362,
+     "part": false
+    },
+    {
+     "path": "src/config_screen.c",
+     "lines": 361,
+     "kind": "source",
+     "start": 1,
+     "end": 361,
+     "part": false
+    },
+    {
+     "path": "src/config_startup.c",
+     "lines": 364,
+     "kind": "source",
+     "start": 1,
+     "end": 364,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-05",
+   "tier": "core",
+   "label": "src",
+   "lines": 3377,
+   "files": [
+    {
+     "path": "src/dash_apps.c",
+     "lines": 802,
+     "kind": "source",
+     "start": 1,
+     "end": 802,
+     "part": false
+    },
+    {
+     "path": "src/dash_art.c",
+     "lines": 815,
+     "kind": "source",
+     "start": 1,
+     "end": 815,
+     "part": false
+    },
+    {
+     "path": "src/dash_bg.c",
+     "lines": 602,
+     "kind": "source",
+     "start": 1,
+     "end": 602,
+     "part": false
+    },
+    {
+     "path": "src/dash_bg_geo.c",
+     "lines": 333,
+     "kind": "source",
+     "start": 1,
+     "end": 333,
+     "part": false
+    },
+    {
+     "path": "src/dash_bg_ps2.c",
+     "lines": 825,
+     "kind": "source",
+     "start": 1,
+     "end": 825,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-06",
+   "tier": "core",
+   "label": "src",
+   "lines": 3665,
+   "files": [
+    {
+     "path": "src/dash_browser.c",
+     "lines": 3665,
+     "kind": "source",
+     "start": 1,
+     "end": 3665,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-07",
+   "tier": "core",
+   "label": "src",
+   "lines": 3455,
+   "files": [
+    {
+     "path": "include/dash_card_tool.h",
+     "lines": 70,
+     "kind": "source",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": "src/dash_card_tool.c",
+     "lines": 2903,
+     "kind": "source",
+     "start": 1,
+     "end": 2903,
+     "part": false
+    },
+    {
+     "path": "src/dash_clock_sync.c",
+     "lines": 482,
+     "kind": "source",
+     "start": 1,
+     "end": 482,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-08",
+   "tier": "core",
+   "label": "src",
+   "lines": 3318,
+   "files": [
+    {
+     "path": "src/dash_devices.c",
+     "lines": 921,
+     "kind": "source",
+     "start": 1,
+     "end": 921,
+     "part": false
+    },
+    {
+     "path": "src/dash_editor.c",
+     "lines": 1494,
+     "kind": "source",
+     "start": 1,
+     "end": 1494,
+     "part": false
+    },
+    {
+     "path": "src/dash_exploit.c",
+     "lines": 169,
+     "kind": "source",
+     "start": 1,
+     "end": 169,
+     "part": false
+    },
+    {
+     "path": "src/dash_files.c",
+     "lines": 734,
+     "kind": "source",
+     "start": 1,
+     "end": 734,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-09",
+   "tier": "core",
+   "label": "src",
+   "lines": 3371,
+   "files": [
+    {
+     "path": "src/dash_font.c",
+     "lines": 957,
+     "kind": "source",
+     "start": 1,
+     "end": 957,
+     "part": false
+    },
+    {
+     "path": "src/dash_ftp.c",
+     "lines": 134,
+     "kind": "source",
+     "start": 1,
+     "end": 134,
+     "part": false
+    },
+    {
+     "path": "src/dash_gfx.c",
+     "lines": 938,
+     "kind": "source",
+     "start": 1,
+     "end": 938,
+     "part": false
+    },
+    {
+     "path": "src/dash_hdd.c",
+     "lines": 1342,
+     "kind": "source",
+     "start": 1,
+     "end": 1342,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-10",
+   "tier": "core",
+   "label": "src",
+   "lines": 3450,
+   "files": [
+    {
+     "path": "src/dash_home.c",
+     "lines": 565,
+     "kind": "source",
+     "start": 1,
+     "end": 565,
+     "part": false
+    },
+    {
+     "path": "src/dash_icons.c",
+     "lines": 1006,
+     "kind": "source",
+     "start": 1,
+     "end": 1006,
+     "part": false
+    },
+    {
+     "path": "src/dash_image.c",
+     "lines": 313,
+     "kind": "source",
+     "start": 1,
+     "end": 313,
+     "part": false
+    },
+    {
+     "path": "src/dash_info.c",
+     "lines": 446,
+     "kind": "source",
+     "start": 1,
+     "end": 446,
+     "part": false
+    },
+    {
+     "path": "src/dash_jpeg.c",
+     "lines": 183,
+     "kind": "source",
+     "start": 1,
+     "end": 183,
+     "part": false
+    },
+    {
+     "path": "src/dash_lib.c",
+     "lines": 937,
+     "kind": "source",
+     "start": 1,
+     "end": 937,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-11",
+   "tier": "core",
+   "label": "src",
+   "lines": 2542,
+   "files": [
+    {
+     "path": "src/dash_main.c",
+     "lines": 1542,
+     "kind": "source",
+     "start": 1,
+     "end": 1542,
+     "part": false
+    },
+    {
+     "path": "src/dash_png.c",
+     "lines": 241,
+     "kind": "source",
+     "start": 1,
+     "end": 241,
+     "part": false
+    },
+    {
+     "path": "src/dash_ps1_card.c",
+     "lines": 759,
+     "kind": "source",
+     "start": 1,
+     "end": 759,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-12",
+   "tier": "core",
+   "label": "src",
+   "lines": 4103,
+   "files": [
+    {
+     "path": "src/dash_settings.c",
+     "lines": 4103,
+     "kind": "source",
+     "start": 1,
+     "end": 4103,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-13",
+   "tier": "core",
+   "label": "src",
+   "lines": 2968,
+   "files": [
+    {
+     "path": "src/dash_smbd.c",
+     "lines": 83,
+     "kind": "source",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": "include/dash_sound.h",
+     "lines": 34,
+     "kind": "source",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "src/dash_sound.c",
+     "lines": 525,
+     "kind": "source",
+     "start": 1,
+     "end": 525,
+     "part": false
+    },
+    {
+     "path": "src/dash_store.c",
+     "lines": 870,
+     "kind": "source",
+     "start": 1,
+     "end": 870,
+     "part": false
+    },
+    {
+     "path": "src/dash_theme.c",
+     "lines": 148,
+     "kind": "source",
+     "start": 1,
+     "end": 148,
+     "part": false
+    },
+    {
+     "path": "src/dash_themes.c",
+     "lines": 1308,
+     "kind": "source",
+     "start": 1,
+     "end": 1308,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-14",
+   "tier": "core",
+   "label": "src",
+   "lines": 3291,
+   "files": [
+    {
+     "path": "src/dash_tools.c",
+     "lines": 1735,
+     "kind": "source",
+     "start": 1,
+     "end": 1735,
+     "part": false
+    },
+    {
+     "path": "src/dash_ui.c",
+     "lines": 1556,
+     "kind": "source",
+     "start": 1,
+     "end": 1556,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-15",
+   "tier": "core",
+   "label": "src",
+   "lines": 3414,
+   "files": [
+    {
+     "path": "src/dash_widgets.c",
+     "lines": 1350,
+     "kind": "source",
+     "start": 1,
+     "end": 1350,
+     "part": false
+    },
+    {
+     "path": "src/dash_worker.c",
+     "lines": 405,
+     "kind": "source",
+     "start": 1,
+     "end": 405,
+     "part": false
+    },
+    {
+     "path": "src/draw.c",
+     "lines": 402,
+     "kind": "source",
+     "start": 1,
+     "end": 402,
+     "part": false
+    },
+    {
+     "path": "src/draw_gs.c",
+     "lines": 206,
+     "kind": "source",
+     "start": 1,
+     "end": 206,
+     "part": false
+    },
+    {
+     "path": "src/draw_text.c",
+     "lines": 363,
+     "kind": "source",
+     "start": 1,
+     "end": 363,
+     "part": false
+    },
+    {
+     "path": "src/editor.c",
+     "lines": 688,
+     "kind": "source",
+     "start": 1,
+     "end": 688,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-16",
+   "tier": "core",
+   "label": "src",
+   "lines": 2884,
+   "files": [
+    {
+     "path": "src/editor_file.c",
+     "lines": 324,
+     "kind": "source",
+     "start": 1,
+     "end": 324,
+     "part": false
+    },
+    {
+     "path": "src/editor_input.c",
+     "lines": 705,
+     "kind": "source",
+     "start": 1,
+     "end": 705,
+     "part": false
+    },
+    {
+     "path": "src/editor_menu.c",
+     "lines": 229,
+     "kind": "source",
+     "start": 1,
+     "end": 229,
+     "part": false
+    },
+    {
+     "path": "src/editor_rules.c",
+     "lines": 123,
+     "kind": "source",
+     "start": 1,
+     "end": 123,
+     "part": false
+    },
+    {
+     "path": "src/elf.c",
+     "lines": 854,
+     "kind": "source",
+     "start": 1,
+     "end": 854,
+     "part": false
+    },
+    {
+     "path": "src/embed_blobs.S",
+     "lines": 91,
+     "kind": "source",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "src/ember.c",
+     "lines": 393,
+     "kind": "source",
+     "start": 1,
+     "end": 393,
+     "part": false
+    },
+    {
+     "path": "src/ember_gameid.c",
+     "lines": 165,
+     "kind": "source",
+     "start": 1,
+     "end": 165,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-17",
+   "tier": "core",
+   "label": "src",
+   "lines": 2630,
+   "files": [
+    {
+     "path": "src/filer.c",
+     "lines": 2578,
+     "kind": "source",
+     "start": 1,
+     "end": 2578,
+     "part": false
+    },
+    {
+     "path": "include/filer_actions.h",
+     "lines": 52,
+     "kind": "source",
+     "start": 1,
+     "end": 52,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-18",
+   "tier": "core",
+   "label": "src",
+   "lines": 2259,
+   "files": [
+    {
+     "path": "src/filer_actions.c",
+     "lines": 2259,
+     "kind": "source",
+     "start": 1,
+     "end": 2259,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-19",
+   "tier": "core",
+   "label": "src",
+   "lines": 2546,
+   "files": [
+    {
+     "path": "src/filer_browser.c",
+     "lines": 2528,
+     "kind": "source",
+     "start": 1,
+     "end": 2528,
+     "part": false
+    },
+    {
+     "path": "include/filer_copy.h",
+     "lines": 18,
+     "kind": "source",
+     "start": 1,
+     "end": 18,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-20",
+   "tier": "core",
+   "label": "src",
+   "lines": 3517,
+   "files": [
+    {
+     "path": "src/filer_copy.c",
+     "lines": 1721,
+     "kind": "source",
+     "start": 1,
+     "end": 1721,
+     "part": false
+    },
+    {
+     "path": "src/filer_device.c",
+     "lines": 231,
+     "kind": "source",
+     "start": 1,
+     "end": 231,
+     "part": false
+    },
+    {
+     "path": "src/filer_fileops.c",
+     "lines": 808,
+     "kind": "source",
+     "start": 1,
+     "end": 808,
+     "part": false
+    },
+    {
+     "path": "src/filer_mount.c",
+     "lines": 238,
+     "kind": "source",
+     "start": 1,
+     "end": 238,
+     "part": false
+    },
+    {
+     "path": "include/ftp_session.h",
+     "lines": 12,
+     "kind": "source",
+     "start": 1,
+     "end": 12,
+     "part": false
+    },
+    {
+     "path": "src/ftp_session.c",
+     "lines": 92,
+     "kind": "source",
+     "start": 1,
+     "end": 92,
+     "part": false
+    },
+    {
+     "path": "src/gui.c",
+     "lines": 406,
+     "kind": "source",
+     "start": 1,
+     "end": 406,
+     "part": false
+    },
+    {
+     "path": "include/gui_colors.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-21",
+   "tier": "core",
+   "label": "src",
+   "lines": 2232,
+   "files": [
+    {
+     "path": "src/gui_colors.c",
+     "lines": 86,
+     "kind": "source",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "include/gui_hdd0_format.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "src/gui_hdd0_format.c",
+     "lines": 75,
+     "kind": "source",
+     "start": 1,
+     "end": 75,
+     "part": false
+    },
+    {
+     "path": "include/gui_neutrino.h",
+     "lines": 26,
+     "kind": "source",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "src/gui_neutrino.c",
+     "lines": 518,
+     "kind": "source",
+     "start": 1,
+     "end": 518,
+     "part": false
+    },
+    {
+     "path": "include/gui_sort.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "src/gui_sort.c",
+     "lines": 95,
+     "kind": "source",
+     "start": 1,
+     "end": 95,
+     "part": false
+    },
+    {
+     "path": "include/gui_texteditor.h",
+     "lines": 8,
+     "kind": "source",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "src/gui_texteditor.c",
+     "lines": 26,
+     "kind": "source",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "include/hdd_header_injector.h",
+     "lines": 20,
+     "kind": "source",
+     "start": 1,
+     "end": 20,
+     "part": false
+    },
+    {
+     "path": "src/hdd_header_injector.c",
+     "lines": 1160,
+     "kind": "source",
+     "start": 1,
+     "end": 1160,
+     "part": false
+    },
+    {
+     "path": "include/hdl_rpc.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "src/hdl_rpc.c",
+     "lines": 83,
+     "kind": "source",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": "include/init.h",
+     "lines": 88,
+     "kind": "source",
+     "start": 1,
+     "end": 88,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-22",
+   "tier": "core",
+   "label": "src",
+   "lines": 3226,
+   "files": [
+    {
+     "path": "src/init.c",
+     "lines": 3205,
+     "kind": "source",
+     "start": 1,
+     "end": 3205,
+     "part": false
+    },
+    {
+     "path": "include/kelf_signer.h",
+     "lines": 21,
+     "kind": "source",
+     "start": 1,
+     "end": 21,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-23",
+   "tier": "core",
+   "label": "src",
+   "lines": 3437,
+   "files": [
+    {
+     "path": "src/kelf_signer.c",
+     "lines": 1153,
+     "kind": "source",
+     "start": 1,
+     "end": 1153,
+     "part": false
+    },
+    {
+     "path": "include/lang.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "src/lang.c",
+     "lines": 642,
+     "kind": "source",
+     "start": 1,
+     "end": 642,
+     "part": false
+    },
+    {
+     "path": "src/main.c",
+     "lines": 315,
+     "kind": "source",
+     "start": 1,
+     "end": 315,
+     "part": false
+    },
+    {
+     "path": "include/main_actions.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "src/main_actions.c",
+     "lines": 888,
+     "kind": "source",
+     "start": 1,
+     "end": 888,
+     "part": false
+    },
+    {
+     "path": "include/main_boot.h",
+     "lines": 10,
+     "kind": "source",
+     "start": 1,
+     "end": 10,
+     "part": false
+    },
+    {
+     "path": "src/main_boot.c",
+     "lines": 97,
+     "kind": "source",
+     "start": 1,
+     "end": 97,
+     "part": false
+    },
+    {
+     "path": "include/main_console_info.h",
+     "lines": 14,
+     "kind": "source",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "src/main_console_info.c",
+     "lines": 255,
+     "kind": "source",
+     "start": 1,
+     "end": 255,
+     "part": false
+    },
+    {
+     "path": "include/main_exploit_installer.h",
+     "lines": 26,
+     "kind": "source",
+     "start": 1,
+     "end": 26,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-24",
+   "tier": "core",
+   "label": "src",
+   "lines": 3228,
+   "files": [
+    {
+     "path": "src/main_exploit_installer.c",
+     "lines": 2519,
+     "kind": "source",
+     "start": 1,
+     "end": 2519,
+     "part": false
+    },
+    {
+     "path": "src/main_fileops.c",
+     "lines": 88,
+     "kind": "source",
+     "start": 1,
+     "end": 88,
+     "part": false
+    },
+    {
+     "path": "include/main_gameid.h",
+     "lines": 21,
+     "kind": "source",
+     "start": 1,
+     "end": 21,
+     "part": false
+    },
+    {
+     "path": "src/main_gameid.c",
+     "lines": 241,
+     "kind": "source",
+     "start": 1,
+     "end": 241,
+     "part": false
+    },
+    {
+     "path": "src/main_gameid_table.c",
+     "lines": 136,
+     "kind": "source",
+     "start": 1,
+     "end": 136,
+     "part": false
+    },
+    {
+     "path": "include/main_history.h",
+     "lines": 6,
+     "kind": "source",
+     "start": 1,
+     "end": 6,
+     "part": false
+    },
+    {
+     "path": "src/main_history.c",
+     "lines": 208,
+     "kind": "source",
+     "start": 1,
+     "end": 208,
+     "part": false
+    },
+    {
+     "path": "include/main_info_screens.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-25",
+   "tier": "core",
+   "label": "src",
+   "lines": 3242,
+   "files": [
+    {
+     "path": "src/main_info_screens.c",
+     "lines": 394,
+     "kind": "source",
+     "start": 1,
+     "end": 394,
+     "part": false
+    },
+    {
+     "path": "include/main_modules.h",
+     "lines": 10,
+     "kind": "source",
+     "start": 1,
+     "end": 10,
+     "part": false
+    },
+    {
+     "path": "src/main_modules.c",
+     "lines": 71,
+     "kind": "source",
+     "start": 1,
+     "end": 71,
+     "part": false
+    },
+    {
+     "path": "include/main_startup.h",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "src/main_startup.c",
+     "lines": 757,
+     "kind": "source",
+     "start": 1,
+     "end": 757,
+     "part": false
+    },
+    {
+     "path": "include/main_title.h",
+     "lines": 23,
+     "kind": "source",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "src/main_title.c",
+     "lines": 753,
+     "kind": "source",
+     "start": 1,
+     "end": 753,
+     "part": false
+    },
+    {
+     "path": "src/makeicon.c",
+     "lines": 426,
+     "kind": "source",
+     "start": 1,
+     "end": 426,
+     "part": false
+    },
+    {
+     "path": "include/mc_card_export.h",
+     "lines": 54,
+     "kind": "source",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "src/mc_card_export.c",
+     "lines": 625,
+     "kind": "source",
+     "start": 1,
+     "end": 625,
+     "part": false
+    },
+    {
+     "path": "include/mc_card_view.h",
+     "lines": 98,
+     "kind": "source",
+     "start": 1,
+     "end": 98,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-26",
+   "tier": "core",
+   "label": "src",
+   "lines": 3051,
+   "files": [
+    {
+     "path": "src/mc_card_view.c",
+     "lines": 543,
+     "kind": "source",
+     "start": 1,
+     "end": 543,
+     "part": false
+    },
+    {
+     "path": "include/mc_card_write.h",
+     "lines": 117,
+     "kind": "source",
+     "start": 1,
+     "end": 117,
+     "part": false
+    },
+    {
+     "path": "src/mc_card_write.c",
+     "lines": 1116,
+     "kind": "source",
+     "start": 1,
+     "end": 1116,
+     "part": false
+    },
+    {
+     "path": "include/mc_ps1_card.h",
+     "lines": 128,
+     "kind": "source",
+     "start": 1,
+     "end": 128,
+     "part": false
+    },
+    {
+     "path": "src/mc_ps1_card.c",
+     "lines": 445,
+     "kind": "source",
+     "start": 1,
+     "end": 445,
+     "part": false
+    },
+    {
+     "path": "include/mc_save_export.h",
+     "lines": 99,
+     "kind": "source",
+     "start": 1,
+     "end": 99,
+     "part": false
+    },
+    {
+     "path": "src/mc_save_export.c",
+     "lines": 504,
+     "kind": "source",
+     "start": 1,
+     "end": 504,
+     "part": false
+    },
+    {
+     "path": "include/mc_save_formats.h",
+     "lines": 99,
+     "kind": "source",
+     "start": 1,
+     "end": 99,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-27",
+   "tier": "core",
+   "label": "src",
+   "lines": 3433,
+   "files": [
+    {
+     "path": "src/mc_save_formats.c",
+     "lines": 954,
+     "kind": "source",
+     "start": 1,
+     "end": 954,
+     "part": false
+    },
+    {
+     "path": "include/mc_sha256.h",
+     "lines": 24,
+     "kind": "source",
+     "start": 1,
+     "end": 24,
+     "part": false
+    },
+    {
+     "path": "src/mc_sha256.c",
+     "lines": 94,
+     "kind": "source",
+     "start": 1,
+     "end": 94,
+     "part": false
+    },
+    {
+     "path": "include/mmce_backup.h",
+     "lines": 63,
+     "kind": "source",
+     "start": 1,
+     "end": 63,
+     "part": false
+    },
+    {
+     "path": "src/mmce_backup.c",
+     "lines": 1002,
+     "kind": "source",
+     "start": 1,
+     "end": 1002,
+     "part": false
+    },
+    {
+     "path": "include/mmce_card_switch.h",
+     "lines": 54,
+     "kind": "source",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "src/mmce_card_switch.c",
+     "lines": 348,
+     "kind": "source",
+     "start": 1,
+     "end": 348,
+     "part": false
+    },
+    {
+     "path": "include/mmce_igr.h",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "src/mmce_igr.c",
+     "lines": 804,
+     "kind": "source",
+     "start": 1,
+     "end": 804,
+     "part": false
+    },
+    {
+     "path": "include/mmce_save_versions.h",
+     "lines": 49,
+     "kind": "source",
+     "start": 1,
+     "end": 49,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-28",
+   "tier": "core",
+   "label": "src",
+   "lines": 3356,
+   "files": [
+    {
+     "path": "src/mmce_save_versions.c",
+     "lines": 475,
+     "kind": "source",
+     "start": 1,
+     "end": 475,
+     "part": false
+    },
+    {
+     "path": "include/neutrino_gameid.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "src/neutrino_gameid.c",
+     "lines": 261,
+     "kind": "source",
+     "start": 1,
+     "end": 261,
+     "part": false
+    },
+    {
+     "path": "src/neutrino_iso.c",
+     "lines": 403,
+     "kind": "source",
+     "start": 1,
+     "end": 403,
+     "part": false
+    },
+    {
+     "path": "include/neutrino_smb.h",
+     "lines": 17,
+     "kind": "source",
+     "start": 1,
+     "end": 17,
+     "part": false
+    },
+    {
+     "path": "src/neutrino_smb.c",
+     "lines": 187,
+     "kind": "source",
+     "start": 1,
+     "end": 187,
+     "part": false
+    },
+    {
+     "path": "src/pad.c",
+     "lines": 456,
+     "kind": "source",
+     "start": 1,
+     "end": 456,
+     "part": false
+    },
+    {
+     "path": "src/pad_ds34.c",
+     "lines": 519,
+     "kind": "source",
+     "start": 1,
+     "end": 519,
+     "part": false
+    },
+    {
+     "path": "src/pc_game_receiver.c",
+     "lines": 359,
+     "kind": "source",
+     "start": 1,
+     "end": 359,
+     "part": false
+    },
+    {
+     "path": "src/popstarter.c",
+     "lines": 112,
+     "kind": "source",
+     "start": 1,
+     "end": 112,
+     "part": false
+    },
+    {
+     "path": "src/popstarter_elf.c",
+     "lines": 217,
+     "kind": "source",
+     "start": 1,
+     "end": 217,
+     "part": false
+    },
+    {
+     "path": "src/popstarter_gameid.c",
+     "lines": 259,
+     "kind": "source",
+     "start": 1,
+     "end": 259,
+     "part": false
+    },
+    {
+     "path": "src/popstarter_internal.h",
+     "lines": 75,
+     "kind": "source",
+     "start": 1,
+     "end": 75,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-29",
+   "tier": "core",
+   "label": "src",
+   "lines": 3098,
+   "files": [
+    {
+     "path": "src/popstarter_path.c",
+     "lines": 399,
+     "kind": "source",
+     "start": 1,
+     "end": 399,
+     "part": false
+    },
+    {
+     "path": "src/popstarter_vcd.c",
+     "lines": 257,
+     "kind": "source",
+     "start": 1,
+     "end": 257,
+     "part": false
+    },
+    {
+     "path": "include/psu_functions.h",
+     "lines": 32,
+     "kind": "source",
+     "start": 1,
+     "end": 32,
+     "part": false
+    },
+    {
+     "path": "src/psu_functions.c",
+     "lines": 423,
+     "kind": "source",
+     "start": 1,
+     "end": 423,
+     "part": false
+    },
+    {
+     "path": "include/qrcodegen.h",
+     "lines": 385,
+     "kind": "source",
+     "start": 1,
+     "end": 385,
+     "part": false
+    },
+    {
+     "path": "src/qrcodegen.c",
+     "lines": 1027,
+     "kind": "source",
+     "start": 1,
+     "end": 1027,
+     "part": false
+    },
+    {
+     "path": "src/remote_control.c",
+     "lines": 111,
+     "kind": "source",
+     "start": 1,
+     "end": 111,
+     "part": false
+    },
+    {
+     "path": "include/self_update.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "src/self_update.c",
+     "lines": 434,
+     "kind": "source",
+     "start": 1,
+     "end": 434,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-core-30",
+   "tier": "core",
+   "label": "src",
+   "lines": 2127,
+   "files": [
+    {
+     "path": "src/smb_cnf.c",
+     "lines": 657,
+     "kind": "source",
+     "start": 1,
+     "end": 657,
+     "part": false
+    },
+    {
+     "path": "include/smb_shares.h",
+     "lines": 144,
+     "kind": "source",
+     "start": 1,
+     "end": 144,
+     "part": false
+    },
+    {
+     "path": "src/smb_shares.c",
+     "lines": 487,
+     "kind": "source",
+     "start": 1,
+     "end": 487,
+     "part": false
+    },
+    {
+     "path": "src/timer.c",
+     "lines": 11,
+     "kind": "source",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "src/update_psu.c",
+     "lines": 364,
+     "kind": "source",
+     "start": 1,
+     "end": 364,
+     "part": false
+    },
+    {
+     "path": "src/virtual_keyboard.c",
+     "lines": 464,
+     "kind": "source",
+     "start": 1,
+     "end": 464,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-01",
+   "tier": "module",
+   "label": "iop/AllowDVDV, iop/ata_bd, iop/dev9_poweroff +1 more",
+   "lines": 4524,
+   "files": [
+    {
+     "path": "iop/AllowDVDV/AllowDVDV.c",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "iop/AllowDVDV/imports.lst",
+     "lines": 9,
+     "kind": "build",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "iop/AllowDVDV/irx_imports.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "iop/ata_bd/include/atad.h",
+     "lines": 135,
+     "kind": "source",
+     "start": 1,
+     "end": 135,
+     "part": false
+    },
+    {
+     "path": "iop/ata_bd/src/exports.tab",
+     "lines": 28,
+     "kind": "build",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "iop/ata_bd/src/imports.lst",
+     "lines": 56,
+     "kind": "build",
+     "start": 1,
+     "end": 56,
+     "part": false
+    },
+    {
+     "path": "iop/ata_bd/src/irx_imports.h",
+     "lines": 34,
+     "kind": "source",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "iop/ata_bd/src/ps2atad.c",
+     "lines": 1581,
+     "kind": "source",
+     "start": 1,
+     "end": 1581,
+     "part": false
+    },
+    {
+     "path": "iop/dev9_poweroff/imports.lst",
+     "lines": 3,
+     "kind": "build",
+     "start": 1,
+     "end": 3,
+     "part": false
+    },
+    {
+     "path": "iop/dev9_poweroff/irx_imports.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "iop/dev9_poweroff/main.c",
+     "lines": 22,
+     "kind": "source",
+     "start": 1,
+     "end": 22,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/ee/libds34bt.c",
+     "lines": 173,
+     "kind": "source",
+     "start": 1,
+     "end": 173,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/ee/libds34bt.h",
+     "lines": 39,
+     "kind": "source",
+     "start": 1,
+     "end": 39,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/iop/ds34bt.c",
+     "lines": 1719,
+     "kind": "source",
+     "start": 1,
+     "end": 1719,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/iop/ds34bt.h",
+     "lines": 376,
+     "kind": "source",
+     "start": 1,
+     "end": 376,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/iop/imports.lst",
+     "lines": 34,
+     "kind": "build",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/iop/irx_imports.h",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/ds34bt/iop/smsutils.S",
+     "lines": 180,
+     "kind": "source",
+     "start": 1,
+     "end": 180,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-02",
+   "tier": "module",
+   "label": "iop/ds34usb, iop/hdl_info, iop/include_compat +1 more",
+   "lines": 3607,
+   "files": [
+    {
+     "path": "iop/ds34usb/ee/libds34usb.c",
+     "lines": 145,
+     "kind": "source",
+     "start": 1,
+     "end": 145,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/ee/libds34usb.h",
+     "lines": 25,
+     "kind": "source",
+     "start": 1,
+     "end": 25,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/iop/ds34usb.c",
+     "lines": 806,
+     "kind": "source",
+     "start": 1,
+     "end": 806,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/iop/ds34usb.h",
+     "lines": 188,
+     "kind": "source",
+     "start": 1,
+     "end": 188,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/iop/imports.lst",
+     "lines": 33,
+     "kind": "build",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/iop/irx_imports.h",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/ds34usb/iop/smsutils.S",
+     "lines": 180,
+     "kind": "source",
+     "start": 1,
+     "end": 180,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/apa.c",
+     "lines": 320,
+     "kind": "source",
+     "start": 1,
+     "end": 320,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/apa.h",
+     "lines": 48,
+     "kind": "source",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/exports.tab",
+     "lines": 11,
+     "kind": "build",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/hdd.c",
+     "lines": 198,
+     "kind": "source",
+     "start": 1,
+     "end": 198,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/hdd.h",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/hdl.c",
+     "lines": 178,
+     "kind": "source",
+     "start": 1,
+     "end": 178,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/hdl.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/imports.lst",
+     "lines": 48,
+     "kind": "build",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/irx_imports.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/main.c",
+     "lines": 94,
+     "kind": "source",
+     "start": 1,
+     "end": 94,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/main.h",
+     "lines": 8,
+     "kind": "source",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "iop/hdl_info/ps2_hdd.h",
+     "lines": 79,
+     "kind": "source",
+     "start": 1,
+     "end": 79,
+     "part": false
+    },
+    {
+     "path": "iop/include_compat/poweroff.h",
+     "lines": 38,
+     "kind": "source",
+     "start": 1,
+     "end": 38,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/ioplib.h",
+     "lines": 40,
+     "kind": "source",
+     "start": 1,
+     "end": 40,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/irx_imports.h",
+     "lines": 33,
+     "kind": "source",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/mmce_cmds.h",
+     "lines": 64,
+     "kind": "source",
+     "start": 1,
+     "end": 64,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/mmce_fs.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/mmce_restore_guard.h",
+     "lines": 55,
+     "kind": "source",
+     "start": 1,
+     "end": 55,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/mmce_sio2.h",
+     "lines": 48,
+     "kind": "source",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/mmcedrv_config.h",
+     "lines": 10,
+     "kind": "source",
+     "start": 1,
+     "end": 10,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/module_debug.h",
+     "lines": 19,
+     "kind": "source",
+     "start": 1,
+     "end": 19,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/sio2man_hook.h",
+     "lines": 33,
+     "kind": "source",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/include/sio2regs.h",
+     "lines": 202,
+     "kind": "source",
+     "start": 1,
+     "end": 202,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/exports.tab",
+     "lines": 18,
+     "kind": "build",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/imports.lst",
+     "lines": 56,
+     "kind": "build",
+     "start": 1,
+     "end": 56,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/ioplib.c",
+     "lines": 101,
+     "kind": "source",
+     "start": 1,
+     "end": 101,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/mmce_cmds.c",
+     "lines": 344,
+     "kind": "source",
+     "start": 1,
+     "end": 344,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-03",
+   "tier": "module",
+   "label": "iop/mmceman",
+   "lines": 3092,
+   "files": [
+    {
+     "path": "iop/mmceman/src/mmce_fs.c",
+     "lines": 1482,
+     "kind": "source",
+     "start": 1,
+     "end": 1482,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/mmce_sio2.c",
+     "lines": 602,
+     "kind": "source",
+     "start": 1,
+     "end": 602,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/mmcedrv.c",
+     "lines": 413,
+     "kind": "source",
+     "start": 1,
+     "end": 413,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/mmceigr.c",
+     "lines": 168,
+     "kind": "source",
+     "start": 1,
+     "end": 168,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/mmceman.c",
+     "lines": 107,
+     "kind": "source",
+     "start": 1,
+     "end": 107,
+     "part": false
+    },
+    {
+     "path": "iop/mmceman/src/sio2man_hook.c",
+     "lines": 320,
+     "kind": "source",
+     "start": 1,
+     "end": 320,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-04",
+   "tier": "module",
+   "label": "iop/mx4sio_bd, iop/nfsman",
+   "lines": 4612,
+   "files": [
+    {
+     "path": "iop/mx4sio_bd/LICENSE",
+     "lines": 167,
+     "kind": "othertext",
+     "start": 1,
+     "end": 167,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/crc16.c",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/crc16.h",
+     "lines": 8,
+     "kind": "source",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/imports.lst",
+     "lines": 58,
+     "kind": "build",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/ioplib.c",
+     "lines": 101,
+     "kind": "source",
+     "start": 1,
+     "end": 101,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/ioplib.h",
+     "lines": 40,
+     "kind": "source",
+     "start": 1,
+     "end": 40,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/irx_imports.h",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/module_debug.h",
+     "lines": 24,
+     "kind": "source",
+     "start": 1,
+     "end": 24,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/mx4sio.c",
+     "lines": 847,
+     "kind": "source",
+     "start": 1,
+     "end": 847,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/mx4sio.h",
+     "lines": 78,
+     "kind": "source",
+     "start": 1,
+     "end": 78,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/sio2man_hook.c",
+     "lines": 315,
+     "kind": "source",
+     "start": 1,
+     "end": 315,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/sio2man_hook.h",
+     "lines": 33,
+     "kind": "source",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/sio2regs.h",
+     "lines": 174,
+     "kind": "source",
+     "start": 1,
+     "end": 174,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/spi_sdcard_crc7.c",
+     "lines": 83,
+     "kind": "source",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/spi_sdcard_crc7.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/spi_sdcard_driver.c",
+     "lines": 736,
+     "kind": "source",
+     "start": 1,
+     "end": 736,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/spi_sdcard_driver.h",
+     "lines": 177,
+     "kind": "source",
+     "start": 1,
+     "end": 177,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/src/spi_sdcard_driver_config.h",
+     "lines": 25,
+     "kind": "source",
+     "start": 1,
+     "end": 25,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/imports.lst",
+     "lines": 61,
+     "kind": "build",
+     "start": 1,
+     "end": 61,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/irx_imports.h",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/linkfile",
+     "lines": 155,
+     "kind": "othertext",
+     "start": 1,
+     "end": 155,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/nfsman.c",
+     "lines": 1388,
+     "kind": "source",
+     "start": 1,
+     "end": 1388,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/ps2iop-compat.h",
+     "lines": 17,
+     "kind": "source",
+     "start": 1,
+     "end": 17,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/unfs4/LICENSE",
+     "lines": 24,
+     "kind": "othertext",
+     "start": 1,
+     "end": 24,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-05",
+   "tier": "module",
+   "label": "iop/nfsman, iop/oldlibs",
+   "lines": 4898,
+   "files": [
+    {
+     "path": "iop/nfsman/unfs4/unfs4.c",
+     "lines": 941,
+     "kind": "source",
+     "start": 1,
+     "end": 941,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/unfs4/unfs4.h",
+     "lines": 227,
+     "kind": "source",
+     "start": 1,
+     "end": 227,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/LICENSE",
+     "lines": 166,
+     "kind": "othertext",
+     "start": 1,
+     "end": 166,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/README",
+     "lines": 124,
+     "kind": "othertext",
+     "start": 1,
+     "end": 124,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FileSystem.c",
+     "lines": 960,
+     "kind": "source",
+     "start": 1,
+     "end": 960,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FileSystem.h",
+     "lines": 175,
+     "kind": "source",
+     "start": 1,
+     "end": 175,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpClient.c",
+     "lines": 705,
+     "kind": "source",
+     "start": 1,
+     "end": 705,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpClient.h",
+     "lines": 171,
+     "kind": "source",
+     "start": 1,
+     "end": 171,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpCommands.c",
+     "lines": 429,
+     "kind": "source",
+     "start": 1,
+     "end": 429,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpControl.c",
+     "lines": 138,
+     "kind": "source",
+     "start": 1,
+     "end": 138,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpControl.h",
+     "lines": 33,
+     "kind": "source",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpMessages.c",
+     "lines": 33,
+     "kind": "source",
+     "start": 1,
+     "end": 33,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpMessages.h",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpServer.c",
+     "lines": 371,
+     "kind": "source",
+     "start": 1,
+     "end": 371,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/FtpServer.h",
+     "lines": 66,
+     "kind": "source",
+     "start": 1,
+     "end": 66,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/Makefile.linux",
+     "lines": 30,
+     "kind": "build",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/imports.lst",
+     "lines": 69,
+     "kind": "build",
+     "start": 1,
+     "end": 69,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/irx_imports.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/src/main.c",
+     "lines": 193,
+     "kind": "source",
+     "start": 1,
+     "end": 193,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-06",
+   "tier": "module",
+   "label": "iop/pccf, iop/ps2hdd_osd",
+   "lines": 4763,
+   "files": [
+    {
+     "path": "iop/pccf/imports.lst",
+     "lines": 26,
+     "kind": "build",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/irx_imports.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/main.c",
+     "lines": 106,
+     "kind": "source",
+     "start": 1,
+     "end": 106,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_ata.c",
+     "lines": 229,
+     "kind": "source",
+     "start": 1,
+     "end": 229,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_ata.h",
+     "lines": 32,
+     "kind": "source",
+     "start": 1,
+     "end": 32,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_control.inc",
+     "lines": 54,
+     "kind": "source",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_hw.c",
+     "lines": 252,
+     "kind": "source",
+     "start": 1,
+     "end": 252,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_pio_bulk.inc",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pccf_pio_profile.inc",
+     "lines": 28,
+     "kind": "source",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcclog.h",
+     "lines": 4,
+     "kind": "source",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcdiag_ata.h",
+     "lines": 21,
+     "kind": "source",
+     "start": 1,
+     "end": 21,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcdiag_cf.c",
+     "lines": 71,
+     "kind": "source",
+     "start": 1,
+     "end": 71,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcdiag_cf.h",
+     "lines": 18,
+     "kind": "source",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcdiag_cis.c",
+     "lines": 186,
+     "kind": "source",
+     "start": 1,
+     "end": 186,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/pcdiag_cis.h",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/ps2.yaml",
+     "lines": 11,
+     "kind": "build",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/apa-opt.h",
+     "lines": 50,
+     "kind": "source",
+     "start": 1,
+     "end": 50,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/apa.c",
+     "lines": 522,
+     "kind": "source",
+     "start": 1,
+     "end": 522,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/cache.c",
+     "lines": 218,
+     "kind": "source",
+     "start": 1,
+     "end": 218,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/free.c",
+     "lines": 89,
+     "kind": "source",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd.c",
+     "lines": 406,
+     "kind": "source",
+     "start": 1,
+     "end": 406,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd.h",
+     "lines": 32,
+     "kind": "source",
+     "start": 1,
+     "end": 32,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd_blkio.c",
+     "lines": 431,
+     "kind": "source",
+     "start": 1,
+     "end": 431,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd_blkio.h",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd_fio.c",
+     "lines": 1207,
+     "kind": "source",
+     "start": 1,
+     "end": 1207,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/hdd_fio.h",
+     "lines": 38,
+     "kind": "source",
+     "start": 1,
+     "end": 38,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/imports.lst",
+     "lines": 84,
+     "kind": "build",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/irx_imports.h",
+     "lines": 43,
+     "kind": "source",
+     "start": 1,
+     "end": 43,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/journal.c",
+     "lines": 88,
+     "kind": "source",
+     "start": 1,
+     "end": 88,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/libapa.h",
+     "lines": 219,
+     "kind": "source",
+     "start": 1,
+     "end": 219,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/misc.c",
+     "lines": 145,
+     "kind": "source",
+     "start": 1,
+     "end": 145,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-07",
+   "tier": "module",
+   "label": "iop/ps2hdd_osd, iop/ps2host, iop/ps2ips_rpc",
+   "lines": 3199,
+   "files": [
+    {
+     "path": "iop/ps2hdd_osd/password.c",
+     "lines": 522,
+     "kind": "source",
+     "start": 1,
+     "end": 522,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/hostlink.h",
+     "lines": 279,
+     "kind": "source",
+     "start": 1,
+     "end": 279,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/imports.lst",
+     "lines": 58,
+     "kind": "build",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/irx_imports.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/net_fio.c",
+     "lines": 773,
+     "kind": "source",
+     "start": 1,
+     "end": 773,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/net_fio.h",
+     "lines": 36,
+     "kind": "source",
+     "start": 1,
+     "end": 36,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/net_fsys.c",
+     "lines": 439,
+     "kind": "source",
+     "start": 1,
+     "end": 439,
+     "part": false
+    },
+    {
+     "path": "iop/ps2host/ps2host.c",
+     "lines": 35,
+     "kind": "source",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/imports.lst",
+     "lines": 60,
+     "kind": "build",
+     "start": 1,
+     "end": 60,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/irx_imports.h",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/ps2.yaml",
+     "lines": 11,
+     "kind": "build",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/ps2ip_rpc.h",
+     "lines": 236,
+     "kind": "source",
+     "start": 1,
+     "end": 236,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/ps2ips.c",
+     "lines": 694,
+     "kind": "source",
+     "start": 1,
+     "end": 694,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-08",
+   "tier": "module",
+   "label": "iop/smb2man",
+   "lines": 4070,
+   "files": [
+    {
+     "path": "iop/smb2man/imports.lst",
+     "lines": 60,
+     "kind": "build",
+     "start": 1,
+     "end": 60,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/irx_imports.h",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/linkfile",
+     "lines": 155,
+     "kind": "othertext",
+     "start": 1,
+     "end": 155,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/ps2iop-compat.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/smb2auth.c",
+     "lines": 307,
+     "kind": "source",
+     "start": 1,
+     "end": 307,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/smb2auth.h",
+     "lines": 42,
+     "kind": "source",
+     "start": 1,
+     "end": 42,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/smb2man.c",
+     "lines": 1625,
+     "kind": "source",
+     "start": 1,
+     "end": 1625,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/LICENSE",
+     "lines": 7,
+     "kind": "othertext",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/README",
+     "lines": 202,
+     "kind": "othertext",
+     "start": 1,
+     "end": 202,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/hmac-md5.c",
+     "lines": 99,
+     "kind": "source",
+     "start": 1,
+     "end": 99,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/hmac-md5.h",
+     "lines": 40,
+     "kind": "source",
+     "start": 1,
+     "end": 40,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/md4.h",
+     "lines": 43,
+     "kind": "source",
+     "start": 1,
+     "end": 43,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/md4c.c",
+     "lines": 240,
+     "kind": "source",
+     "start": 1,
+     "end": 240,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/md5.c",
+     "lines": 190,
+     "kind": "source",
+     "start": 1,
+     "end": 190,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/md5.h",
+     "lines": 23,
+     "kind": "source",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/ntlm.c",
+     "lines": 263,
+     "kind": "source",
+     "start": 1,
+     "end": 263,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/ntlm.h",
+     "lines": 15,
+     "kind": "source",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/riptopl.patch",
+     "lines": 486,
+     "kind": "build",
+     "start": 1,
+     "end": 486,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/unicode.c",
+     "lines": 204,
+     "kind": "source",
+     "start": 1,
+     "end": 204,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/unicode.h",
+     "lines": 13,
+     "kind": "source",
+     "start": 1,
+     "end": 13,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-09",
+   "tier": "module",
+   "label": "iop/smb2man, iop/smbd, iop/smbman",
+   "lines": 4025,
+   "files": [
+    {
+     "path": "iop/smb2man/usmb2/usmb2.c",
+     "lines": 1085,
+     "kind": "source",
+     "start": 1,
+     "end": 1085,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/usmb2.h",
+     "lines": 130,
+     "kind": "source",
+     "start": 1,
+     "end": 130,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/config.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/imports.lst",
+     "lines": 84,
+     "kind": "build",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/irx_imports.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/libsmb2-raw-query-info.patch",
+     "lines": 14,
+     "kind": "build",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/libsmb2-session-key-leak.patch",
+     "lines": 14,
+     "kind": "build",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/linkfile",
+     "lines": 155,
+     "kind": "othertext",
+     "start": 1,
+     "end": 155,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/smbd.c",
+     "lines": 340,
+     "kind": "source",
+     "start": 1,
+     "end": 340,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/smbd.h",
+     "lines": 61,
+     "kind": "source",
+     "start": 1,
+     "end": 61,
+     "part": false
+    },
+    {
+     "path": "iop/smbd/smbd_fs.c",
+     "lines": 1016,
+     "kind": "source",
+     "start": 1,
+     "end": 1016,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/auth.c",
+     "lines": 93,
+     "kind": "source",
+     "start": 1,
+     "end": 93,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/auth.h",
+     "lines": 14,
+     "kind": "source",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/debug.h",
+     "lines": 17,
+     "kind": "source",
+     "start": 1,
+     "end": 17,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/des.c",
+     "lines": 568,
+     "kind": "source",
+     "start": 1,
+     "end": 568,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/des.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/imports.lst",
+     "lines": 63,
+     "kind": "build",
+     "start": 1,
+     "end": 63,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/irx_imports.h",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/md4.c",
+     "lines": 182,
+     "kind": "source",
+     "start": 1,
+     "end": 182,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/md4.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/poll.c",
+     "lines": 91,
+     "kind": "source",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/poll.h",
+     "lines": 25,
+     "kind": "source",
+     "start": 1,
+     "end": 25,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-10",
+   "tier": "module",
+   "label": "iop/smbman",
+   "lines": 3855,
+   "files": [
+    {
+     "path": "iop/smbman/smb.c",
+     "lines": 1717,
+     "kind": "source",
+     "start": 1,
+     "end": 1717,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/smb.h",
+     "lines": 903,
+     "kind": "source",
+     "start": 1,
+     "end": 903,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/smb_fio.c",
+     "lines": 1167,
+     "kind": "source",
+     "start": 1,
+     "end": 1167,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/smb_fio.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/smbman.c",
+     "lines": 38,
+     "kind": "source",
+     "start": 1,
+     "end": 38,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-11",
+   "tier": "module",
+   "label": "iop/udpfs_smap, iop/usbd-ra",
+   "lines": 4754,
+   "files": [
+    {
+     "path": "iop/udpfs_smap/LICENSE",
+     "lines": 172,
+     "kind": "othertext",
+     "start": 1,
+     "end": 172,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/include/irx_imports.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/include/main.h",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/include/mprintf.h",
+     "lines": 20,
+     "kind": "source",
+     "start": 1,
+     "end": 20,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/include/smap.h",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/include/xfer.h",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/src/exports.tab",
+     "lines": 14,
+     "kind": "build",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/src/imports.lst",
+     "lines": 49,
+     "kind": "build",
+     "start": 1,
+     "end": 49,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/src/main.c",
+     "lines": 26,
+     "kind": "source",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/src/smap.c",
+     "lines": 639,
+     "kind": "source",
+     "start": 1,
+     "end": 639,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/src/xfer.c",
+     "lines": 271,
+     "kind": "source",
+     "start": 1,
+     "end": 271,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/include/usbd.h",
+     "lines": 361,
+     "kind": "source",
+     "start": 1,
+     "end": 361,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/include/usbd_macro.h",
+     "lines": 154,
+     "kind": "source",
+     "start": 1,
+     "end": 154,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/driver.c",
+     "lines": 283,
+     "kind": "source",
+     "start": 1,
+     "end": 283,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/driver.h",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/exports.tab",
+     "lines": 23,
+     "kind": "build",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/hcd.c",
+     "lines": 544,
+     "kind": "source",
+     "start": 1,
+     "end": 544,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/hcd.h",
+     "lines": 28,
+     "kind": "source",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/hub.c",
+     "lines": 737,
+     "kind": "source",
+     "start": 1,
+     "end": 737,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/hub.h",
+     "lines": 19,
+     "kind": "source",
+     "start": 1,
+     "end": 19,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/imports.lst",
+     "lines": 48,
+     "kind": "build",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/interface.c",
+     "lines": 452,
+     "kind": "source",
+     "start": 1,
+     "end": 452,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/irx_imports.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/mem.c",
+     "lines": 259,
+     "kind": "source",
+     "start": 1,
+     "end": 259,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/mem.h",
+     "lines": 45,
+     "kind": "source",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/usbd.c",
+     "lines": 410,
+     "kind": "source",
+     "start": 1,
+     "end": 410,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-12",
+   "tier": "module",
+   "label": "iop/usbd-ra, iop/usbmass_bd, iop/vmcman",
+   "lines": 2781,
+   "files": [
+    {
+     "path": "iop/usbd-ra/src/usbdpriv.h",
+     "lines": 328,
+     "kind": "source",
+     "start": 1,
+     "end": 328,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/usbio.c",
+     "lines": 319,
+     "kind": "source",
+     "start": 1,
+     "end": 319,
+     "part": false
+    },
+    {
+     "path": "iop/usbd-ra/src/usbio.h",
+     "lines": 28,
+     "kind": "source",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/LICENSE",
+     "lines": 167,
+     "kind": "othertext",
+     "start": 1,
+     "end": 167,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/imports.lst",
+     "lines": 40,
+     "kind": "build",
+     "start": 1,
+     "end": 40,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/include/module_debug.h",
+     "lines": 36,
+     "kind": "source",
+     "start": 1,
+     "end": 36,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/include/scsi.h",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/irx_imports.h",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/main.c",
+     "lines": 37,
+     "kind": "source",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/scsi.c",
+     "lines": 440,
+     "kind": "source",
+     "start": 1,
+     "end": 440,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/src/usb_mass.c",
+     "lines": 901,
+     "kind": "source",
+     "start": 1,
+     "end": 901,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/include/mcman.h",
+     "lines": 130,
+     "kind": "source",
+     "start": 1,
+     "end": 130,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/exports.tab",
+     "lines": 91,
+     "kind": "build",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/imports.lst",
+     "lines": 136,
+     "kind": "build",
+     "start": 1,
+     "end": 136,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/irx_imports.h",
+     "lines": 61,
+     "kind": "source",
+     "start": 1,
+     "end": 61,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-13",
+   "tier": "module",
+   "label": "iop/vmcman",
+   "lines": 4398,
+   "files": [
+    {
+     "path": "iop/vmcman/src/main.c",
+     "lines": 4398,
+     "kind": "source",
+     "start": 1,
+     "end": 4398,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-14",
+   "tier": "module",
+   "label": "iop/vmcman",
+   "lines": 3714,
+   "files": [
+    {
+     "path": "iop/vmcman/src/mcdev.c",
+     "lines": 842,
+     "kind": "source",
+     "start": 1,
+     "end": 842,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/mciomanx_backing.c",
+     "lines": 371,
+     "kind": "source",
+     "start": 1,
+     "end": 371,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/mcman-internal.h",
+     "lines": 381,
+     "kind": "source",
+     "start": 1,
+     "end": 381,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/mcsio2.c",
+     "lines": 1354,
+     "kind": "source",
+     "start": 1,
+     "end": 1354,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/src/ps1mc_fio.c",
+     "lines": 766,
+     "kind": "source",
+     "start": 1,
+     "end": 766,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-module-15",
+   "tier": "module",
+   "label": "iop/vmcman, iop/xparam",
+   "lines": 1593,
+   "files": [
+    {
+     "path": "iop/vmcman/src/ps2mc_fio.c",
+     "lines": 1472,
+     "kind": "source",
+     "start": 1,
+     "end": 1472,
+     "part": false
+    },
+    {
+     "path": "iop/xparam/include/xparam.h",
+     "lines": 38,
+     "kind": "source",
+     "start": 1,
+     "end": 38,
+     "part": false
+    },
+    {
+     "path": "iop/xparam/src/imports.lst",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "iop/xparam/src/irx_imports.h",
+     "lines": 16,
+     "kind": "source",
+     "start": 1,
+     "end": 16,
+     "part": false
+    },
+    {
+     "path": "iop/xparam/src/xparam.c",
+     "lines": 63,
+     "kind": "source",
+     "start": 1,
+     "end": 63,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-01",
+   "tier": "support",
+   "label": ".claude, .claude/hooks, .github +13 more",
+   "lines": 7381,
+   "files": [
+    {
+     "path": ".claude/settings.json",
+     "lines": 19,
+     "kind": "build",
+     "start": 1,
+     "end": 19,
+     "part": false
+    },
+    {
+     "path": ".claude/hooks/session-start.sh",
+     "lines": 27,
+     "kind": "source",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": ".github/FUNDING.yml",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": ".github/ps2build-sdk.env",
+     "lines": 27,
+     "kind": "build",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": ".github/ISSUE_TEMPLATE/issue.yml",
+     "lines": 199,
+     "kind": "build",
+     "start": 1,
+     "end": 199,
+     "part": false
+    },
+    {
+     "path": ".github/scripts/ps2build_sdk_watch.py",
+     "lines": 452,
+     "kind": "source",
+     "start": 1,
+     "end": 452,
+     "part": false
+    },
+    {
+     "path": ".github/scripts/test_ps2build_sdk_watch.py",
+     "lines": 567,
+     "kind": "source",
+     "start": 1,
+     "end": 567,
+     "part": false
+    },
+    {
+     "path": ".vscode/settings.json",
+     "lines": 6,
+     "kind": "build",
+     "start": 1,
+     "end": 6,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.FHDB.APPS/icon.sys",
+     "lines": 18,
+     "kind": "othertext",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.FHDB.APPS/system.cnf",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.GSM/icon.sys",
+     "lines": 18,
+     "kind": "othertext",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.GSM/system.cnf",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.OPL/icon.sys",
+     "lines": 18,
+     "kind": "othertext",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.OPL/system.cnf",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.ULE/icon.sys",
+     "lines": 18,
+     "kind": "othertext",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "__Headers/PP.ULE/system.cnf",
+     "lines": 4,
+     "kind": "build",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "docs-site/build.py",
+     "lines": 216,
+     "kind": "source",
+     "start": 1,
+     "end": 216,
+     "part": false
+    },
+    {
+     "path": "docs-site/manifest.json",
+     "lines": 297,
+     "kind": "build",
+     "start": 1,
+     "end": 297,
+     "part": false
+    },
+    {
+     "path": "docs-site/static/assets/app.js",
+     "lines": 152,
+     "kind": "source",
+     "start": 1,
+     "end": 152,
+     "part": false
+    },
+    {
+     "path": "docs-site/static/assets/favicon.svg",
+     "lines": 14,
+     "kind": "othertext",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "docs-site/static/assets/orbs.js",
+     "lines": 316,
+     "kind": "source",
+     "start": 1,
+     "end": 316,
+     "part": false
+    },
+    {
+     "path": "docs-site/static/assets/ui/capture-manifest.json",
+     "lines": 804,
+     "kind": "build",
+     "start": 1,
+     "end": 804,
+     "part": false
+    },
+    {
+     "path": "res/APPINFO.PBT",
+     "lines": 153,
+     "kind": "othertext",
+     "start": 1,
+     "end": 153,
+     "part": false
+    },
+    {
+     "path": "res/WLE-CLOUD.CNF.example",
+     "lines": 12,
+     "kind": "othertext",
+     "start": 1,
+     "end": 12,
+     "part": false
+    },
+    {
+     "path": "res/WLE-UPDATE-CA.PEM",
+     "lines": 77,
+     "kind": "othertext",
+     "start": 1,
+     "end": 77,
+     "part": false
+    },
+    {
+     "path": "res/icons/rocket-launch.svg",
+     "lines": 1,
+     "kind": "othertext",
+     "start": 1,
+     "end": 1,
+     "part": false
+    },
+    {
+     "path": "research/sd2psxtd/mmce_restore_txn_model.c",
+     "lines": 203,
+     "kind": "source",
+     "start": 1,
+     "end": 203,
+     "part": false
+    },
+    {
+     "path": "research/sd2psxtd/mmce_restore_txn_model.h",
+     "lines": 104,
+     "kind": "source",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "scripts/audit_r3z_settings.py",
+     "lines": 166,
+     "kind": "source",
+     "start": 1,
+     "end": 166,
+     "part": false
+    },
+    {
+     "path": "scripts/build_cloud_tls.sh",
+     "lines": 77,
+     "kind": "source",
+     "start": 1,
+     "end": 77,
+     "part": false
+    },
+    {
+     "path": "scripts/build_jpeg.sh",
+     "lines": 68,
+     "kind": "source",
+     "start": 1,
+     "end": 68,
+     "part": false
+    },
+    {
+     "path": "scripts/check_ds34_build.py",
+     "lines": 28,
+     "kind": "source",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "scripts/check_loader_layout.sh",
+     "lines": 149,
+     "kind": "source",
+     "start": 1,
+     "end": 149,
+     "part": false
+    },
+    {
+     "path": "scripts/check_stack_realign.py",
+     "lines": 377,
+     "kind": "source",
+     "start": 1,
+     "end": 377,
+     "part": false
+    },
+    {
+     "path": "scripts/check_toolchain_purity.py",
+     "lines": 51,
+     "kind": "source",
+     "start": 1,
+     "end": 51,
+     "part": false
+    },
+    {
+     "path": "scripts/check_udpfs_smap.py",
+     "lines": 46,
+     "kind": "source",
+     "start": 1,
+     "end": 46,
+     "part": false
+    },
+    {
+     "path": "scripts/configure_ds34.py",
+     "lines": 46,
+     "kind": "source",
+     "start": 1,
+     "end": 46,
+     "part": false
+    },
+    {
+     "path": "scripts/copy_test_pack.py",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "scripts/download_metrics.py",
+     "lines": 234,
+     "kind": "source",
+     "start": 1,
+     "end": 234,
+     "part": false
+    },
+    {
+     "path": "scripts/ee_toolchain.sh",
+     "lines": 70,
+     "kind": "source",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": "scripts/fetch_libsmb2.sh",
+     "lines": 31,
+     "kind": "source",
+     "start": 1,
+     "end": 31,
+     "part": false
+    },
+    {
+     "path": "scripts/gen_cloud_client.py",
+     "lines": 64,
+     "kind": "source",
+     "start": 1,
+     "end": 64,
+     "part": false
+    },
+    {
+     "path": "scripts/gen_dash_font.py",
+     "lines": 170,
+     "kind": "source",
+     "start": 1,
+     "end": 170,
+     "part": false
+    },
+    {
+     "path": "scripts/gen_githash.py",
+     "lines": 55,
+     "kind": "source",
+     "start": 1,
+     "end": 55,
+     "part": false
+    },
+    {
+     "path": "scripts/gen_sfx.py",
+     "lines": 192,
+     "kind": "source",
+     "start": 1,
+     "end": 192,
+     "part": false
+    },
+    {
+     "path": "scripts/package_apps.py",
+     "lines": 150,
+     "kind": "source",
+     "start": 1,
+     "end": 150,
+     "part": false
+    },
+    {
+     "path": "scripts/package_kit.py",
+     "lines": 563,
+     "kind": "source",
+     "start": 1,
+     "end": 563,
+     "part": false
+    },
+    {
+     "path": "scripts/prepare_psbbn_theme.py",
+     "lines": 89,
+     "kind": "source",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "scripts/ps2build_sdk.sh",
+     "lines": 459,
+     "kind": "source",
+     "start": 1,
+     "end": 459,
+     "part": false
+    },
+    {
+     "path": "scripts/release_notes.py",
+     "lines": 219,
+     "kind": "source",
+     "start": 1,
+     "end": 219,
+     "part": false
+    },
+    {
+     "path": "scripts/stale_code_audit.sh",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "scripts/sync_github_wiki.py",
+     "lines": 216,
+     "kind": "source",
+     "start": 1,
+     "end": 216,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-02",
+   "tier": "support",
+   "label": "ship, ship/neutrino-ilink, ship/shortcuts +1 more",
+   "lines": 7843,
+   "files": [
+    {
+     "path": "ship/kit-externals.json",
+     "lines": 265,
+     "kind": "build",
+     "start": 1,
+     "end": 265,
+     "part": false
+    },
+    {
+     "path": "ship/neutrino-ilink/LICENSE",
+     "lines": 165,
+     "kind": "othertext",
+     "start": 1,
+     "end": 165,
+     "part": false
+    },
+    {
+     "path": "ship/shortcuts/Launchstation-Documentation.url",
+     "lines": 2,
+     "kind": "doc",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "ship/shortcuts/OPL-PS1-AIO-Converter-GUI.url",
+     "lines": 2,
+     "kind": "doc",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "ship/shortcuts/OrbitPS2-Manager.url",
+     "lines": 2,
+     "kind": "doc",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "ship/shortcuts/PS2-Servers.url",
+     "lines": 2,
+     "kind": "doc",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "ship/shortcuts/android-udpfs-server.url",
+     "lines": 2,
+     "kind": "doc",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "tests/dash_card_tool_host.c",
+     "lines": 538,
+     "kind": "source",
+     "start": 1,
+     "end": 538,
+     "part": false
+    },
+    {
+     "path": "tests/mc_card_view_host.c",
+     "lines": 51,
+     "kind": "source",
+     "start": 1,
+     "end": 51,
+     "part": false
+    },
+    {
+     "path": "tests/mc_card_write_host.c",
+     "lines": 212,
+     "kind": "source",
+     "start": 1,
+     "end": 212,
+     "part": false
+    },
+    {
+     "path": "tests/mc_fingerprint_host.c",
+     "lines": 71,
+     "kind": "source",
+     "start": 1,
+     "end": 71,
+     "part": false
+    },
+    {
+     "path": "tests/mc_fixture.py",
+     "lines": 141,
+     "kind": "source",
+     "start": 1,
+     "end": 141,
+     "part": false
+    },
+    {
+     "path": "tests/mc_ps1_card_host.c",
+     "lines": 126,
+     "kind": "source",
+     "start": 1,
+     "end": 126,
+     "part": false
+    },
+    {
+     "path": "tests/mc_save_export_host.c",
+     "lines": 170,
+     "kind": "source",
+     "start": 1,
+     "end": 170,
+     "part": false
+    },
+    {
+     "path": "tests/mc_save_formats_host.c",
+     "lines": 133,
+     "kind": "source",
+     "start": 1,
+     "end": 133,
+     "part": false
+    },
+    {
+     "path": "tests/mmce_save_versions_host.c",
+     "lines": 125,
+     "kind": "source",
+     "start": 1,
+     "end": 125,
+     "part": false
+    },
+    {
+     "path": "tests/pccf_ata_card.h",
+     "lines": 140,
+     "kind": "source",
+     "start": 1,
+     "end": 140,
+     "part": false
+    },
+    {
+     "path": "tests/test_app_packages.py",
+     "lines": 186,
+     "kind": "source",
+     "start": 1,
+     "end": 186,
+     "part": false
+    },
+    {
+     "path": "tests/test_background_only_hotkeys.py",
+     "lines": 119,
+     "kind": "source",
+     "start": 1,
+     "end": 119,
+     "part": false
+    },
+    {
+     "path": "tests/test_bgm_sidecar.py",
+     "lines": 262,
+     "kind": "source",
+     "start": 1,
+     "end": 262,
+     "part": false
+    },
+    {
+     "path": "tests/test_bookmark_routes.py",
+     "lines": 70,
+     "kind": "source",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": "tests/test_boot_deferred_init.py",
+     "lines": 49,
+     "kind": "source",
+     "start": 1,
+     "end": 49,
+     "part": false
+    },
+    {
+     "path": "tests/test_browser_sort.py",
+     "lines": 150,
+     "kind": "source",
+     "start": 1,
+     "end": 150,
+     "part": false
+    },
+    {
+     "path": "tests/test_build_identity.py",
+     "lines": 59,
+     "kind": "source",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "tests/test_carousel_culling.py",
+     "lines": 62,
+     "kind": "source",
+     "start": 1,
+     "end": 62,
+     "part": false
+    },
+    {
+     "path": "tests/test_cdvd_scmd_buffers.py",
+     "lines": 58,
+     "kind": "source",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "tests/test_cf.c",
+     "lines": 157,
+     "kind": "source",
+     "start": 1,
+     "end": 157,
+     "part": false
+    },
+    {
+     "path": "tests/test_cis.c",
+     "lines": 125,
+     "kind": "source",
+     "start": 1,
+     "end": 125,
+     "part": false
+    },
+    {
+     "path": "tests/test_classic_settings_persistence.py",
+     "lines": 97,
+     "kind": "source",
+     "start": 1,
+     "end": 97,
+     "part": false
+    },
+    {
+     "path": "tests/test_clock_field_editor.py",
+     "lines": 98,
+     "kind": "source",
+     "start": 1,
+     "end": 98,
+     "part": false
+    },
+    {
+     "path": "tests/test_clock_save_action.py",
+     "lines": 79,
+     "kind": "source",
+     "start": 1,
+     "end": 79,
+     "part": false
+    },
+    {
+     "path": "tests/test_clock_sync.py",
+     "lines": 253,
+     "kind": "source",
+     "start": 1,
+     "end": 253,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_history_browser.py",
+     "lines": 137,
+     "kind": "source",
+     "start": 1,
+     "end": 137,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_link_screen.py",
+     "lines": 70,
+     "kind": "source",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_menu.py",
+     "lines": 164,
+     "kind": "source",
+     "start": 1,
+     "end": 164,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_recovery.py",
+     "lines": 275,
+     "kind": "source",
+     "start": 1,
+     "end": 275,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_relay.py",
+     "lines": 26,
+     "kind": "source",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_tls_paths.py",
+     "lines": 67,
+     "kind": "source",
+     "start": 1,
+     "end": 67,
+     "part": false
+    },
+    {
+     "path": "tests/test_cloud_upload_ledger.py",
+     "lines": 190,
+     "kind": "source",
+     "start": 1,
+     "end": 190,
+     "part": false
+    },
+    {
+     "path": "tests/test_console_region.py",
+     "lines": 45,
+     "kind": "source",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "tests/test_copy_pipeline.py",
+     "lines": 481,
+     "kind": "source",
+     "start": 1,
+     "end": 481,
+     "part": false
+    },
+    {
+     "path": "tests/test_copy_psu_listing.py",
+     "lines": 784,
+     "kind": "source",
+     "start": 1,
+     "end": 784,
+     "part": false
+    },
+    {
+     "path": "tests/test_copy_short_io.py",
+     "lines": 104,
+     "kind": "source",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "tests/test_copy_test_pack.py",
+     "lines": 23,
+     "kind": "source",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "tests/test_cursor_sound_ticks.py",
+     "lines": 85,
+     "kind": "source",
+     "start": 1,
+     "end": 85,
+     "part": false
+    },
+    {
+     "path": "tests/test_dash_card_tool.py",
+     "lines": 1421,
+     "kind": "source",
+     "start": 1,
+     "end": 1421,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-03",
+   "tier": "support",
+   "label": "tests",
+   "lines": 7973,
+   "files": [
+    {
+     "path": "tests/test_dash_ftp.py",
+     "lines": 193,
+     "kind": "source",
+     "start": 1,
+     "end": 193,
+     "part": false
+    },
+    {
+     "path": "tests/test_dash_pause.py",
+     "lines": 70,
+     "kind": "source",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": "tests/test_dashboard_console_summary.py",
+     "lines": 50,
+     "kind": "source",
+     "start": 1,
+     "end": 50,
+     "part": false
+    },
+    {
+     "path": "tests/test_dashboard_languages.py",
+     "lines": 124,
+     "kind": "source",
+     "start": 1,
+     "end": 124,
+     "part": false
+    },
+    {
+     "path": "tests/test_dashboard_pending_loops.py",
+     "lines": 20,
+     "kind": "source",
+     "start": 1,
+     "end": 20,
+     "part": false
+    },
+    {
+     "path": "tests/test_dashboard_present_buffers.py",
+     "lines": 133,
+     "kind": "source",
+     "start": 1,
+     "end": 133,
+     "part": false
+    },
+    {
+     "path": "tests/test_dev9_transition.py",
+     "lines": 166,
+     "kind": "source",
+     "start": 1,
+     "end": 166,
+     "part": false
+    },
+    {
+     "path": "tests/test_device_autostart_safe_mode.py",
+     "lines": 52,
+     "kind": "source",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "tests/test_device_input.py",
+     "lines": 495,
+     "kind": "source",
+     "start": 1,
+     "end": 495,
+     "part": false
+    },
+    {
+     "path": "tests/test_display_feedback.py",
+     "lines": 133,
+     "kind": "source",
+     "start": 1,
+     "end": 133,
+     "part": false
+    },
+    {
+     "path": "tests/test_download_metrics.py",
+     "lines": 200,
+     "kind": "source",
+     "start": 1,
+     "end": 200,
+     "part": false
+    },
+    {
+     "path": "tests/test_editor_keyboard.py",
+     "lines": 804,
+     "kind": "source",
+     "start": 1,
+     "end": 804,
+     "part": false
+    },
+    {
+     "path": "tests/test_elisa_font_load.py",
+     "lines": 43,
+     "kind": "source",
+     "start": 1,
+     "end": 43,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_gameid.py",
+     "lines": 132,
+     "kind": "source",
+     "start": 1,
+     "end": 132,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_iop_handoff.py",
+     "lines": 79,
+     "kind": "source",
+     "start": 1,
+     "end": 79,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_launch.py",
+     "lines": 87,
+     "kind": "source",
+     "start": 1,
+     "end": 87,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_paths.py",
+     "lines": 104,
+     "kind": "source",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_retrogem_handoff.py",
+     "lines": 61,
+     "kind": "source",
+     "start": 1,
+     "end": 61,
+     "part": false
+    },
+    {
+     "path": "tests/test_ember_two_usb_handoff.py",
+     "lines": 149,
+     "kind": "source",
+     "start": 1,
+     "end": 149,
+     "part": false
+    },
+    {
+     "path": "tests/test_exploit_folder_warning.py",
+     "lines": 181,
+     "kind": "source",
+     "start": 1,
+     "end": 181,
+     "part": false
+    },
+    {
+     "path": "tests/test_feedback_35_82.py",
+     "lines": 46,
+     "kind": "source",
+     "start": 1,
+     "end": 46,
+     "part": false
+    },
+    {
+     "path": "tests/test_file_browser_heap.py",
+     "lines": 83,
+     "kind": "source",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": "tests/test_file_operation_overlay.py",
+     "lines": 201,
+     "kind": "source",
+     "start": 1,
+     "end": 201,
+     "part": false
+    },
+    {
+     "path": "tests/test_file_stat_errors.py",
+     "lines": 142,
+     "kind": "source",
+     "start": 1,
+     "end": 142,
+     "part": false
+    },
+    {
+     "path": "tests/test_files_tab_lifecycle.py",
+     "lines": 167,
+     "kind": "source",
+     "start": 1,
+     "end": 167,
+     "part": false
+    },
+    {
+     "path": "tests/test_font_weight.py",
+     "lines": 228,
+     "kind": "source",
+     "start": 1,
+     "end": 228,
+     "part": false
+    },
+    {
+     "path": "tests/test_ftp_network.py",
+     "lines": 118,
+     "kind": "source",
+     "start": 1,
+     "end": 118,
+     "part": false
+    },
+    {
+     "path": "tests/test_ftp_server.py",
+     "lines": 65,
+     "kind": "source",
+     "start": 1,
+     "end": 65,
+     "part": false
+    },
+    {
+     "path": "tests/test_ftp_session.py",
+     "lines": 30,
+     "kind": "source",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "tests/test_gage_alignment.py",
+     "lines": 54,
+     "kind": "source",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "tests/test_get_size.py",
+     "lines": 260,
+     "kind": "source",
+     "start": 1,
+     "end": 260,
+     "part": false
+    },
+    {
+     "path": "tests/test_hdd_manager_browse.py",
+     "lines": 85,
+     "kind": "source",
+     "start": 1,
+     "end": 85,
+     "part": false
+    },
+    {
+     "path": "tests/test_hex_editor.py",
+     "lines": 320,
+     "kind": "source",
+     "start": 1,
+     "end": 320,
+     "part": false
+    },
+    {
+     "path": "tests/test_hidden_apps.py",
+     "lines": 74,
+     "kind": "source",
+     "start": 1,
+     "end": 74,
+     "part": false
+    },
+    {
+     "path": "tests/test_hint_bar_fit.py",
+     "lines": 76,
+     "kind": "source",
+     "start": 1,
+     "end": 76,
+     "part": false
+    },
+    {
+     "path": "tests/test_hint_clearance.py",
+     "lines": 34,
+     "kind": "source",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "tests/test_hint_order.py",
+     "lines": 98,
+     "kind": "source",
+     "start": 1,
+     "end": 98,
+     "part": false
+    },
+    {
+     "path": "tests/test_home_focus.py",
+     "lines": 135,
+     "kind": "source",
+     "start": 1,
+     "end": 135,
+     "part": false
+    },
+    {
+     "path": "tests/test_http_body_cap.py",
+     "lines": 120,
+     "kind": "source",
+     "start": 1,
+     "end": 120,
+     "part": false
+    },
+    {
+     "path": "tests/test_https_tls.py",
+     "lines": 252,
+     "kind": "source",
+     "start": 1,
+     "end": 252,
+     "part": false
+    },
+    {
+     "path": "tests/test_igr_return_policy.py",
+     "lines": 49,
+     "kind": "source",
+     "start": 1,
+     "end": 49,
+     "part": false
+    },
+    {
+     "path": "tests/test_ilink_browser.py",
+     "lines": 44,
+     "kind": "source",
+     "start": 1,
+     "end": 44,
+     "part": false
+    },
+    {
+     "path": "tests/test_kit_package.py",
+     "lines": 306,
+     "kind": "source",
+     "start": 1,
+     "end": 306,
+     "part": false
+    },
+    {
+     "path": "tests/test_launch_driver_messages.py",
+     "lines": 361,
+     "kind": "source",
+     "start": 1,
+     "end": 361,
+     "part": false
+    },
+    {
+     "path": "tests/test_launch_iop_override.py",
+     "lines": 265,
+     "kind": "source",
+     "start": 1,
+     "end": 265,
+     "part": false
+    },
+    {
+     "path": "tests/test_launch_options.py",
+     "lines": 93,
+     "kind": "source",
+     "start": 1,
+     "end": 93,
+     "part": false
+    },
+    {
+     "path": "tests/test_listing_callers.py",
+     "lines": 455,
+     "kind": "source",
+     "start": 1,
+     "end": 455,
+     "part": false
+    },
+    {
+     "path": "tests/test_listing_complete.py",
+     "lines": 395,
+     "kind": "source",
+     "start": 1,
+     "end": 395,
+     "part": false
+    },
+    {
+     "path": "tests/test_llvm_toolchain.py",
+     "lines": 69,
+     "kind": "source",
+     "start": 1,
+     "end": 69,
+     "part": false
+    },
+    {
+     "path": "tests/test_loader_linkfile.py",
+     "lines": 24,
+     "kind": "source",
+     "start": 1,
+     "end": 24,
+     "part": false
+    },
+    {
+     "path": "tests/test_maintained_documentation.py",
+     "lines": 48,
+     "kind": "source",
+     "start": 1,
+     "end": 48,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-04",
+   "tier": "support",
+   "label": "tests",
+   "lines": 7963,
+   "files": [
+    {
+     "path": "tests/test_mc1_mx4sio_handoff.py",
+     "lines": 240,
+     "kind": "source",
+     "start": 1,
+     "end": 240,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_card_export.py",
+     "lines": 174,
+     "kind": "source",
+     "start": 1,
+     "end": 174,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_card_view.py",
+     "lines": 136,
+     "kind": "source",
+     "start": 1,
+     "end": 136,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_card_write.py",
+     "lines": 465,
+     "kind": "source",
+     "start": 1,
+     "end": 465,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_detect_retry.py",
+     "lines": 123,
+     "kind": "source",
+     "start": 1,
+     "end": 123,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_fingerprint.py",
+     "lines": 179,
+     "kind": "source",
+     "start": 1,
+     "end": 179,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_folder_icon.py",
+     "lines": 140,
+     "kind": "source",
+     "start": 1,
+     "end": 140,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_poll_usb_barrier.py",
+     "lines": 81,
+     "kind": "source",
+     "start": 1,
+     "end": 81,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_ps1_card.py",
+     "lines": 315,
+     "kind": "source",
+     "start": 1,
+     "end": 315,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_save_export.py",
+     "lines": 259,
+     "kind": "source",
+     "start": 1,
+     "end": 259,
+     "part": false
+    },
+    {
+     "path": "tests/test_mc_save_formats.py",
+     "lines": 512,
+     "kind": "source",
+     "start": 1,
+     "end": 512,
+     "part": false
+    },
+    {
+     "path": "tests/test_misc_settings_dispatch.py",
+     "lines": 38,
+     "kind": "source",
+     "start": 1,
+     "end": 38,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_backup.py",
+     "lines": 59,
+     "kind": "source",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_bus_restore.py",
+     "lines": 59,
+     "kind": "source",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_dread_returns.py",
+     "lines": 95,
+     "kind": "source",
+     "start": 1,
+     "end": 95,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_exclusive_new_files.py",
+     "lines": 104,
+     "kind": "source",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_fingerprint_backup.py",
+     "lines": 198,
+     "kind": "source",
+     "start": 1,
+     "end": 198,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_fs_restore_guard.py",
+     "lines": 88,
+     "kind": "source",
+     "start": 1,
+     "end": 88,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_handle_release.py",
+     "lines": 142,
+     "kind": "source",
+     "start": 1,
+     "end": 142,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_native_import.py",
+     "lines": 114,
+     "kind": "source",
+     "start": 1,
+     "end": 114,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_presence_probe.py",
+     "lines": 58,
+     "kind": "source",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_protocol.py",
+     "lines": 18,
+     "kind": "source",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_publish.py",
+     "lines": 233,
+     "kind": "source",
+     "start": 1,
+     "end": 233,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_recovery.py",
+     "lines": 113,
+     "kind": "source",
+     "start": 1,
+     "end": 113,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_rename_fallback.py",
+     "lines": 112,
+     "kind": "source",
+     "start": 1,
+     "end": 112,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_restore_txn_model.py",
+     "lines": 235,
+     "kind": "source",
+     "start": 1,
+     "end": 235,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_save_versions.py",
+     "lines": 214,
+     "kind": "source",
+     "start": 1,
+     "end": 214,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_selectable_install.py",
+     "lines": 167,
+     "kind": "source",
+     "start": 1,
+     "end": 167,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_status_failures.py",
+     "lines": 115,
+     "kind": "source",
+     "start": 1,
+     "end": 115,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_targeted_safety.py",
+     "lines": 158,
+     "kind": "source",
+     "start": 1,
+     "end": 158,
+     "part": false
+    },
+    {
+     "path": "tests/test_mmce_upstream_contract.py",
+     "lines": 80,
+     "kind": "source",
+     "start": 1,
+     "end": 80,
+     "part": false
+    },
+    {
+     "path": "tests/test_modal_animation.py",
+     "lines": 308,
+     "kind": "source",
+     "start": 1,
+     "end": 308,
+     "part": false
+    },
+    {
+     "path": "tests/test_move_manifest.py",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "tests/test_native_cloud.py",
+     "lines": 182,
+     "kind": "source",
+     "start": 1,
+     "end": 182,
+     "part": false
+    },
+    {
+     "path": "tests/test_native_four_browser_modes.py",
+     "lines": 34,
+     "kind": "source",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "tests/test_navigation_wraparound.py",
+     "lines": 73,
+     "kind": "source",
+     "start": 1,
+     "end": 73,
+     "part": false
+    },
+    {
+     "path": "tests/test_nested_scissor.py",
+     "lines": 104,
+     "kind": "source",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "tests/test_network_load_result.py",
+     "lines": 171,
+     "kind": "source",
+     "start": 1,
+     "end": 171,
+     "part": false
+    },
+    {
+     "path": "tests/test_neutrino_cancel_feedback.py",
+     "lines": 67,
+     "kind": "source",
+     "start": 1,
+     "end": 67,
+     "part": false
+    },
+    {
+     "path": "tests/test_neutrino_iso.py",
+     "lines": 66,
+     "kind": "source",
+     "start": 1,
+     "end": 66,
+     "part": false
+    },
+    {
+     "path": "tests/test_neutrino_menu_audio.py",
+     "lines": 193,
+     "kind": "source",
+     "start": 1,
+     "end": 193,
+     "part": false
+    },
+    {
+     "path": "tests/test_neutrino_profiles.py",
+     "lines": 141,
+     "kind": "source",
+     "start": 1,
+     "end": 141,
+     "part": false
+    },
+    {
+     "path": "tests/test_neutrino_smb.py",
+     "lines": 138,
+     "kind": "source",
+     "start": 1,
+     "end": 138,
+     "part": false
+    },
+    {
+     "path": "tests/test_new_folder_save_icons.py",
+     "lines": 82,
+     "kind": "source",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "tests/test_nfs_shares.py",
+     "lines": 187,
+     "kind": "source",
+     "start": 1,
+     "end": 187,
+     "part": false
+    },
+    {
+     "path": "tests/test_opl_title_cfg.py",
+     "lines": 115,
+     "kind": "source",
+     "start": 1,
+     "end": 115,
+     "part": false
+    },
+    {
+     "path": "tests/test_orb_seamless.py",
+     "lines": 86,
+     "kind": "source",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "tests/test_own_config_name.py",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "tests/test_pad_icon_order.py",
+     "lines": 47,
+     "kind": "source",
+     "start": 1,
+     "end": 47,
+     "part": false
+    },
+    {
+     "path": "tests/test_panel_transparency.py",
+     "lines": 36,
+     "kind": "source",
+     "start": 1,
+     "end": 36,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf.py",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf_ata.c",
+     "lines": 97,
+     "kind": "source",
+     "start": 1,
+     "end": 97,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf_fs.py",
+     "lines": 279,
+     "kind": "source",
+     "start": 1,
+     "end": 279,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf_hw.c",
+     "lines": 194,
+     "kind": "source",
+     "start": 1,
+     "end": 194,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf_module.c",
+     "lines": 84,
+     "kind": "source",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "tests/test_pccf_owner.py",
+     "lines": 115,
+     "kind": "source",
+     "start": 1,
+     "end": 115,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-05",
+   "tier": "support",
+   "label": "tests",
+   "lines": 7884,
+   "files": [
+    {
+     "path": "tests/test_pccf_rw.c",
+     "lines": 86,
+     "kind": "source",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "tests/test_physical_hold_input.py",
+     "lines": 48,
+     "kind": "source",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "tests/test_png_viewer.py",
+     "lines": 52,
+     "kind": "source",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "tests/test_popstarter_retrogem.py",
+     "lines": 62,
+     "kind": "source",
+     "start": 1,
+     "end": 62,
+     "part": false
+    },
+    {
+     "path": "tests/test_portable_filename.py",
+     "lines": 74,
+     "kind": "source",
+     "start": 1,
+     "end": 74,
+     "part": false
+    },
+    {
+     "path": "tests/test_poweroff_init.py",
+     "lines": 45,
+     "kind": "source",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "tests/test_poweroff_shutdown.py",
+     "lines": 64,
+     "kind": "source",
+     "start": 1,
+     "end": 64,
+     "part": false
+    },
+    {
+     "path": "tests/test_project_branding.py",
+     "lines": 51,
+     "kind": "source",
+     "start": 1,
+     "end": 51,
+     "part": false
+    },
+    {
+     "path": "tests/test_ps1_card_rediscovery.py",
+     "lines": 149,
+     "kind": "source",
+     "start": 1,
+     "end": 149,
+     "part": false
+    },
+    {
+     "path": "tests/test_ps2browser_card_update.py",
+     "lines": 87,
+     "kind": "source",
+     "start": 1,
+     "end": 87,
+     "part": false
+    },
+    {
+     "path": "tests/test_ps2ips_rpc.py",
+     "lines": 566,
+     "kind": "source",
+     "start": 1,
+     "end": 566,
+     "part": false
+    },
+    {
+     "path": "tests/test_psu_extract_to_mc.py",
+     "lines": 59,
+     "kind": "source",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_browser_contract.py",
+     "lines": 91,
+     "kind": "source",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_browser_wins.py",
+     "lines": 111,
+     "kind": "source",
+     "start": 1,
+     "end": 111,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_config_inventory.py",
+     "lines": 57,
+     "kind": "source",
+     "start": 1,
+     "end": 57,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_four_browser_modes.py",
+     "lines": 84,
+     "kind": "source",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_loader_disable.py",
+     "lines": 59,
+     "kind": "source",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_neutrino_gameid.py",
+     "lines": 216,
+     "kind": "source",
+     "start": 1,
+     "end": 216,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_neutrino_options.py",
+     "lines": 158,
+     "kind": "source",
+     "start": 1,
+     "end": 158,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_oct15_backport.py",
+     "lines": 140,
+     "kind": "source",
+     "start": 1,
+     "end": 140,
+     "part": false
+    },
+    {
+     "path": "tests/test_r3z_video_switch.py",
+     "lines": 97,
+     "kind": "source",
+     "start": 1,
+     "end": 97,
+     "part": false
+    },
+    {
+     "path": "tests/test_recent_skips_game_images.py",
+     "lines": 50,
+     "kind": "source",
+     "start": 1,
+     "end": 50,
+     "part": false
+    },
+    {
+     "path": "tests/test_release_notes.py",
+     "lines": 173,
+     "kind": "source",
+     "start": 1,
+     "end": 173,
+     "part": false
+    },
+    {
+     "path": "tests/test_rename_devices.py",
+     "lines": 510,
+     "kind": "source",
+     "start": 1,
+     "end": 510,
+     "part": false
+    },
+    {
+     "path": "tests/test_rolling_release_workflow.py",
+     "lines": 112,
+     "kind": "source",
+     "start": 1,
+     "end": 112,
+     "part": false
+    },
+    {
+     "path": "tests/test_root_mc_poll.py",
+     "lines": 144,
+     "kind": "source",
+     "start": 1,
+     "end": 144,
+     "part": false
+    },
+    {
+     "path": "tests/test_saildot4k_wins.py",
+     "lines": 302,
+     "kind": "source",
+     "start": 1,
+     "end": 302,
+     "part": false
+    },
+    {
+     "path": "tests/test_scene_override_nesting.py",
+     "lines": 34,
+     "kind": "source",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "tests/test_sd2cloud_parity.py",
+     "lines": 57,
+     "kind": "source",
+     "start": 1,
+     "end": 57,
+     "part": false
+    },
+    {
+     "path": "tests/test_selector_centering.py",
+     "lines": 47,
+     "kind": "source",
+     "start": 1,
+     "end": 47,
+     "part": false
+    },
+    {
+     "path": "tests/test_self_update.py",
+     "lines": 63,
+     "kind": "source",
+     "start": 1,
+     "end": 63,
+     "part": false
+    },
+    {
+     "path": "tests/test_settings_navigation.py",
+     "lines": 247,
+     "kind": "source",
+     "start": 1,
+     "end": 247,
+     "part": false
+    },
+    {
+     "path": "tests/test_settings_save_prompt.py",
+     "lines": 214,
+     "kind": "source",
+     "start": 1,
+     "end": 214,
+     "part": false
+    },
+    {
+     "path": "tests/test_sfx_ps2.py",
+     "lines": 48,
+     "kind": "source",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "tests/test_sjis_dashboard_titles.py",
+     "lines": 149,
+     "kind": "source",
+     "start": 1,
+     "end": 149,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_browser_failure.py",
+     "lines": 65,
+     "kind": "source",
+     "start": 1,
+     "end": 65,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_cnf_edit.py",
+     "lines": 203,
+     "kind": "source",
+     "start": 1,
+     "end": 203,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_connect_state.py",
+     "lines": 157,
+     "kind": "source",
+     "start": 1,
+     "end": 157,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_explicit_port.py",
+     "lines": 73,
+     "kind": "source",
+     "start": 1,
+     "end": 73,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_settings_row.py",
+     "lines": 89,
+     "kind": "source",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "tests/test_smb_shares.py",
+     "lines": 333,
+     "kind": "source",
+     "start": 1,
+     "end": 333,
+     "part": false
+    },
+    {
+     "path": "tests/test_software_clock.py",
+     "lines": 193,
+     "kind": "source",
+     "start": 1,
+     "end": 193,
+     "part": false
+    },
+    {
+     "path": "tests/test_sound_recovery.py",
+     "lines": 183,
+     "kind": "source",
+     "start": 1,
+     "end": 183,
+     "part": false
+    },
+    {
+     "path": "tests/test_stack_realign_check.py",
+     "lines": 350,
+     "kind": "source",
+     "start": 1,
+     "end": 350,
+     "part": false
+    },
+    {
+     "path": "tests/test_startup_status.py",
+     "lines": 119,
+     "kind": "source",
+     "start": 1,
+     "end": 119,
+     "part": false
+    },
+    {
+     "path": "tests/test_storage_probe_frames.py",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "tests/test_system_clock_menu.py",
+     "lines": 42,
+     "kind": "source",
+     "start": 1,
+     "end": 42,
+     "part": false
+    },
+    {
+     "path": "tests/test_temperature.py",
+     "lines": 161,
+     "kind": "source",
+     "start": 1,
+     "end": 161,
+     "part": false
+    },
+    {
+     "path": "tests/test_theme_motion.py",
+     "lines": 81,
+     "kind": "source",
+     "start": 1,
+     "end": 81,
+     "part": false
+    },
+    {
+     "path": "tests/test_tile_styles.py",
+     "lines": 199,
+     "kind": "source",
+     "start": 1,
+     "end": 199,
+     "part": false
+    },
+    {
+     "path": "tests/test_timer_wrap.py",
+     "lines": 53,
+     "kind": "source",
+     "start": 1,
+     "end": 53,
+     "part": false
+    },
+    {
+     "path": "tests/test_transfer_progress.py",
+     "lines": 84,
+     "kind": "source",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "tests/test_transfer_stack_preflight.py",
+     "lines": 181,
+     "kind": "source",
+     "start": 1,
+     "end": 181,
+     "part": false
+    },
+    {
+     "path": "tests/test_udpfs_directory_errors.py",
+     "lines": 93,
+     "kind": "source",
+     "start": 1,
+     "end": 93,
+     "part": false
+    },
+    {
+     "path": "tests/test_udpfs_retry.py",
+     "lines": 36,
+     "kind": "source",
+     "start": 1,
+     "end": 36,
+     "part": false
+    },
+    {
+     "path": "tests/test_udpfs_smap_fifo_tail.py",
+     "lines": 218,
+     "kind": "source",
+     "start": 1,
+     "end": 218,
+     "part": false
+    },
+    {
+     "path": "tests/test_udpfs_smap_startup.py",
+     "lines": 96,
+     "kind": "source",
+     "start": 1,
+     "end": 96,
+     "part": false
+    },
+    {
+     "path": "tests/test_unified_dashboard_navigation.py",
+     "lines": 152,
+     "kind": "source",
+     "start": 1,
+     "end": 152,
+     "part": false
+    },
+    {
+     "path": "tests/test_update_ancestry.py",
+     "lines": 176,
+     "kind": "source",
+     "start": 1,
+     "end": 176,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-06",
+   "tier": "support",
+   "label": "tests, tests/card-tool-shim, tests/fixtures +3 more",
+   "lines": 5092,
+   "files": [
+    {
+     "path": "tests/test_update_ram_sink.py",
+     "lines": 142,
+     "kind": "source",
+     "start": 1,
+     "end": 142,
+     "part": false
+    },
+    {
+     "path": "tests/test_update_sas_timestamps.py",
+     "lines": 183,
+     "kind": "source",
+     "start": 1,
+     "end": 183,
+     "part": false
+    },
+    {
+     "path": "tests/test_update_sidecar_transaction.py",
+     "lines": 262,
+     "kind": "source",
+     "start": 1,
+     "end": 262,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_boot_paths.py",
+     "lines": 89,
+     "kind": "source",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_browse_cache.py",
+     "lines": 212,
+     "kind": "source",
+     "start": 1,
+     "end": 212,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_iop_pad_handoff.py",
+     "lines": 86,
+     "kind": "source",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_probe_status.py",
+     "lines": 102,
+     "kind": "source",
+     "start": 1,
+     "end": 102,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_shared_namespace.py",
+     "lines": 98,
+     "kind": "source",
+     "start": 1,
+     "end": 98,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_stat_timeout.py",
+     "lines": 181,
+     "kind": "source",
+     "start": 1,
+     "end": 181,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_storage_lifecycle.py",
+     "lines": 156,
+     "kind": "source",
+     "start": 1,
+     "end": 156,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_unit_diagnostics.py",
+     "lines": 167,
+     "kind": "source",
+     "start": 1,
+     "end": 167,
+     "part": false
+    },
+    {
+     "path": "tests/test_usb_wait_text.py",
+     "lines": 90,
+     "kind": "source",
+     "start": 1,
+     "end": 90,
+     "part": false
+    },
+    {
+     "path": "tests/test_usbmass_two_drives.py",
+     "lines": 337,
+     "kind": "source",
+     "start": 1,
+     "end": 337,
+     "part": false
+    },
+    {
+     "path": "tests/test_video_sound_preview.py",
+     "lines": 75,
+     "kind": "source",
+     "start": 1,
+     "end": 75,
+     "part": false
+    },
+    {
+     "path": "tests/test_vmc_rename.py",
+     "lines": 137,
+     "kind": "source",
+     "start": 1,
+     "end": 137,
+     "part": false
+    },
+    {
+     "path": "tests/test_wallpaper_docs.py",
+     "lines": 41,
+     "kind": "source",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "tests/test_wiki_capture_media.py",
+     "lines": 23,
+     "kind": "source",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "tests/test_wle_igr.py",
+     "lines": 51,
+     "kind": "source",
+     "start": 1,
+     "end": 51,
+     "part": false
+    },
+    {
+     "path": "tests/test_worker_queue.py",
+     "lines": 81,
+     "kind": "source",
+     "start": 1,
+     "end": 81,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_feedback.py",
+     "lines": 68,
+     "kind": "source",
+     "start": 1,
+     "end": 68,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_launch_sizing.py",
+     "lines": 75,
+     "kind": "source",
+     "start": 1,
+     "end": 75,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_oct_2026.py",
+     "lines": 65,
+     "kind": "source",
+     "start": 1,
+     "end": 65,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_quickwins.py",
+     "lines": 105,
+     "kind": "source",
+     "start": 1,
+     "end": 105,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_round3.py",
+     "lines": 78,
+     "kind": "source",
+     "start": 1,
+     "end": 78,
+     "part": false
+    },
+    {
+     "path": "tests/test_zack_storage_drivers.py",
+     "lines": 212,
+     "kind": "source",
+     "start": 1,
+     "end": 212,
+     "part": false
+    },
+    {
+     "path": "tests/card-tool-shim/dash_internal.h",
+     "lines": 58,
+     "kind": "source",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "tests/card-tool-shim/filer_shared.h",
+     "lines": 11,
+     "kind": "source",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "tests/card-tool-shim/launchelf.h",
+     "lines": 2,
+     "kind": "source",
+     "start": 1,
+     "end": 2,
+     "part": false
+    },
+    {
+     "path": "tests/card-tool-shim/libcdvd.h",
+     "lines": 8,
+     "kind": "source",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "tests/card-tool-shim/mc_card_export.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "tests/fixtures/r3z-06b06d0-config-keys.json",
+     "lines": 66,
+     "kind": "build",
+     "start": 1,
+     "end": 66,
+     "part": false
+    },
+    {
+     "path": "tests/ftp/loadcore.h",
+     "lines": 7,
+     "kind": "source",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "tests/ftp/platform.h",
+     "lines": 61,
+     "kind": "source",
+     "start": 1,
+     "end": 61,
+     "part": false
+    },
+    {
+     "path": "tests/ftp/sifrpc.h",
+     "lines": 14,
+     "kind": "source",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "tests/ftp/startup.h",
+     "lines": 18,
+     "kind": "source",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "tests/ftp/test_server.c",
+     "lines": 1131,
+     "kind": "source",
+     "start": 1,
+     "end": 1131,
+     "part": false
+    },
+    {
+     "path": "tests/ftp-ee/delaythread.h",
+     "lines": 4,
+     "kind": "source",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "tests/ftp-ee/init.h",
+     "lines": 4,
+     "kind": "source",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "tests/ftp-ee/launchelf.h",
+     "lines": 5,
+     "kind": "source",
+     "start": 1,
+     "end": 5,
+     "part": false
+    },
+    {
+     "path": "tests/ftp-ee/sifrpc.h",
+     "lines": 13,
+     "kind": "source",
+     "start": 1,
+     "end": 13,
+     "part": false
+    },
+    {
+     "path": "tests/ftp-ee/test_session.c",
+     "lines": 240,
+     "kind": "source",
+     "start": 1,
+     "end": 240,
+     "part": false
+    },
+    {
+     "path": "tests/nfsman_live/drive.c",
+     "lines": 275,
+     "kind": "source",
+     "start": 1,
+     "end": 275,
+     "part": false
+    },
+    {
+     "path": "tests/nfsman_live/run.sh",
+     "lines": 52,
+     "kind": "source",
+     "start": 1,
+     "end": 52,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-support-07",
+   "tier": "support",
+   "label": "tests/pccf-stubs, tests/smb2man_live, tests/smbd_live +1 more",
+   "lines": 2351,
+   "files": [
+    {
+     "path": "tests/pccf-stubs/bdm.h",
+     "lines": 11,
+     "kind": "source",
+     "start": 1,
+     "end": 11,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/dev9regs.h",
+     "lines": 46,
+     "kind": "source",
+     "start": 1,
+     "end": 46,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/io_common.h",
+     "lines": 66,
+     "kind": "source",
+     "start": 1,
+     "end": 66,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/iomanX.h",
+     "lines": 398,
+     "kind": "source",
+     "start": 1,
+     "end": 398,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/iox_stat.h",
+     "lines": 143,
+     "kind": "source",
+     "start": 1,
+     "end": 143,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/irx.h",
+     "lines": 4,
+     "kind": "source",
+     "start": 1,
+     "end": 4,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/loadcore.h",
+     "lines": 13,
+     "kind": "source",
+     "start": 1,
+     "end": 13,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/sysclib.h",
+     "lines": 1,
+     "kind": "source",
+     "start": 1,
+     "end": 1,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/tamtypes.h",
+     "lines": 1,
+     "kind": "source",
+     "start": 1,
+     "end": 1,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/thbase.h",
+     "lines": 5,
+     "kind": "source",
+     "start": 1,
+     "end": 5,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/thsemap.h",
+     "lines": 87,
+     "kind": "source",
+     "start": 1,
+     "end": 87,
+     "part": false
+    },
+    {
+     "path": "tests/pccf-stubs/types.h",
+     "lines": 5,
+     "kind": "source",
+     "start": 1,
+     "end": 5,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/drive.c",
+     "lines": 350,
+     "kind": "source",
+     "start": 1,
+     "end": 350,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/intrman.h",
+     "lines": 10,
+     "kind": "source",
+     "start": 1,
+     "end": 10,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/iomanX.h",
+     "lines": 76,
+     "kind": "source",
+     "start": 1,
+     "end": 76,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/loadcore.h",
+     "lines": 3,
+     "kind": "source",
+     "start": 1,
+     "end": 3,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/sysclib.h",
+     "lines": 1,
+     "kind": "source",
+     "start": 1,
+     "end": 1,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/sysmem.h",
+     "lines": 23,
+     "kind": "source",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/tamtypes.h",
+     "lines": 13,
+     "kind": "source",
+     "start": 1,
+     "end": 13,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/thbase.h",
+     "lines": 9,
+     "kind": "source",
+     "start": 1,
+     "end": 9,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/inc/thsemap.h",
+     "lines": 29,
+     "kind": "source",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "tests/smb2man_live/run.sh",
+     "lines": 179,
+     "kind": "source",
+     "start": 1,
+     "end": 179,
+     "part": false
+    },
+    {
+     "path": "tests/smbd_live/client.c",
+     "lines": 238,
+     "kind": "source",
+     "start": 1,
+     "end": 238,
+     "part": false
+    },
+    {
+     "path": "tests/smbd_live/host.c",
+     "lines": 234,
+     "kind": "source",
+     "start": 1,
+     "end": 234,
+     "part": false
+    },
+    {
+     "path": "tests/smbd_live/run.sh",
+     "lines": 194,
+     "kind": "source",
+     "start": 1,
+     "end": 194,
+     "part": false
+    },
+    {
+     "path": "windows/cloud-relay/Cloud Relay.bat",
+     "lines": 3,
+     "kind": "source",
+     "start": 1,
+     "end": 3,
+     "part": false
+    },
+    {
+     "path": "windows/cloud-relay/Cloud Relay.ps1",
+     "lines": 209,
+     "kind": "source",
+     "start": 1,
+     "end": 209,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-buildci-01",
+   "tier": "buildci",
+   "label": "(root), .github/workflows",
+   "lines": 2173,
+   "files": [
+    {
+     "path": ".clang-format",
+     "lines": 79,
+     "kind": "build",
+     "start": 1,
+     "end": 79,
+     "part": false
+    },
+    {
+     "path": ".clangd",
+     "lines": 7,
+     "kind": "build",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": ".gitignore",
+     "lines": 49,
+     "kind": "build",
+     "start": 1,
+     "end": 49,
+     "part": false
+    },
+    {
+     "path": "LICENSE",
+     "lines": 24,
+     "kind": "othertext",
+     "start": 1,
+     "end": 24,
+     "part": false
+    },
+    {
+     "path": "ps2.yaml",
+     "lines": 699,
+     "kind": "build",
+     "start": 1,
+     "end": 699,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/compile.yml",
+     "lines": 813,
+     "kind": "workflow",
+     "start": 1,
+     "end": 813,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/docs-pages.yml",
+     "lines": 70,
+     "kind": "workflow",
+     "start": 1,
+     "end": 70,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/download-metrics.yml",
+     "lines": 32,
+     "kind": "workflow",
+     "start": 1,
+     "end": 32,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/neutrino-watch.yml",
+     "lines": 83,
+     "kind": "workflow",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/ps2build-sdk-watch.yml",
+     "lines": 245,
+     "kind": "workflow",
+     "start": 1,
+     "end": 245,
+     "part": false
+    },
+    {
+     "path": ".github/workflows/sync-wiki.yml",
+     "lines": 72,
+     "kind": "workflow",
+     "start": 1,
+     "end": 72,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-docs-01",
+   "tier": "docs",
+   "label": "(root), __Headers, docs +1 more",
+   "lines": 8408,
+   "files": [
+    {
+     "path": "AGENTS.md",
+     "lines": 15,
+     "kind": "doc",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "CHANGELOG.md",
+     "lines": 166,
+     "kind": "doc",
+     "start": 1,
+     "end": 166,
+     "part": false
+    },
+    {
+     "path": "CLAUDE.md",
+     "lines": 15,
+     "kind": "doc",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "README.md",
+     "lines": 291,
+     "kind": "doc",
+     "start": 1,
+     "end": 291,
+     "part": false
+    },
+    {
+     "path": "USB-STABILITY-AUDIT-2026-10-08.md",
+     "lines": 322,
+     "kind": "doc",
+     "start": 1,
+     "end": 322,
+     "part": false
+    },
+    {
+     "path": "storage_driver_fixes_plan.md",
+     "lines": 25,
+     "kind": "doc",
+     "start": 1,
+     "end": 25,
+     "part": false
+    },
+    {
+     "path": "__Headers/README.MD",
+     "lines": 1,
+     "kind": "doc",
+     "start": 1,
+     "end": 1,
+     "part": false
+    },
+    {
+     "path": "docs/BUILDING.md",
+     "lines": 189,
+     "kind": "doc",
+     "start": 1,
+     "end": 189,
+     "part": false
+    },
+    {
+     "path": "docs/DISPLAY_FEEDBACK_2026-10-15.md",
+     "lines": 80,
+     "kind": "doc",
+     "start": 1,
+     "end": 80,
+     "part": false
+    },
+    {
+     "path": "docs/ECOSYSTEM-COMPARISON.md",
+     "lines": 87,
+     "kind": "doc",
+     "start": 1,
+     "end": 87,
+     "part": false
+    },
+    {
+     "path": "docs/EMBER-RETROGEM.md",
+     "lines": 84,
+     "kind": "doc",
+     "start": 1,
+     "end": 84,
+     "part": false
+    },
+    {
+     "path": "docs/FTP-SELECTIVE-PORT-HANDOFF.md",
+     "lines": 29,
+     "kind": "doc",
+     "start": 1,
+     "end": 29,
+     "part": false
+    },
+    {
+     "path": "docs/FileBrowser sort+display modes.txt",
+     "lines": 63,
+     "kind": "doc",
+     "start": 1,
+     "end": 63,
+     "part": false
+    },
+    {
+     "path": "docs/LAUNCHELF.CNF",
+     "lines": 464,
+     "kind": "build",
+     "start": 1,
+     "end": 464,
+     "part": false
+    },
+    {
+     "path": "docs/MMCE_RESTORE_PROTOCOL.md",
+     "lines": 89,
+     "kind": "doc",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "docs/MMCE_SD2PSXTD_FIRMWARE_AUDIT.md",
+     "lines": 75,
+     "kind": "doc",
+     "start": 1,
+     "end": 75,
+     "part": false
+    },
+    {
+     "path": "docs/Multiple USB_mass drives and partitions.txt",
+     "lines": 72,
+     "kind": "doc",
+     "start": 1,
+     "end": 72,
+     "part": false
+    },
+    {
+     "path": "docs/NATIVE_CLOUD.md",
+     "lines": 265,
+     "kind": "doc",
+     "start": 1,
+     "end": 265,
+     "part": false
+    },
+    {
+     "path": "docs/New resolutions.txt",
+     "lines": 89,
+     "kind": "doc",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "docs/R3Z-10-PARITY-AUDIT.md",
+     "lines": 80,
+     "kind": "doc",
+     "start": 1,
+     "end": 80,
+     "part": false
+    },
+    {
+     "path": "docs/R3Z-11-GAME-ID-AUDIT.md",
+     "lines": 82,
+     "kind": "doc",
+     "start": 1,
+     "end": 82,
+     "part": false
+    },
+    {
+     "path": "docs/R3Z-CONFIG-PARITY.md",
+     "lines": 89,
+     "kind": "doc",
+     "start": 1,
+     "end": 89,
+     "part": false
+    },
+    {
+     "path": "docs/R3Z-REQUEST-VALIDATION.md",
+     "lines": 150,
+     "kind": "doc",
+     "start": 1,
+     "end": 150,
+     "part": false
+    },
+    {
+     "path": "docs/README.md",
+     "lines": 80,
+     "kind": "doc",
+     "start": 1,
+     "end": 80,
+     "part": false
+    },
+    {
+     "path": "docs/THIRD_PARTY_CREDITS.md",
+     "lines": 118,
+     "kind": "doc",
+     "start": 1,
+     "end": 118,
+     "part": false
+    },
+    {
+     "path": "docs/TODO.txt",
+     "lines": 8,
+     "kind": "doc",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "docs/UI-CAPTURES.md",
+     "lines": 50,
+     "kind": "doc",
+     "start": 1,
+     "end": 50,
+     "part": false
+    },
+    {
+     "path": "docs/architecture-maintenance.md",
+     "lines": 132,
+     "kind": "doc",
+     "start": 1,
+     "end": 132,
+     "part": false
+    },
+    {
+     "path": "docs/changes.txt",
+     "lines": 1027,
+     "kind": "doc",
+     "start": 1,
+     "end": 1027,
+     "part": false
+    },
+    {
+     "path": "docs/dashboard.md",
+     "lines": 652,
+     "kind": "doc",
+     "start": 1,
+     "end": 652,
+     "part": false
+    },
+    {
+     "path": "docs/font-generation.md",
+     "lines": 79,
+     "kind": "doc",
+     "start": 1,
+     "end": 79,
+     "part": false
+    },
+    {
+     "path": "docs/keyboard.txt",
+     "lines": 66,
+     "kind": "doc",
+     "start": 1,
+     "end": 66,
+     "part": false
+    },
+    {
+     "path": "docs/report-follow-up.md",
+     "lines": 107,
+     "kind": "doc",
+     "start": 1,
+     "end": 107,
+     "part": false
+    },
+    {
+     "path": "docs/themes.md",
+     "lines": 442,
+     "kind": "doc",
+     "start": 1,
+     "end": 442,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/apps.html",
+     "lines": 92,
+     "kind": "doc",
+     "start": 1,
+     "end": 92,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/architecture.html",
+     "lines": 23,
+     "kind": "doc",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/building.html",
+     "lines": 83,
+     "kind": "doc",
+     "start": 1,
+     "end": 83,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/cloud.html",
+     "lines": 23,
+     "kind": "doc",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/configuration.html",
+     "lines": 96,
+     "kind": "doc",
+     "start": 1,
+     "end": 96,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/contributing.html",
+     "lines": 8,
+     "kind": "doc",
+     "start": 1,
+     "end": 8,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/controls.html",
+     "lines": 105,
+     "kind": "doc",
+     "start": 1,
+     "end": 105,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/credits.html",
+     "lines": 65,
+     "kind": "doc",
+     "start": 1,
+     "end": 65,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/dashboard.html",
+     "lines": 104,
+     "kind": "doc",
+     "start": 1,
+     "end": 104,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/developers.html",
+     "lines": 25,
+     "kind": "doc",
+     "start": 1,
+     "end": 25,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/devices.html",
+     "lines": 76,
+     "kind": "doc",
+     "start": 1,
+     "end": 76,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/ecosystem.html",
+     "lines": 14,
+     "kind": "doc",
+     "start": 1,
+     "end": 14,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/ember.html",
+     "lines": 48,
+     "kind": "doc",
+     "start": 1,
+     "end": 48,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/exploit-installer.html",
+     "lines": 59,
+     "kind": "doc",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/faq.html",
+     "lines": 20,
+     "kind": "doc",
+     "start": 1,
+     "end": 20,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/file-browser.html",
+     "lines": 137,
+     "kind": "doc",
+     "start": 1,
+     "end": 137,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/game-launching.html",
+     "lines": 54,
+     "kind": "doc",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/getting-started.html",
+     "lines": 23,
+     "kind": "doc",
+     "start": 1,
+     "end": 23,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/hdd-manager.html",
+     "lines": 58,
+     "kind": "doc",
+     "start": 1,
+     "end": 58,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/hdd.html",
+     "lines": 53,
+     "kind": "doc",
+     "start": 1,
+     "end": 53,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/igr.html",
+     "lines": 51,
+     "kind": "doc",
+     "start": 1,
+     "end": 51,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/ilink.html",
+     "lines": 28,
+     "kind": "doc",
+     "start": 1,
+     "end": 28,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/index.html",
+     "lines": 43,
+     "kind": "doc",
+     "start": 1,
+     "end": 43,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/install.html",
+     "lines": 36,
+     "kind": "doc",
+     "start": 1,
+     "end": 36,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/languages.html",
+     "lines": 45,
+     "kind": "doc",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/launch-arguments.html",
+     "lines": 52,
+     "kind": "doc",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/memory-card.html",
+     "lines": 45,
+     "kind": "doc",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/mmce-backup.html",
+     "lines": 91,
+     "kind": "doc",
+     "start": 1,
+     "end": 91,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/mmce.html",
+     "lines": 39,
+     "kind": "doc",
+     "start": 1,
+     "end": 39,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/mx4sio.html",
+     "lines": 35,
+     "kind": "doc",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/network-services.html",
+     "lines": 26,
+     "kind": "doc",
+     "start": 1,
+     "end": 26,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/network.html",
+     "lines": 22,
+     "kind": "doc",
+     "start": 1,
+     "end": 22,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/neutrino.html",
+     "lines": 86,
+     "kind": "doc",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/nfs.html",
+     "lines": 62,
+     "kind": "doc",
+     "start": 1,
+     "end": 62,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/pc-card-cf.html",
+     "lines": 52,
+     "kind": "doc",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/popstarter.html",
+     "lines": 45,
+     "kind": "doc",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/privacy.html",
+     "lines": 7,
+     "kind": "doc",
+     "start": 1,
+     "end": 7,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/releases.html",
+     "lines": 81,
+     "kind": "doc",
+     "start": 1,
+     "end": 81,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/saves.html",
+     "lines": 135,
+     "kind": "doc",
+     "start": 1,
+     "end": 135,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/settings.html",
+     "lines": 171,
+     "kind": "doc",
+     "start": 1,
+     "end": 171,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/smb.html",
+     "lines": 86,
+     "kind": "doc",
+     "start": 1,
+     "end": 86,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/special-hardware.html",
+     "lines": 41,
+     "kind": "doc",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/text-editor.html",
+     "lines": 74,
+     "kind": "doc",
+     "start": 1,
+     "end": 74,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/themes.html",
+     "lines": 160,
+     "kind": "doc",
+     "start": 1,
+     "end": 160,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/troubleshooting.html",
+     "lines": 25,
+     "kind": "doc",
+     "start": 1,
+     "end": 25,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/udpfs.html",
+     "lines": 43,
+     "kind": "doc",
+     "start": 1,
+     "end": 43,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/ui-captures.html",
+     "lines": 15,
+     "kind": "doc",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/usb.html",
+     "lines": 47,
+     "kind": "doc",
+     "start": 1,
+     "end": 47,
+     "part": false
+    },
+    {
+     "path": "docs-site/content/wiki.html",
+     "lines": 16,
+     "kind": "doc",
+     "start": 1,
+     "end": 16,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-docs-02",
+   "tier": "docs",
+   "label": "docs/follow-ups, docs/licenses, docs/plans +21 more",
+   "lines": 4679,
+   "files": [
+    {
+     "path": "docs/follow-ups/move-manifest.md",
+     "lines": 42,
+     "kind": "doc",
+     "start": 1,
+     "end": 42,
+     "part": false
+    },
+    {
+     "path": "docs/licenses/Emotion-Engine-LICENSE.txt",
+     "lines": 47,
+     "kind": "doc",
+     "start": 1,
+     "end": 47,
+     "part": false
+    },
+    {
+     "path": "docs/licenses/Material-Design-Icons-LICENSE.txt",
+     "lines": 235,
+     "kind": "doc",
+     "start": 1,
+     "end": 235,
+     "part": false
+    },
+    {
+     "path": "docs/licenses/Roboto-COPYRIGHT.txt",
+     "lines": 52,
+     "kind": "doc",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-17-issue-triage.md",
+     "lines": 56,
+     "kind": "doc",
+     "start": 1,
+     "end": 56,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md",
+     "lines": 191,
+     "kind": "doc",
+     "start": 1,
+     "end": 191,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-18-cloud-handoff.md",
+     "lines": 54,
+     "kind": "doc",
+     "start": 1,
+     "end": 54,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-18-dev9-transition-follow-up.md",
+     "lines": 46,
+     "kind": "doc",
+     "start": 1,
+     "end": 46,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-18-tester-follow-up.md",
+     "lines": 64,
+     "kind": "doc",
+     "start": 1,
+     "end": 64,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-19-zack-issues.md",
+     "lines": 192,
+     "kind": "doc",
+     "start": 1,
+     "end": 192,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-24-stable-issue-recovery.md",
+     "lines": 45,
+     "kind": "doc",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "docs/plans/2026-10-26-sd2cloud-parity-plan.md",
+     "lines": 100,
+     "kind": "doc",
+     "start": 1,
+     "end": 100,
+     "part": false
+    },
+    {
+     "path": "docs/plans/pc-card-cf-integration.md",
+     "lines": 144,
+     "kind": "doc",
+     "start": 1,
+     "end": 144,
+     "part": false
+    },
+    {
+     "path": "docs/plans/wlaunchelf-r3z-oct17-parity.md",
+     "lines": 65,
+     "kind": "doc",
+     "start": 1,
+     "end": 65,
+     "part": false
+    },
+    {
+     "path": "docs/superpowers/plans/2026-09-26-osdsys-dash.md",
+     "lines": 1087,
+     "kind": "doc",
+     "start": 1,
+     "end": 1087,
+     "part": false
+    },
+    {
+     "path": "docs/superpowers/plans/2026-11-04-hide-tabs.md",
+     "lines": 164,
+     "kind": "doc",
+     "start": 1,
+     "end": 164,
+     "part": false
+    },
+    {
+     "path": "docs/superpowers/specs/2026-09-26-osdsys-dash-design.md",
+     "lines": 180,
+     "kind": "doc",
+     "start": 1,
+     "end": 180,
+     "part": false
+    },
+    {
+     "path": "docs/superpowers/specs/2026-11-04-boot-defer-design.md",
+     "lines": 41,
+     "kind": "doc",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "docs/superpowers/specs/2026-11-04-hide-tabs-design.md",
+     "lines": 35,
+     "kind": "doc",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "docs/theme-example/README.md",
+     "lines": 59,
+     "kind": "doc",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "docs/theme-example/theme.cfg",
+     "lines": 61,
+     "kind": "build",
+     "start": 1,
+     "end": 61,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/Building-and-Validation.md",
+     "lines": 21,
+     "kind": "doc",
+     "start": 1,
+     "end": 21,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/Current-Features.md",
+     "lines": 77,
+     "kind": "doc",
+     "start": 1,
+     "end": 77,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/Home.md",
+     "lines": 41,
+     "kind": "doc",
+     "start": 1,
+     "end": 41,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/MMCE-Recovery.md",
+     "lines": 75,
+     "kind": "doc",
+     "start": 1,
+     "end": 75,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/Releases-and-Recovery.md",
+     "lines": 72,
+     "kind": "doc",
+     "start": 1,
+     "end": 72,
+     "part": false
+    },
+    {
+     "path": "docs/wiki/Theme-and-Wallpaper-Guide.md",
+     "lines": 63,
+     "kind": "doc",
+     "start": 1,
+     "end": 63,
+     "part": false
+    },
+    {
+     "path": "ee_libs/tcpips/VENDORED.md",
+     "lines": 35,
+     "kind": "doc",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "exploits/README.md",
+     "lines": 34,
+     "kind": "doc",
+     "start": 1,
+     "end": 34,
+     "part": false
+    },
+    {
+     "path": "iop/mx4sio_bd/ORIGIN.md",
+     "lines": 47,
+     "kind": "doc",
+     "start": 1,
+     "end": 47,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/README.md",
+     "lines": 45,
+     "kind": "doc",
+     "start": 1,
+     "end": 45,
+     "part": false
+    },
+    {
+     "path": "iop/nfsman/unfs4/VENDORED.txt",
+     "lines": 15,
+     "kind": "doc",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/LAUNCHSTATION.md",
+     "lines": 96,
+     "kind": "doc",
+     "start": 1,
+     "end": 96,
+     "part": false
+    },
+    {
+     "path": "iop/oldlibs/ps2ftpd/changes.txt",
+     "lines": 71,
+     "kind": "doc",
+     "start": 1,
+     "end": 71,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/PS2SDK_LICENSE.txt",
+     "lines": 165,
+     "kind": "doc",
+     "start": 1,
+     "end": 165,
+     "part": false
+    },
+    {
+     "path": "iop/pccf/VENDORED.md",
+     "lines": 30,
+     "kind": "doc",
+     "start": 1,
+     "end": 30,
+     "part": false
+    },
+    {
+     "path": "iop/ps2hdd_osd/README.md",
+     "lines": 15,
+     "kind": "doc",
+     "start": 1,
+     "end": 15,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/PS2SDK_LICENSE.txt",
+     "lines": 166,
+     "kind": "doc",
+     "start": 1,
+     "end": 166,
+     "part": false
+    },
+    {
+     "path": "iop/ps2ips_rpc/VENDORED.md",
+     "lines": 62,
+     "kind": "doc",
+     "start": 1,
+     "end": 62,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/README.md",
+     "lines": 53,
+     "kind": "doc",
+     "start": 1,
+     "end": 53,
+     "part": false
+    },
+    {
+     "path": "iop/smb2man/usmb2/VENDORED.txt",
+     "lines": 59,
+     "kind": "doc",
+     "start": 1,
+     "end": 59,
+     "part": false
+    },
+    {
+     "path": "iop/smbman/README.md",
+     "lines": 52,
+     "kind": "doc",
+     "start": 1,
+     "end": 52,
+     "part": false
+    },
+    {
+     "path": "iop/udpfs_smap/ORIGIN.md",
+     "lines": 37,
+     "kind": "doc",
+     "start": 1,
+     "end": 37,
+     "part": false
+    },
+    {
+     "path": "iop/usbmass_bd/ORIGIN.md",
+     "lines": 53,
+     "kind": "doc",
+     "start": 1,
+     "end": 53,
+     "part": false
+    },
+    {
+     "path": "iop/vmcman/README.md",
+     "lines": 35,
+     "kind": "doc",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "res/README.md",
+     "lines": 18,
+     "kind": "doc",
+     "start": 1,
+     "end": 18,
+     "part": false
+    },
+    {
+     "path": "res/UPDATE-CA.md",
+     "lines": 35,
+     "kind": "doc",
+     "start": 1,
+     "end": 35,
+     "part": false
+    },
+    {
+     "path": "research/sd2psxtd/README.md",
+     "lines": 76,
+     "kind": "doc",
+     "start": 1,
+     "end": 76,
+     "part": false
+    },
+    {
+     "path": "ship/KIT-README.txt",
+     "lines": 92,
+     "kind": "doc",
+     "start": 1,
+     "end": 92,
+     "part": false
+    },
+    {
+     "path": "ship/neutrino-ilink/README.txt",
+     "lines": 27,
+     "kind": "doc",
+     "start": 1,
+     "end": 27,
+     "part": false
+    },
+    {
+     "path": "windows/cloud-relay/README.md",
+     "lines": 52,
+     "kind": "doc",
+     "start": 1,
+     "end": 52,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-skim-01",
+   "tier": "skim",
+   "label": "generated bitmap font data arrays",
+   "lines": 27149,
+   "files": [
+    {
+     "path": "src/dash_font_data.c",
+     "lines": 9657,
+     "kind": "source",
+     "start": 1,
+     "end": 9657,
+     "part": false
+    },
+    {
+     "path": "src/dash_font_emotion_engine.c",
+     "lines": 8036,
+     "kind": "source",
+     "start": 1,
+     "end": 8036,
+     "part": false
+    },
+    {
+     "path": "src/dash_font_emotion_engine_bold.c",
+     "lines": 8804,
+     "kind": "source",
+     "start": 1,
+     "end": 8804,
+     "part": false
+    },
+    {
+     "path": "src/font_uLE.c",
+     "lines": 652,
+     "kind": "source",
+     "start": 1,
+     "end": 652,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-skim-02",
+   "tier": "skim",
+   "label": "generated icon and title-database data arrays",
+   "lines": 2942,
+   "files": [
+    {
+     "path": "iop/xparam/src/database_merged.c",
+     "lines": 887,
+     "kind": "source",
+     "start": 1,
+     "end": 887,
+     "part": false
+    },
+    {
+     "path": "src/icon.c",
+     "lines": 2055,
+     "kind": "source",
+     "start": 1,
+     "end": 2055,
+     "part": false
+    }
+   ]
+  },
+  {
+   "id": "launch-skim-03",
+   "tier": "skim",
+   "label": "language files",
+   "lines": 7157,
+   "files": [
+    {
+     "path": "Lang/DASHBOARD.inc",
+     "lines": 704,
+     "kind": "source",
+     "start": 1,
+     "end": 704,
+     "part": false
+    },
+    {
+     "path": "Lang/ENG.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/FRE.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/GER.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/HUN.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/ITA.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/POL.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/POR.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/PTBR.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    },
+    {
+     "path": "Lang/SPA.LNG",
+     "lines": 717,
+     "kind": "othertext",
+     "start": 1,
+     "end": 717,
+     "part": false
+    }
+   ]
+  }
+ ],
+ "listed": [
+  {
+   "path": "__Headers/PP.FHDB.APPS/list.ico",
+   "bytes": 34808,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "__Headers/PP.GSM/list.ico",
+   "bytes": 23402,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "__Headers/PP.OPL/list.ico",
+   "bytes": 21744,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "__Headers/PP.ULE/list.ico",
+   "bytes": 47512,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/launchstation-logo.avif",
+   "bytes": 9446,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/style.css",
+   "bytes": 84236,
+   "lines": 1900,
+   "reason": "site stylesheet (static web asset, not product code)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/about.png",
+   "bytes": 99857,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/app-details.png",
+   "bytes": 99609,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/app-options.png",
+   "bytes": 79795,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/appearance.png",
+   "bytes": 140949,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/application-views.gif",
+   "bytes": 2894342,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/application-views.mp4",
+   "bytes": 337371,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/apps-carousel.png",
+   "bytes": 117096,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/apps-grid.png",
+   "bytes": 111110,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/apps-list.png",
+   "bytes": 124894,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/apps-menu.png",
+   "bytes": 76597,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/build-information.png",
+   "bytes": 86435,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/cloud-backups.png",
+   "bytes": 123708,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/colour-editor.png",
+   "bytes": 130828,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/files-context.png",
+   "bytes": 74513,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/files-devices.png",
+   "bytes": 125972,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/files-folder.png",
+   "bytes": 114759,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/files-usb-root.png",
+   "bytes": 86630,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/image-loaders.png",
+   "bytes": 139904,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/image-viewer.png",
+   "bytes": 66707,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/misc-commands.png",
+   "bytes": 81656,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/mmce-backup-settings.png",
+   "bytes": 158474,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-applications.png",
+   "bytes": 154004,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-input.png",
+   "bytes": 122801,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-launching.png",
+   "bytes": 139703,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-network.png",
+   "bytes": 145143,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-overview.png",
+   "bytes": 119929,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-sound.png",
+   "bytes": 128128,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-storage.png",
+   "bytes": 143350,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/settings-system.png",
+   "bytes": 146776,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/system-information.png",
+   "bytes": 108231,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/text-editor-menu.png",
+   "bytes": 68410,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/text-editor.png",
+   "bytes": 124423,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-background.png",
+   "bytes": 140594,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-biosblue.png",
+   "bytes": 79108,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-black.png",
+   "bytes": 79182,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-bootlines.png",
+   "bytes": 79847,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-brushed.png",
+   "bytes": 150497,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-clock.png",
+   "bytes": 130104,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-clockring.png",
+   "bytes": 118183,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-colours.png",
+   "bytes": 145271,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-crt.png",
+   "bytes": 78674,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-crystal.png",
+   "bytes": 131710,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-cubes.png",
+   "bytes": 93402,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-customize.png",
+   "bytes": 123027,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-discred.png",
+   "bytes": 129791,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-highlights.gif",
+   "bytes": 4885148,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-highlights.mp4",
+   "bytes": 597007,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-icons.png",
+   "bytes": 115389,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-mcblue.png",
+   "bytes": 87006,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-mcgrid.png",
+   "bytes": 82238,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-minimal.png",
+   "bytes": 85827,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-mist.png",
+   "bytes": 103577,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-mono.png",
+   "bytes": 74720,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-osd.png",
+   "bytes": 136599,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-picker.png",
+   "bytes": 110955,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-psx.png",
+   "bytes": 94879,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-stream.png",
+   "bytes": 82184,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-text.png",
+   "bytes": 132909,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-tiles.png",
+   "bytes": 130872,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-tour.mp4",
+   "bytes": 1095595,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-towers.png",
+   "bytes": 197823,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/theme-wallpaper.png",
+   "bytes": 130677,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/tools-essentials.png",
+   "bytes": 149256,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/tools-storage.png",
+   "bytes": 142068,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/ui/usb-diagnostics.png",
+   "bytes": 99269,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs-site/static/assets/wallpaper-example.png",
+   "bytes": 2901,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "docs/theme-example/background.png",
+   "bytes": 2901,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/CHN.sys",
+   "bytes": 964,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/DTL-SYSTEM.XLF",
+   "bytes": 13896,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/EUR.sys",
+   "bytes": 964,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/IOPRP.IMG",
+   "bytes": 15741,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/IOPRP_LTS.IMG",
+   "bytes": 18652,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/JPN.sys",
+   "bytes": 964,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/OSD110.KERNEL",
+   "bytes": 6992,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/OSDSYS.KERNEL",
+   "bytes": 7056,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/SYSTEM.XLF",
+   "bytes": 13896,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/USA.sys",
+   "bytes": 964,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/XSYSTEM.XLF",
+   "bytes": 13896,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/XSYSTEM2.XLF",
+   "bytes": 13896,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "exploits/list.icn",
+   "bytes": 37882,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "iop/__precompiled/udpfs_ioman.irx",
+   "bytes": 11633,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "iop/__precompiled/udpfs_ministack.irx",
+   "bytes": 5025,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "iop/__precompiled/udpfs_smap.irx",
+   "bytes": 8081,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "iop/__v10/ps2dev9.irx",
+   "bytes": 13193,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "iop/__v10/ps2ip.irx",
+   "bytes": 118513,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/bgm.ogg",
+   "bytes": 462185,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/L1.png",
+   "bytes": 1455,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/L2.png",
+   "bytes": 1692,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/L3.png",
+   "bytes": 2063,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/R1.png",
+   "bytes": 1492,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/R2.png",
+   "bytes": 1827,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/R3.png",
+   "bytes": 1924,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/circle.png",
+   "bytes": 2019,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/cross.png",
+   "bytes": 2013,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/down.png",
+   "bytes": 1843,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/left.png",
+   "bytes": 1764,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/right.png",
+   "bytes": 1833,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/select.png",
+   "bytes": 649,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/square.png",
+   "bytes": 1999,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/start.png",
+   "bytes": 1014,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/triangle.png",
+   "bytes": 2010,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/icons/up.png",
+   "bytes": 1778,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/memory-card/copy.icn",
+   "bytes": 14990,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/memory-card/del.icn",
+   "bytes": 14990,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/memory-card/icon.sys",
+   "bytes": 964,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/memory-card/list.icn",
+   "bytes": 14990,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/music.sad",
+   "bytes": 284656,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/bd_connect.adp",
+   "bytes": 15680,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/bd_disconnect.adp",
+   "bytes": 15680,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/boot.adp",
+   "bytes": 74144,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/cancel.adp",
+   "bytes": 5088,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/confirm.adp",
+   "bytes": 7744,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/cursor.adp",
+   "bytes": 2064,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/message.adp",
+   "bytes": 15936,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "res/sfx_ps2/transition.adp",
+   "bytes": 5600,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "ship/neutrino-ilink/IEEE1394_bd_mini.irx",
+   "bytes": 10577,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "ship/neutrino-ilink/iLinkman.irx",
+   "bytes": 15713,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  },
+  {
+   "path": "tests/fixtures/transcend_ts4gcf133.cis",
+   "bytes": 160,
+   "lines": 0,
+   "reason": "binary file (covered by the asset/clutter inventory, not read as text)"
+  }
+ ]
+}

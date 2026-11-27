@@ -1,0 +1,375 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     10d8     4 .rel.text
+       0        0       30     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_lookup)
+      30       30       e0     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_open)
+     110      110       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.malloc)
+     128      128       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.free)
+     140      140       20     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_opendir)
+     160      160       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.calloc)
+     178      178       58     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_readdir)
+     1d0      1d0       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.put_fh)
+     1e8      1e8        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_cmd_hdr)
+     1f0      1f0       98     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_rpc)
+     288      288       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.get_attrs)
+     2b0      2b0       30     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_prw)
+     2e0      2e0       20     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_size)
+     300      300       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_getattr)
+     328      328       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_stat)
+     350      350        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.path_size)
+     358      358       20     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.put_path)
+     378      378       30     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_mkdir)
+     3a8      3a8       10     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.put_name)
+     3b8      3b8       30     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_remove)
+     3e8      3e8       48     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_rename)
+     430      430       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.unfs4_truncate)
+     448      448       30     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text._start)
+     478      478       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.get_fh)
+     490      490        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.put_opaque)
+     498      498       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.write_to_socket)
+     4c0      4c0       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.read_from_socket)
+     4e8      4e8        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.socket_failed)
+     4f0      4f0        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_wait)
+     4f8      4f8       10     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.get64)
+     508      508       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_init)
+     530      530       28     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_deinit)
+     558      558       d8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_open)
+     630      630       48     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_close)
+     678      678       88     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_read)
+     700      700       d0     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_write)
+     7d0      7d0        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_lseek)
+     7d8      7d8        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_remove)
+     7e0      7e0       60     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_mkdir)
+     840      840        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_rmdir)
+     848      848       b0     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_dopen)
+     8f8      8f8       48     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_dclose)
+     940      940       d8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_dread)
+     a18      a18       88     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_getstat)
+     aa0      aa0       90     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_rename)
+     b30      b30       90     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_lseek64)
+     bc0      bc0      130     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_devctl)
+     cf0      cf0       c8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_lock_path)
+     db8      db8       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_fixpath)
+     dd0      dd0       20     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_errno)
+     df0      df0       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_check)
+     e08      e08       38     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_ready)
+     e40      e40       20     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_drop)
+     e60      e60        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_seconds)
+     e68      e68       e0     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_connect)
+     f48      f48       10     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_clock)
+     f58      f58       10     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_slot)
+     f68      f68       58     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_lock_file)
+     fc0      fc0       70     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_delete)
+    1030     1030        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_is_root)
+    1038     1038        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_fill_stat)
+    1040     1040       98     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.text.nfsman_parse_url)
+       0        0       f8     4 .rel.data
+       0        0        8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.data._irx_id)
+       8        8       18     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.data.nfsman_dev)
+      20       20       d8     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.data.nfsman_ops)
+       0        0       d0     4 .rel.rodata
+       0        0       d0     4         obj/nfsman/iop/nfsman/nfsman.o:(.rel.rodata.nfsman_errno)
+       0        0     4758    16 .text
+       0        0       d4    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_lookup)
+       0        0       d4     1                 unfs4_lookup
+      e0       e0      564    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_open)
+      e0       e0      564     1                 unfs4_open
+     650      650       48    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.malloc)
+     650      650       48     1                 malloc
+     6a0      6a0       48    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.free)
+     6a0      6a0       48     1                 free
+     6f0      6f0       84    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_opendir)
+     6f0      6f0       84     1                 unfs4_opendir
+     780      780       74    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.calloc)
+     780      780       74     1                 calloc
+     800      800      254    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_readdir)
+     800      800      254     1                 unfs4_readdir
+     a60      a60       b0    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.put_fh)
+     a60      a60       b0     1                 put_fh
+     b10      b10       c4    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_cmd_hdr)
+     b10      b10       c4     1                 unfs4_cmd_hdr
+     be0      be0       2c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.put_attr_request)
+     be0      be0       2c     1                 put_attr_request
+     c10      c10      2a8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_rpc)
+     c10      c10      2a8     1                 unfs4_rpc
+     ec0      ec0       34    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.get32)
+     ec0      ec0       34     1                 get32
+     f00      f00       e4    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.get_attrs)
+     f00      f00       e4     1                 get_attrs
+     ff0      ff0      1dc    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_prw)
+     ff0      ff0      1dc     1                 unfs4_prw
+    11d0     11d0       70    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_size)
+    11d0     11d0       70     1                 unfs4_size
+    1240     1240       c0    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_getattr)
+    1240     1240       c0     1                 unfs4_getattr
+    1300     1300       88    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_stat)
+    1300     1300       88     1                 unfs4_stat
+    1390     1390       98    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.path_size)
+    1390     1390       98     1                 path_size
+    1430     1430       e4    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.put_path)
+    1430     1430       e4     1                 put_path
+    1520     1520       e8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_mkdir)
+    1520     1520       e8     1                 unfs4_mkdir
+    1610     1610       40    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.put_name)
+    1610     1610       40     1                 put_name
+    1650     1650       b8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_remove)
+    1650     1650       b8     1                 unfs4_remove
+    1710     1710      114    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_rename)
+    1710     1710      114     1                 unfs4_rename
+    1830     1830       f0    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.unfs4_truncate)
+    1830     1830       f0     1                 unfs4_truncate
+    1920     1920       3c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text._start)
+    1920     1920       3c     1                 _start
+    1960     1960       a8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.get_fh)
+    1960     1960       a8     1                 get_fh
+    1a10     1a10       70    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.put_opaque)
+    1a10     1a10       70     1                 put_opaque
+    1a80     1a80       c8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.write_to_socket)
+    1a80     1a80       c8     1                 write_to_socket
+    1b50     1b50       cc    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.read_from_socket)
+    1b50     1b50       cc     1                 read_from_socket
+    1c20     1c20       40    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.socket_failed)
+    1c20     1c20       40     1                 socket_failed
+    1c60     1c60      100    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_wait)
+    1c60     1c60      100     1                 nfsman_wait
+    1d60     1d60       3c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.get64)
+    1d60     1d60       3c     1                 get64
+    1da0     1da0       60    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_init)
+    1da0     1da0       60     1                 nfsman_init
+    1e00     1e00       40    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_deinit)
+    1e00     1e00       40     1                 nfsman_deinit
+    1e40     1e40        8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_nulldev)
+    1e40     1e40        8     1                 nfsman_nulldev
+    1e50     1e50      2f4    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_open)
+    1e50     1e50      2f4     1                 nfsman_open
+    2150     2150       84    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_close)
+    2150     2150       84     1                 nfsman_close
+    21e0     21e0      19c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_read)
+    21e0     21e0      19c     1                 nfsman_read
+    2380     2380      264    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_write)
+    2380     2380      264     1                 nfsman_write
+    25f0     25f0       48    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_lseek)
+    25f0     25f0       48     1                 nfsman_lseek
+    2640     2640        c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_remove)
+    2640     2640        c     1                 nfsman_remove
+    2650     2650      108    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_mkdir)
+    2650     2650      108     1                 nfsman_mkdir
+    2760     2760        c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_rmdir)
+    2760     2760        c     1                 nfsman_rmdir
+    2770     2770      16c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_dopen)
+    2770     2770      16c     1                 nfsman_dopen
+    28e0     28e0       80    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_dclose)
+    28e0     28e0       80     1                 nfsman_dclose
+    2960     2960      224    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_dread)
+    2960     2960      224     1                 nfsman_dread
+    2b90     2b90      14c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_getstat)
+    2b90     2b90      14c     1                 nfsman_getstat
+    2ce0     2ce0      1b8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_rename)
+    2ce0     2ce0      1b8     1                 nfsman_rename
+    2ea0     2ea0      164    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_lseek64)
+    2ea0     2ea0      164     1                 nfsman_lseek64
+    3010     3010      290    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_devctl)
+    3010     3010      290     1                 nfsman_devctl
+    32a0     32a0        c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_nulldev64)
+    32a0     32a0        c     1                 nfsman_nulldev64
+    32b0     32b0      1f8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_lock_path)
+    32b0     32b0      1f8     1                 nfsman_lock_path
+    34b0     34b0       d0    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_fixpath)
+    34b0     34b0       d0     1                 nfsman_fixpath
+    3580     3580      100    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_errno)
+    3580     3580      100     1                 nfsman_errno
+    3680     3680       60    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_check)
+    3680     3680       60     1                 nfsman_check
+    36e0     36e0       c8    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_ready)
+    36e0     36e0       c8     1                 nfsman_ready
+    37b0     37b0       6c    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_drop)
+    37b0     37b0       6c     1                 nfsman_drop
+    3820     3820       20    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_seconds)
+    3820     3820       20     1                 nfsman_seconds
+    3840     3840      308    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_connect)
+    3840     3840      308     1                 nfsman_connect
+    3b50     3b50       50    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_clock)
+    3b50     3b50       50     1                 nfsman_clock
+    3ba0     3ba0       70    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_slot)
+    3ba0     3ba0       70     1                 nfsman_slot
+    3c10     3c10       94    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_lock_file)
+    3c10     3c10       94     1                 nfsman_lock_file
+    3cb0     3cb0      120    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_delete)
+    3cb0     3cb0      120     1                 nfsman_delete
+    3dd0     3dd0       30    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_is_root)
+    3dd0     3dd0       30     1                 nfsman_is_root
+    3e00     3e00      3ec    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_fill_stat)
+    3e00     3e00      3ec     1                 nfsman_fill_stat
+    41f0     41f0      2d0    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_parse_url)
+    41f0     41f0      2d0     1                 nfsman_parse_url
+    44c0     44c0       90    16         obj/nfsman/iop/nfsman/nfsman.o:(.text.nfsman_number)
+    44c0     44c0       90     1                 nfsman_number
+    4550     4550      208    16         obj/nfsman/imports.o:(.text)
+    4564     4564        0     1                 AddDrv
+    456c     456c        0     1                 DelDrv
+    4590     4590        0     1                 lwip_recv
+    4598     4598        0     1                 lwip_send
+    45a0     45a0        0     1                 lwip_close
+    45a8     45a8        0     1                 lwip_socket
+    45b0     45b0        0     1                 lwip_connect
+    45b8     45b8        0     1                 lwip_bind
+    45c0     45c0        0     1                 lwip_select
+    45c8     45c8        0     1                 lwip_ioctl
+    45d0     45d0        0     1                 lwip_getsockopt
+    45d8     45d8        0     1                 ipaddr_addr
+    45fc     45fc        0     1                 CpuSuspendIntr
+    4604     4604        0     1                 CpuResumeIntr
+    4628     4628        0     1                 GetSystemTime
+    4630     4630        0     1                 SysClock2USec
+    4654     4654        0     1                 AllocSysMemory
+    465c     465c        0     1                 FreeSysMemory
+    4680     4680        0     1                 CreateSema
+    4688     4688        0     1                 WaitSema
+    4690     4690        0     1                 SignalSema
+    4698     4698        0     1                 DeleteSema
+    46bc     46bc        0     1                 memset
+    46c4     46c4        0     1                 memcpy
+    46cc     46cc        0     1                 memchr
+    46d4     46d4        0     1                 memcmp
+    46dc     46dc        0     1                 memmove
+    46e4     46e4        0     1                 strcpy
+    46ec     46ec        0     1                 strcat
+    46f4     46f4        0     1                 strchr
+    46fc     46fc        0     1                 strncmp
+    4704     4704        0     1                 strncpy
+    470c     470c        0     1                 strcmp
+    4714     4714        0     1                 strlen
+    471c     471c        0     1                 sprintf
+    4724     4724        0     1                 _toupper
+    4748     4748        0     1                 printf
+       0        0      144    16 .rodata
+       0        0       68    16         obj/nfsman/iop/nfsman/nfsman.o:(.rodata.nfsman_errno)
+      70       70       bc    16         <internal>:(.rodata.str1.1)
+     130      130        e    16         obj/nfsman/iop/nfsman/nfsman.o:(.rodata.$__const.unfs4_create.id)
+     140      140        4    16         obj/nfsman/iop/nfsman/nfsman.o:(.rodata.unfs4_rpc.zero)
+     140      140        4     1                 unfs4_rpc.zero
+  4048c4   4048c4    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       a4    16 .data
+       0        0        8    16         obj/nfsman/iop/nfsman/nfsman.o:(.data._irx_id)
+       0        0        8     1                 _irx_id
+      10       10       14    16         obj/nfsman/iop/nfsman/nfsman.o:(.data.nfsman_dev)
+      10       10       14     1                 nfsman_dev
+      30       30       6c    16         obj/nfsman/iop/nfsman/nfsman.o:(.data.nfsman_ops)
+      30       30       6c     1                 nfsman_ops
+      a0       a0        4    16         obj/nfsman/iop/nfsman/nfsman.o:(.data.nfs_sema)
+      a0       a0        4     1                 nfs_sema
+  444974   444974        0     1 __bss_start = .
+       0        0      b84    16 .bss
+       0        0      340    16         obj/nfsman/iop/nfsman/nfsman.o:(.bss.file_table)
+       0        0      340     1                 file_table
+     340      340      840    16         obj/nfsman/iop/nfsman/nfsman.o:(.bss.exports)
+     340      340      840     1                 exports
+     b80      b80        4    16         obj/nfsman/iop/nfsman/nfsman.o:(.bss.last_id)
+     b80      b80        4     1                 last_id
+  445504   445504        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/nfsman/iop/nfsman/nfsman.o:(.mdebug.abi32)
+       0        0        0     1         obj/nfsman/imports.o:(.mdebug.abi32)
+       0        0       19     1 .llvm_addrsig
+       0        0       19     1         obj/nfsman/iop/nfsman/nfsman.o:(.llvm_addrsig)
+      19       19        0     1         obj/nfsman/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      860     4 .symtab
+       0        0      860     4         <internal>:(.symtab)
+       0        0       92     1 .shstrtab
+       0        0       92     1         <internal>:(.shstrtab)
+       0        0      592     1 .strtab
+       0        0      592     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+unfs4_open                                        obj/nfsman/iop/nfsman/nfsman.o
+malloc                                            obj/nfsman/iop/nfsman/nfsman.o
+free                                              obj/nfsman/iop/nfsman/nfsman.o
+CpuSuspendIntr                                    obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+AllocSysMemory                                    obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+CpuResumeIntr                                     obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+FreeSysMemory                                     obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+unfs4_opendir                                     obj/nfsman/iop/nfsman/nfsman.o
+calloc                                            obj/nfsman/iop/nfsman/nfsman.o
+memset                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+unfs4_readdir                                     obj/nfsman/iop/nfsman/nfsman.o
+memcpy                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+unfs4_prw                                         obj/nfsman/iop/nfsman/nfsman.o
+unfs4_size                                        obj/nfsman/iop/nfsman/nfsman.o
+unfs4_stat                                        obj/nfsman/iop/nfsman/nfsman.o
+unfs4_mkdir                                       obj/nfsman/iop/nfsman/nfsman.o
+strlen                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+unfs4_remove                                      obj/nfsman/iop/nfsman/nfsman.o
+unfs4_rename                                      obj/nfsman/iop/nfsman/nfsman.o
+unfs4_truncate                                    obj/nfsman/iop/nfsman/nfsman.o
+lwip_socket                                       obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_connect                                      obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_close                                        obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+_start                                            obj/nfsman/iop/nfsman/nfsman.o
+DelDrv                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+AddDrv                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_send                                         obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_recv                                         obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_select                                       obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+CreateSema                                        obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+DeleteSema                                        obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+SignalSema                                        obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+WaitSema                                          obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+strncpy                                           obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+strcpy                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+strncmp                                           obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+memchr                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+strchr                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+strcmp                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_bind                                         obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_ioctl                                        obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+lwip_getsockopt                                   obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+printf                                            obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+GetSystemTime                                     obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+SysClock2USec                                     obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+ipaddr_addr                                       obj/nfsman/imports.o
+                                                  obj/nfsman/iop/nfsman/nfsman.o
+_irx_id                                           obj/nfsman/iop/nfsman/nfsman.o
+memcmp                                            obj/nfsman/imports.o
+memmove                                           obj/nfsman/imports.o
+strcat                                            obj/nfsman/imports.o
+sprintf                                           obj/nfsman/imports.o
+_toupper                                          obj/nfsman/imports.o

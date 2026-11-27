@@ -1,0 +1,30 @@
+Link: loader
+Source: loader.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 161
+Discarded code/data sections (ABI metadata excluded): 131, of which non-empty: 100, 17807 bytes
+  first-party: 14 non-empty sections, 372 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 86 non-empty sections, 17435 bytes
+  third-party-dep: 0 non-empty sections, 0 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+first-party	bss (empty)	1	0
+first-party	code	14	372
+first-party	code (empty)	1	0
+first-party	data (empty)	1	0
+first-party	metadata	2	48
+sdk	bss	1	44
+sdk	bss (empty)	7	0
+sdk	code	82	17348
+sdk	code (empty)	9	0
+sdk	data	1	4
+sdk	data (empty)	12	0
+sdk	metadata	28	672
+sdk	rodata	2	39
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file
+372	14	build/obj/loader/loader/loader.o

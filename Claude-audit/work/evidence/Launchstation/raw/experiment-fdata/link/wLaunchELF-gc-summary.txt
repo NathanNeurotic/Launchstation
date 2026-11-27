@@ -1,0 +1,83 @@
+Link: wLaunchELF
+Source: wLaunchELF.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 4656
+Discarded code/data sections (ABI metadata excluded): 3342, of which non-empty: 1752, 413289 bytes
+  first-party: 96 non-empty sections, 16723 bytes
+  embed-blob: 1 non-empty sections, 11493 bytes
+  sdk: 882 non-empty sections, 229336 bytes
+  third-party-dep: 773 non-empty sections, 155737 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+embed-blob	bss (empty)	51	0
+embed-blob	code (empty)	51	0
+embed-blob	data	1	11493
+embed-blob	metadata	102	2448
+first-party	bss	3	92
+first-party	bss (empty)	124	0
+first-party	code	76	13996
+first-party	code (empty)	127	0
+first-party	data	3	2388
+first-party	data (empty)	127	0
+first-party	metadata	254	6096
+first-party	rodata	14	247
+sdk	bss	2	132
+sdk	bss (empty)	295	0
+sdk	code	830	219132
+sdk	code (empty)	95	0
+sdk	data	3	12
+sdk	data (empty)	327	0
+sdk	metadata	696	16704
+sdk	rodata	47	10060
+third-party-dep	bss	4	341
+third-party-dep	bss (empty)	131	0
+third-party-dep	code	511	134004
+third-party-dep	code (empty)	131	0
+third-party-dep	data	4	16
+third-party-dep	data (empty)	131	0
+third-party-dep	metadata	262	6288
+third-party-dep	rodata	254	21376
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file
+11493	1	build-fdata/obj/_embed/ps2atad_irx.o
+2048	2	build-fdata/obj/wLaunchELF/src/icon.o
+1608	4	build-fdata/lib/libhdd_ee.a(libhdd.o)
+1456	6	build-fdata/obj/wLaunchELF/src/dash_themes.o
+1424	8	build-fdata/obj/wLaunchELF/src/qrcodegen.o
+924	2	build-fdata/obj/wLaunchELF/src/dash_font.o
+880	2	build-fdata/obj/wLaunchELF/src/main_title.o
+808	6	build-fdata/obj/wLaunchELF/src/config.o
+761	4	build-fdata/obj/wLaunchELF/src/update_psu.o
+660	3	build-fdata/obj/wLaunchELF/src/dash_icons.o
+556	2	build-fdata/obj/wLaunchELF/src/dash_ui.o
+556	2	build-fdata/obj/wLaunchELF/src/dash_browser.o
+476	3	build-fdata/obj/wLaunchELF/src/dash_lib.o
+412	5	build-fdata/obj/wLaunchELF/src/dash_main.o
+388	2	build-fdata/obj/wLaunchELF/src/draw.o
+380	1	build-fdata/obj/wLaunchELF/src/virtual_keyboard.o
+368	3	build-fdata/obj/wLaunchELF/src/dash_devices.o
+348	2	build-fdata/obj/wLaunchELF/src/main.o
+280	1	build-fdata/lib/libiopreboot.a(SifIopRebootBuffer.o)
+268	2	build-fdata/obj/wLaunchELF/src/dash_apps.o
+266	5	build-fdata/obj/wLaunchELF/src/mc_save_export.o
+252	1	build-fdata/obj/wLaunchELF/src/pad.o
+236	1	build-fdata/obj/wLaunchELF/src/elf.o
+204	4	build-fdata/obj/wLaunchELF/src/dash_store.o
+184	2	build-fdata/obj/wLaunchELF/src/dash_art.o
+180	1	build-fdata/obj/wLaunchELF/src/dash_gfx.o
+170	6	build-fdata/obj/wLaunchELF/src/mc_save_formats.o
+148	4	build-fdata/obj/wLaunchELF/src/filer.o
+128	1	build-fdata/obj/wLaunchELF/src/main_actions.o
+84	1	build-fdata/obj/wLaunchELF/ee_libs/tcpips/ps2ipc.o
+80	1	build-fdata/obj/wLaunchELF/src/cloud_http.o
+64	2	build-fdata/obj/wLaunchELF/src/psu_functions.o
+40	1	build-fdata/obj/wLaunchELF/src/filer_browser.o
+32	1	build-fdata/obj/wLaunchELF/src/config_network.o
+28	1	build-fdata/obj/wLaunchELF/src/dash_bg.o
+12	1	build-fdata/obj/wLaunchELF/src/init.o
+5	1	build-fdata/obj/wLaunchELF/src/mc_ps1_card.o
+5	1	build-fdata/obj/wLaunchELF/src/chkesr.o
+4	1	build-fdata/obj/wLaunchELF/src/editor_input.o

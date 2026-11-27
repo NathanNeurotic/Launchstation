@@ -1,0 +1,10 @@
+## Largely identical files (dupes-file-pairs.tsv)
+- src/main_exploit_installer.c is 0% the same as Launchstation/src/gui.c (15 cloned normalised lines)
+- src/main_exploit_installer.c is 0% the same as Launchstation/src/main_console_info.c (12 cloned normalised lines)
+- src/main_gameid_table.c is 96% the same as POPSLoader/src/retrogem.cpp (123 cloned normalised lines)
+
+## Duplicate blocks (dupes-blocks.tsv)
+- src/main_exploit_installer.c:248-267  ==  Launchstation/src/main_console_info.c:7-26  (12 normalised lines)
+- src/main_exploit_installer.c:807-825  ==  Launchstation/src/gui.c:22-40  (15 normalised lines)
+- src/main_gameid_table.c:10-58  ==  POPSLoader/src/retrogem.cpp:56-104  (49 normalised lines)
+- src/main_gameid_table.c:60-133  ==  POPSLoader/src/retrogem.cpp:105-178  (74 normalised lines)

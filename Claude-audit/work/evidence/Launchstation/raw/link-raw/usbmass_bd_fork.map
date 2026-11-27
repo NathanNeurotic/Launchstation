@@ -1,0 +1,186 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      9a8     4 .rel.text
+       0        0       60     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.rel.text)
+      60       60      618     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.rel.text)
+     678      678      318     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.rel.text)
+     990      990       18     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.rel.data)
+       0        0     2190    16 .text
+       0        0       7c    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.text)
+       0        0       7c     1                 _start
+      80       80     1054    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.text)
+      80       80      31c     1                 usb_queue_cmd
+     39c      39c      214     1                 usb_mass_init
+     5b0      5b0       9c     1                 usb_bulk_get_max_lun
+     64c      64c      154     1                 usb_mass_probe
+     7a0      7a0      214     1                 usb_mass_connect
+     9b4      9b4       ec     1                 usb_mass_disconnect
+     aa0      aa0      258     1                 usb_mass_update
+     cf8      cf8       14     1                 usb_callback
+     d0c      d0c       a8     1                 usb_bulk_reset
+     db4      db4       4c     1                 sceUsbdControlTransfer
+     e00      e00       74     1                 usb_bulk_clear_halt
+     e74      e74       54     1                 perform_bulk_transfer
+     ec8      ec8       78     1                 usb_transfer_callback
+     f40      f40       b4     1                 usb_bulk_status
+     ff4      ff4       7c     1                 usb_bulk_probeEndpoint
+    1070     1070       64     1                 usb_mass_release
+    10e0     10e0      bf4    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.text)
+    10e0     10e0      598     1                 scsi_connect
+    1678     1678       64     1                 scsi_disconnect
+    16dc     16dc       6c     1                 scsi_init
+    1748     1748      130     1                 scsi_read
+    1878     1878      1b8     1                 scsi_write
+    1a30     1a30        8     1                 scsi_flush
+    1a38     1a38       40     1                 scsi_stop
+    1a78     1a78       14     1                 scsi_cmd_start_stop_unit
+    1a8c     1a8c       7c     1                 scsi_cmd_read_capacity16
+    1b08     1b08       74     1                 scsi_cmd
+    1b7c     1b7c      158     1                 scsi_cmd_rw_sector
+    1ce0     1ce0      150    16         obj/usbmass_bd_fork/imports.o:(.text)
+    1cf4     1cf4        0     1                 bdm_connect_bd
+    1cfc     1cfc        0     1                 bdm_disconnect_bd
+    1d20     1d20        0     1                 printf
+    1d44     1d44        0     1                 memset
+    1d4c     1d4c        0     1                 memcpy
+    1d70     1d70        0     1                 CreateThread
+    1d78     1d78        0     1                 StartThread
+    1d80     1d80        0     1                 DeleteThread
+    1d88     1d88        0     1                 DelayThread
+    1dac     1dac        0     1                 CreateSema
+    1db4     1db4        0     1                 SignalSema
+    1dbc     1dbc        0     1                 WaitSema
+    1dc4     1dc4        0     1                 DeleteSema
+    1de8     1de8        0     1                 sceUsbdScanStaticDescriptor
+    1df0     1df0        0     1                 sceUsbdOpenPipe
+    1df8     1df8        0     1                 sceUsbdOpenPipeAligned
+    1e00     1e00        0     1                 sceUsbdClosePipe
+    1e08     1e08        0     1                 sceUsbdSetPrivateData
+    1e10     1e10        0     1                 sceUsbdTransferPipe
+    1e18     1e18        0     1                 sceUsbdRegisterLdd
+    1e20     1e20        0     1                 sceUsbdGetDeviceLocation
+    1e30     1e30      360    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.text)
+    1e30     1e30      360     1                 __udivdi3
+       0        0      72d    16 .rodata
+       0        0      72d    16         <internal>:(.rodata.str1.1)
+  4028dd   4028dd    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       10    16 .data
+       0        0        8    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10        0    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.data)
+      10       10        0    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.data)
+      10       10        0    16         obj/usbmass_bd_fork/imports.o:(.data)
+      10       10        0    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.data)
+  4428f0   4428f0        0     1 __bss_start = .
+       0        0      160    16 .bss
+       0        0        0    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.bss)
+       0        0       d8    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.bss)
+       0        0       3c     1                 usb_queue_cmd.ucmd
+      3c       3c        4     1                 usb_queue_cmd.tag
+      40       40        4     1                 usb_mass_cmd_sema
+      44       44       60     1                 g_mass_device
+      a4       a4        4     1                 usb_mass_update_sema
+      a8       a8       30     1                 driver
+      e0       e0       80    16         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.bss)
+      e0       e0       80     1                 g_scsi_bd
+     160      160        0    16         obj/usbmass_bd_fork/imports.o:(.bss)
+     160      160        0    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.bss)
+  442a50   442a50        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.mdebug.abi32)
+       0        0        0     1         obj/usbmass_bd_fork/imports.o:(.mdebug.abi32)
+       0        0        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.mdebug.abi32)
+       0        0      3a0     4 .pdr
+       0        0       20     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.pdr)
+      20       20      200     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.pdr)
+     220      220      160     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.pdr)
+     380      380       20     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.pdr)
+       0        0       e8     4 .rel.pdr
+       0        0        8     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.rel.pdr)
+       8        8       80     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.rel.pdr)
+      88       88       58     4         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.rel.pdr)
+      e0       e0        8     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.rel.pdr)
+       0        0       10     1 .llvm_addrsig
+       0        0        0     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o:(.llvm_addrsig)
+       0        0        b     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o:(.llvm_addrsig)
+       b        b        5     1         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o:(.llvm_addrsig)
+      10       10        0     1         obj/usbmass_bd_fork/imports.o:(.llvm_addrsig)
+      10       10        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      6e0     4 .symtab
+       0        0      6e0     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0      4fe     1 .strtab
+       0        0      4fe     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_start                                            obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+printf                                            obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+scsi_init                                         obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+usb_mass_init                                     obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+_irx_id                                           obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+usb_queue_cmd                                     obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+WaitSema                                          obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+memcpy                                            obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+sceUsbdTransferPipe                               obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+SignalSema                                        obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+CreateSema                                        obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+sceUsbdRegisterLdd                                obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+CreateThread                                      obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+StartThread                                       obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+DeleteThread                                      obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+DeleteSema                                        obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+sceUsbdScanStaticDescriptor                       obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+sceUsbdOpenPipe                                   obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+scsi_disconnect                                   obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+sceUsbdGetDeviceLocation                          obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+scsi_connect                                      obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+DelayThread                                       obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+sceUsbdOpenPipeAligned                            obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+sceUsbdClosePipe                                  obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+memset                                            obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+__udivdi3                                         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj)
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+bdm_connect_bd                                    obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+bdm_disconnect_bd                                 obj/usbmass_bd_fork/imports.o
+                                                  obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+sceUsbdSetPrivateData                             obj/usbmass_bd_fork/imports.o

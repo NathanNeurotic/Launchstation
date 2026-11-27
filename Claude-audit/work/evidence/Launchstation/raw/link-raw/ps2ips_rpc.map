@@ -1,0 +1,172 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      598     4 .rel.text
+       0        0      598     4         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.rel.data)
+       0        0       a8     4 .rel.rodata
+       0        0       a8     4         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.rel.rodata)
+       0        0      d0c    16 .text
+       0        0      b14    16         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.text)
+       0        0       a8     1                 _start
+      a8       a8       78     1                 threadRpcFunction
+     120      120      9f4     1                 rpcHandlerFunction
+     b20      b20      1ec    16         obj/ps2ips_rpc/imports.o:(.text)
+     b34      b34        0     1                 CreateThread
+     b3c      b3c        0     1                 DeleteThread
+     b44      b44        0     1                 StartThread
+     b4c      b4c        0     1                 GetThreadId
+     b70      b70        0     1                 printf
+     b94      b94        0     1                 memcpy
+     b9c      b9c        0     1                 memset
+     bc0      bc0        0     1                 CpuSuspendIntr
+     bc8      bc8        0     1                 CpuResumeIntr
+     bec      bec        0     1                 sceSifInitRpc
+     bf4      bf4        0     1                 sceSifSetRpcQueue
+     bfc      bfc        0     1                 sceSifRegisterRpc
+     c04      c04        0     1                 sceSifRpcLoop
+     c0c      c0c        0     1                 sceSifGetOtherData
+     c30      c30        0     1                 sceSifDmaStat
+     c38      c38        0     1                 sceSifSetDma
+     c5c      c5c        0     1                 lwip_accept
+     c64      c64        0     1                 lwip_bind
+     c6c      c6c        0     1                 lwip_close
+     c74      c74        0     1                 lwip_connect
+     c7c      c7c        0     1                 lwip_getpeername
+     c84      c84        0     1                 lwip_getsockname
+     c8c      c8c        0     1                 lwip_getsockopt
+     c94      c94        0     1                 lwip_setsockopt
+     c9c      c9c        0     1                 lwip_listen
+     ca4      ca4        0     1                 lwip_recv
+     cac      cac        0     1                 lwip_recvfrom
+     cb4      cb4        0     1                 lwip_send
+     cbc      cbc        0     1                 lwip_sendto
+     cc4      cc4        0     1                 lwip_socket
+     ccc      ccc        0     1                 lwip_select
+     cd4      cd4        0     1                 lwip_ioctl
+     cdc      cdc        0     1                 ps2ip_getconfig
+     ce4      ce4        0     1                 ps2ip_setconfig
+     cec      cec        0     1                 lwip_gethostbyname
+     cf4      cf4        0     1                 dns_setserver
+     cfc      cfc        0     1                 dns_getserver
+       0        0      118    16 .rodata
+       0        0       54    16         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.rodata)
+      60       60       b8    16         <internal>:(.rodata.str1.1)
+  400e48   400e48    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       10    16 .data
+       0        0        8    16         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10        0    16         obj/ps2ips_rpc/imports.o:(.data)
+  440e60   440e60        0     1 __bss_start = .
+       0        0      d50    16 .bss
+       0        0      d4c    16         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.bss)
+       0        0       18     1                 ps2ips_queue
+      18       18       44     1                 ps2ips_server
+      5c       5c      800     1                 _rpc_buffer
+     85c      85c       90     1                 rests
+     8ec      8ec      440     1                 lwip_buffer
+     d2c      d2c       10     1                 do_recvfrom.sifdma
+     d3c      d3c       10     1                 do_recvfrom.sockaddr
+     d50      d50        0    16         obj/ps2ips_rpc/imports.o:(.bss)
+  441bb0   441bb0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2ips_rpc/imports.o:(.mdebug.abi32)
+       0        0       60     4 .pdr
+       0        0       60     4         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.pdr)
+       0        0       18     4 .rel.pdr
+       0        0       18     4         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.rel.pdr)
+       0        0        9     1 .llvm_addrsig
+       0        0        9     1         obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o:(.llvm_addrsig)
+       9        9        0     1         obj/ps2ips_rpc/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      420     4 .symtab
+       0        0      420     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      2e3     1 .strtab
+       0        0      2e3     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_start                                            obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+printf                                            obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+CreateThread                                      obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+StartThread                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+DeleteThread                                      obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+GetThreadId                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifSetRpcQueue                                 obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifRegisterRpc                                 obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifRpcLoop                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_accept                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_getsockopt                                   obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+memcpy                                            obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_getsockname                                  obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+ps2ip_getconfig                                   obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_listen                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_select                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_socket                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_close                                        obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_getpeername                                  obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_connect                                      obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_bind                                         obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_setsockopt                                   obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+dns_getserver                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+memset                                            obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_recv                                         obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifDmaStat                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+CpuSuspendIntr                                    obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifSetDma                                      obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+CpuResumeIntr                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_ioctl                                        obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_recvfrom                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_gethostbyname                                obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+ps2ip_setconfig                                   obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+dns_setserver                                     obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifGetOtherData                                obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_send                                         obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+lwip_sendto                                       obj/ps2ips_rpc/imports.o
+                                                  obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+_irx_id                                           obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+sceSifInitRpc                                     obj/ps2ips_rpc/imports.o

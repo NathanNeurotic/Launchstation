@@ -1,0 +1,279 @@
+Using the llvm EE toolchain: <HOME>/AppData/Local/ps2build/llvm-toolchain/llvm/bin/clang
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+  0      0   0      0   0      0      0      0                              0  0      0   0      0   0      0      0      0                              0  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0                              0100  5.21M 100  5.21M   0      0 13.38M      0                              0100  5.21M 100  5.21M   0      0 11.96M      0                              0100  5.21M 100  5.21M   0      0 10.61M      0                              0
+<WORK_ROOT>/build/Launchstation/.cache/cloud-deps/mbedtls-3.6.7.tar.bz2: OK
+-- Building for: Ninja
+CMake Deprecation Warning at CMakeLists.txt:21 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+-- The C compiler identification is Clang 24.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: <HOME>/AppData/Local/ps2build/llvm-toolchain/llvm/bin/clang.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Found Python3: <HOME>/AppData/Local/Programs/Python/Python314/python.exe (found version "3.14.7") found components: Interpreter
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Configuring done (135.6s)
+-- Generating done (2.0s)
+-- Build files have been written to: <HOME>/AppData/Local/Temp/tmp.20p7pp8Vv0/build
+[1/118] Building C object 3rdparty/everest/CMakeFiles/everest.dir/library/everest.c.obj
+[2/118] Building C object 3rdparty/everest/CMakeFiles/everest.dir/library/x25519.c.obj
+[3/118] Building C object 3rdparty/everest/CMakeFiles/everest.dir/library/Hacl_Curve25519_joined.c.obj
+[4/118] Building C object 3rdparty/p256-m/CMakeFiles/p256m.dir/p256-m_driver_entrypoints.c.obj
+[5/118] Building C object 3rdparty/p256-m/CMakeFiles/p256m.dir/p256-m/p256-m.c.obj
+[6/118] Building C object library/CMakeFiles/mbedcrypto.dir/aes.c.obj
+[7/118] Building C object library/CMakeFiles/mbedcrypto.dir/aesni.c.obj
+[8/118] Building C object library/CMakeFiles/mbedcrypto.dir/aesce.c.obj
+[9/118] Building C object library/CMakeFiles/mbedcrypto.dir/aria.c.obj
+[10/118] Building C object library/CMakeFiles/mbedcrypto.dir/asn1parse.c.obj
+[11/118] Building C object library/CMakeFiles/mbedcrypto.dir/asn1write.c.obj
+[12/118] Building C object library/CMakeFiles/mbedcrypto.dir/base64.c.obj
+[13/118] Building C object library/CMakeFiles/mbedcrypto.dir/bignum.c.obj
+[14/118] Building C object library/CMakeFiles/mbedcrypto.dir/bignum_core.c.obj
+[15/118] Building C object library/CMakeFiles/mbedcrypto.dir/bignum_mod.c.obj
+[16/118] Building C object library/CMakeFiles/mbedcrypto.dir/bignum_mod_raw.c.obj
+[17/118] Building C object library/CMakeFiles/mbedcrypto.dir/block_cipher.c.obj
+[18/118] Building C object library/CMakeFiles/mbedcrypto.dir/camellia.c.obj
+[19/118] Building C object library/CMakeFiles/mbedcrypto.dir/ccm.c.obj
+[20/118] Building C object library/CMakeFiles/mbedcrypto.dir/chacha20.c.obj
+[21/118] Building C object library/CMakeFiles/mbedcrypto.dir/chachapoly.c.obj
+[22/118] Building C object library/CMakeFiles/mbedcrypto.dir/cipher.c.obj
+[23/118] Building C object library/CMakeFiles/mbedcrypto.dir/cipher_wrap.c.obj
+[24/118] Building C object library/CMakeFiles/mbedcrypto.dir/constant_time.c.obj
+[25/118] Building C object library/CMakeFiles/mbedcrypto.dir/cmac.c.obj
+[26/118] Building C object library/CMakeFiles/mbedcrypto.dir/ctr_drbg.c.obj
+[27/118] Building C object library/CMakeFiles/mbedcrypto.dir/des.c.obj
+[28/118] Building C object library/CMakeFiles/mbedcrypto.dir/dhm.c.obj
+[29/118] Linking C static library 3rdparty\everest\libeverest.a
+[30/118] Building C object library/CMakeFiles/mbedcrypto.dir/ecdh.c.obj
+[31/118] Linking C static library 3rdparty\p256-m\libp256m.a
+[32/118] Building C object library/CMakeFiles/mbedcrypto.dir/ecdsa.c.obj
+[33/118] Building C object library/CMakeFiles/mbedcrypto.dir/ecjpake.c.obj
+[34/118] Building C object library/CMakeFiles/mbedcrypto.dir/ecp.c.obj
+[35/118] Building C object library/CMakeFiles/mbedcrypto.dir/ecp_curves.c.obj
+[36/118] Building C object library/CMakeFiles/mbedcrypto.dir/entropy.c.obj
+[37/118] Building C object library/CMakeFiles/mbedcrypto.dir/entropy_poll.c.obj
+[38/118] Building C object library/CMakeFiles/mbedcrypto.dir/error.c.obj
+[39/118] Building C object library/CMakeFiles/mbedcrypto.dir/gcm.c.obj
+[40/118] Building C object library/CMakeFiles/mbedcrypto.dir/hkdf.c.obj
+[41/118] Building C object library/CMakeFiles/mbedcrypto.dir/hmac_drbg.c.obj
+[42/118] Building C object library/CMakeFiles/mbedcrypto.dir/lmots.c.obj
+[43/118] Building C object library/CMakeFiles/mbedcrypto.dir/lms.c.obj
+[44/118] Building C object library/CMakeFiles/mbedcrypto.dir/md.c.obj
+[45/118] Building C object library/CMakeFiles/mbedcrypto.dir/md5.c.obj
+[46/118] Building C object library/CMakeFiles/mbedcrypto.dir/memory_buffer_alloc.c.obj
+[47/118] Building C object library/CMakeFiles/mbedcrypto.dir/nist_kw.c.obj
+[48/118] Building C object library/CMakeFiles/mbedcrypto.dir/oid.c.obj
+[49/118] Building C object library/CMakeFiles/mbedcrypto.dir/padlock.c.obj
+[50/118] Building C object library/CMakeFiles/mbedcrypto.dir/pem.c.obj
+[51/118] Building C object library/CMakeFiles/mbedcrypto.dir/pk.c.obj
+[52/118] Building C object library/CMakeFiles/mbedcrypto.dir/pk_ecc.c.obj
+[53/118] Building C object library/CMakeFiles/mbedcrypto.dir/pk_wrap.c.obj
+[54/118] Building C object library/CMakeFiles/mbedcrypto.dir/pkcs12.c.obj
+[55/118] Building C object library/CMakeFiles/mbedcrypto.dir/pkcs5.c.obj
+[56/118] Building C object library/CMakeFiles/mbedcrypto.dir/pkparse.c.obj
+[57/118] Building C object library/CMakeFiles/mbedcrypto.dir/pkwrite.c.obj
+[58/118] Building C object library/CMakeFiles/mbedcrypto.dir/platform.c.obj
+[59/118] Building C object library/CMakeFiles/mbedcrypto.dir/platform_util.c.obj
+[60/118] Building C object library/CMakeFiles/mbedcrypto.dir/poly1305.c.obj
+[61/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto.c.obj
+[62/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_aead.c.obj
+[63/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_cipher.c.obj
+[64/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_client.c.obj
+[65/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_driver_wrappers_no_static.c.obj
+[66/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_ecp.c.obj
+[67/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_ffdh.c.obj
+[68/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_hash.c.obj
+[69/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_mac.c.obj
+[70/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_pake.c.obj
+[71/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_rsa.c.obj
+[72/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_random.c.obj
+[73/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_se.c.obj
+[74/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_slot_management.c.obj
+[75/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_crypto_storage.c.obj
+[76/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_its_file.c.obj
+[77/118] Building C object library/CMakeFiles/mbedcrypto.dir/psa_util.c.obj
+[78/118] Building C object library/CMakeFiles/mbedcrypto.dir/ripemd160.c.obj
+[79/118] Building C object library/CMakeFiles/mbedcrypto.dir/rsa.c.obj
+[80/118] Building C object library/CMakeFiles/mbedcrypto.dir/rsa_alt_helpers.c.obj
+[81/118] Building C object library/CMakeFiles/mbedcrypto.dir/sha1.c.obj
+[82/118] Building C object library/CMakeFiles/mbedcrypto.dir/sha256.c.obj
+[83/118] Building C object library/CMakeFiles/mbedcrypto.dir/sha512.c.obj
+[84/118] Building C object library/CMakeFiles/mbedcrypto.dir/sha3.c.obj
+[85/118] Building C object library/CMakeFiles/mbedcrypto.dir/threading.c.obj
+[86/118] Building C object library/CMakeFiles/mbedcrypto.dir/timing.c.obj
+[87/118] Building C object library/CMakeFiles/mbedcrypto.dir/version.c.obj
+[88/118] Building C object library/CMakeFiles/mbedcrypto.dir/version_features.c.obj
+[89/118] Building C object library/CMakeFiles/mbedx509.dir/pkcs7.c.obj
+[90/118] Building C object library/CMakeFiles/mbedx509.dir/x509.c.obj
+[91/118] Building C object library/CMakeFiles/mbedx509.dir/x509_create.c.obj
+[92/118] Building C object library/CMakeFiles/mbedx509.dir/x509_crl.c.obj
+[93/118] Building C object library/CMakeFiles/mbedx509.dir/x509_crt.c.obj
+[94/118] Building C object library/CMakeFiles/mbedx509.dir/x509_csr.c.obj
+[95/118] Building C object library/CMakeFiles/mbedx509.dir/x509write.c.obj
+[96/118] Building C object library/CMakeFiles/mbedx509.dir/x509write_crt.c.obj
+[97/118] Building C object library/CMakeFiles/mbedx509.dir/x509write_csr.c.obj
+[98/118] Building C object library/CMakeFiles/mbedtls.dir/debug.c.obj
+[99/118] Building C object library/CMakeFiles/mbedtls.dir/mps_reader.c.obj
+[100/118] Building C object library/CMakeFiles/mbedtls.dir/mps_trace.c.obj
+[101/118] Building C object library/CMakeFiles/mbedtls.dir/net_sockets.c.obj
+[102/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_cache.c.obj
+[103/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_ciphersuites.c.obj
+[104/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_client.c.obj
+[105/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_cookie.c.obj
+[106/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_debug_helpers_generated.c.obj
+[107/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_msg.c.obj
+[108/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_ticket.c.obj
+[109/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls.c.obj
+[110/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls12_client.c.obj
+[111/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls12_server.c.obj
+[112/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls13_keys.c.obj
+[113/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls13_server.c.obj
+[114/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls13_client.c.obj
+[115/118] Building C object library/CMakeFiles/mbedtls.dir/ssl_tls13_generic.c.obj
+[116/118] Linking C static library library\libmbedcrypto.a
+[117/118] Linking C static library library\libmbedx509.a
+[118/118] Linking C static library library\libmbedtls.a
+-- Install configuration: "MinSizeRel"
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/cmake/MbedTLS/MbedTLSConfig.cmake
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/cmake/MbedTLS/MbedTLSConfigVersion.cmake
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/cmake/MbedTLS/MbedTLSTargets.cmake
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/cmake/MbedTLS/MbedTLSTargets-minsizerel.cmake
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/aes.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/aria.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/asn1.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/asn1write.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/base64.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/bignum.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/block_cipher.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/build_info.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/camellia.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ccm.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/chacha20.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/chachapoly.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/check_config.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/cipher.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/cmac.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/compat-2.x.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_legacy_crypto.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_legacy_from_psa.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_psa_from_legacy.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_psa_superset_legacy.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_ssl.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_adjust_x509.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/config_psa.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/constant_time.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ctr_drbg.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/debug.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/des.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/dhm.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ecdh.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ecdsa.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ecjpake.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ecp.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/entropy.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/error.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/gcm.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/hkdf.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/hmac_drbg.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/lms.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/mbedtls_config.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/md.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/md5.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/memory_buffer_alloc.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/net_sockets.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/nist_kw.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/oid.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/pem.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/pk.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/pkcs12.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/pkcs5.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/pkcs7.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/platform.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/platform_time.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/platform_util.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/poly1305.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/private_access.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/psa_util.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ripemd160.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/rsa.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/sha1.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/sha256.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/sha3.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/sha512.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ssl.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ssl_cache.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ssl_ciphersuites.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ssl_cookie.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/ssl_ticket.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/threading.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/timing.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/version.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/x509.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/x509_crl.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/x509_crt.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/mbedtls/x509_csr.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/build_info.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_adjust_auto_enabled.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_adjust_config_dependencies.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_adjust_config_key_pair_types.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_adjust_config_synonyms.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_builtin_composites.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_builtin_key_derivation.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_builtin_primitives.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_compat.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_config.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_driver_common.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_driver_contexts_composites.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_driver_contexts_key_derivation.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_driver_contexts_primitives.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_extra.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_legacy.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_platform.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_se_driver.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_sizes.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_struct.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_types.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/psa/crypto_values.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/everest.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/Hacl_Curve25519.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlib
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlib/FStar_UInt128.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlib/FStar_UInt64_FStar_UInt32_FStar_UInt16_FStar_UInt8.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlib.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/c_endianness.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/builtin.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/callconv.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/compat.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/debug.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/target.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/types.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/kremlin/internal/wasmsupport.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/vs2013
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/vs2013/Hacl_Curve25519.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/include/everest/x25519.h
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/libeverest.a
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/libp256m.a
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/libmbedcrypto.a
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/libmbedx509.a
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/libmbedtls.a
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/pkgconfig/mbedcrypto.pc
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/pkgconfig/mbedtls.pc
+-- Installing: <WORK_ROOT>/build/Launchstation/.cloud-deps/lib/pkgconfig/mbedx509.pc
+Native cloud TLS dependency ready in <WORK_ROOT>/build/Launchstation/.cloud-deps
+exit=0

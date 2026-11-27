@@ -1,0 +1,41 @@
+# CANDIDATE LIST ONLY (mmceman link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/mmceman/imports.o	CreateSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mmceman/imports.o	DeleteSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mmceman/imports.o	RegisterLibraryEntries	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mmceman/imports.o	SignalSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mmceman/imports.o	WaitSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mmceman/iop/mmceman/src/ioplib.o	ioplib_getTableSize	FUNC	52	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_open	FUNC	1060	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_read	FUNC	916	GLOBAL	.text	2	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_dread	FUNC	880	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_getstat	FUNC	848	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_devctl	FUNC	440	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_rename	FUNC	428	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_close	FUNC	424	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_lseek64	FUNC	400	GLOBAL	.text	7	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_write	FUNC	400	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_dopen	FUNC	360	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_mkdir	FUNC	328	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_remove	FUNC	328	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_rmdir	FUNC	328	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_lseek	FUNC	308	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_dclose	FUNC	212	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_init	FUNC	104	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_ioctl2	FUNC	32	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_deinit	FUNC	8	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_fs.o	mmce_fs_ioctl	FUNC	8	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmce_sio2.o	mmce_sio2_rx_dma	FUNC	444	GLOBAL	.text	0	yes
+build/obj/mmceman/iop/mmceman/src/mmce_sio2.o	mmce_sio2_intr_handler	FUNC	48	GLOBAL	.text	2	yes
+build/obj/mmceman/iop/mmceman/src/mmce_sio2.o	mmce_sio2_timeout_handler	FUNC	36	GLOBAL	.text	8	yes
+build/obj/mmceman/iop/mmceman/src/mmce_sio2.o	mmce_sio2_get_port	FUNC	16	GLOBAL	.text	0	yes
+build/obj/mmceman/iop/mmceman/src/mmce_sio2.o	mmce_sio2_use_alarm	OBJECT	1	GLOBAL	.data	10	yes
+build/obj/mmceman/iop/mmceman/src/mmceman.o	__start	FUNC	172	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmceman.o	_start	FUNC	60	GLOBAL	.text	0	yes
+build/obj/mmceman/iop/mmceman/src/mmceman.o	__stop	FUNC	40	GLOBAL	.text	1	yes
+build/obj/mmceman/iop/mmceman/src/mmceman.o	mmce_product_ids	OBJECT	20	GLOBAL	.data	0	yes
+build/obj/mmceman/iop/mmceman/src/mmceman.o	_irx_id	OBJECT	8	GLOBAL	.data	0	yes

@@ -1,0 +1,149 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-05.b",
+  "coverage": [
+    {"path": "src/dash_apps.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_art.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg_geo.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_bg_ps2.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_apps.c is the dashboard Applications screen: a filtered index (order[]) over the dashApps library with Grid, List and Carousel views, the per-application options menu (favorite, pin, hide, details, metadata editor, boot-app key) and the apps options menu. dash_art.c is the bounded artwork cache: 40 decoded thumbnail slots, per-frame wants with priorities, one worker job at a time that probes up to 12 candidate cover paths and decodes the PNG, plus an 8-slot cache of theme PNGs (wallpaper, THEME/ layers, default app icon) and the procedural tile drawing. dash_bg.c is the background renderer (scene dispatch, the Crystal scene with stars/sparks/towers/streak, wallpaper cover-fit, focus-app wallpaper cross-fade, scanline texture, adaptive FULL/SUBTLE effects). dash_bg_geo.c and dash_bg_ps2.c hold the other procedural scenes (gradient, grid, lines, cubes, stream, tiles, brushed, ribbons; tunnel, mist, towers, disc, OSD orbs, clock ring, streaks, clouds), all drawn on the UI thread every frame.",
+  "reusable_helpers": [
+    {"name": "fileExists", "path": "src/dash_art.c", "line": 151, "what": "genFixPath + genOpen/genClose existence probe"},
+    {"name": "deviceRoot", "path": "src/dash_art.c", "line": 180, "what": "device root of a path (\"mass:/\", HDD maps to \"hdd0:/+OPL/\")"},
+    {"name": "buildCandidate", "path": "src/dash_art.c", "line": 202, "what": "splits an ELF path into dir/file/base and builds OPL-style cover file names"},
+    {"name": "dashThemeTextureFile", "path": "src/dash_art.c", "line": 549, "what": "background-decoded, path-keyed PNG texture cache with generation counter"},
+    {"name": "monogram", "path": "src/dash_art.c", "line": 617, "what": "two-letter uppercase initials from a title"},
+    {"name": "dashBgHash", "path": "src/dash_bg.c", "line": 65, "what": "integer pair hash to float 0..1"},
+    {"name": "frand", "path": "src/dash_bg.c", "line": 57, "what": "xorshift32 random float 0..1"},
+    {"name": "drawCover", "path": "src/dash_bg.c", "line": 356, "what": "cover-fit (crop to 4:3) full-screen texture draw"},
+    {"name": "colA", "path": "src/dash_bg_geo.c", "line": 12, "what": "colour with clamped alpha (second copy at dash_bg_ps2.c:50)"},
+    {"name": "openFolder", "path": "src/dash_apps.c", "line": 138, "what": "directory part of a path up to the last slash"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Artwork results for transient Home entries mark DASHLIB.CNF dirty, causing byte-identical library cache rewrites (idle and before every launch)",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_art.c", "start": 392, "end": 425},
+        {"path": "src/dash_home.c", "start": 60, "end": 72},
+        {"path": "src/dash_lib.c", "start": 444, "end": 452},
+        {"path": "src/dash_lib.c", "start": 624, "end": 627},
+        {"path": "src/dash_main.c", "start": 646, "end": 648},
+        {"path": "src/dash_main.c", "start": 1488, "end": 1489}
+      ],
+      "problem": "Home resolves recents/pins/favorites that are not in the library into home_tmp[] transients that start at DASH_ART_UNKNOWN on every homeRebuild (dash_home.c:69, dash_lib.c:444-452). When their art job ends, artDone sets art_dirty on UNKNOWN->NONE or ->FOUND (dash_art.c:397,422). That schedules a full DASHLIB.CNF rewrite after 6 s idle and before each launch (dash_main.c:647-648,1488-1489), but dashLibBuildCache skips TRANSIENT entries (dash_lib.c:626-627), so the file written is byte-identical. Transients without art have no slot, so every Home rebuild re-probes them and repeats the write.",
+      "fix": "In artDone, set art_dirty only when the app is not DASH_APP_TRANSIENT (the two assignments at dash_art.c:397 and :422).",
+      "justification": "Adds one flag test to two existing conditions. It removes a whole-file memory-card rewrite of an unchanged file per Home rebuild and from the launch path; no simpler change stops it because the dirty flag is the only trigger.",
+      "benefit": "One redundant DASHLIB.CNF write (whole library text, roughly 10-30 KB for 100 apps, INFERRED) avoided per Home rebuild with an art-less transient and before such launches; less worker time and card wear.",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_art.c:380-427 (art_dirty at 397/422), dash_home.c:60-113 (homeAdd -> dashLibResolve(path,&home_tmp[n])), dash_lib.c:444-482 (MakeTransient memset, UNKNOWN, TRANSIENT flag), dash_lib.c:612-640 (cache skips TRANSIENT), dash_store.c:659-724 (SaveCache only sets dirty; submitSave writes whole file, no content compare), dash_main.c:646-648 and 1486-1490. Grep dashArtTakeDirty: only dash_main.c:647 and :1488. Grep dashHomeRebuild callers: dash_apps.c:91,459, dash_main.c:719, dash_settings.c (6 sites). File size and store-on-card are INFERRED (store dir is beside the config or mc0:/SYS-CONF/, dash_store.c header)."
+    },
+    {
+      "n": 2,
+      "title": "showDetails: len += snprintf can exceed body[640], then sizeof(body)-len underflows and the Metadata line is written past the stack buffer",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_apps.c", "start": 118, "end": 136}
+      ],
+      "problem": "Each append adds snprintf's would-be length. Worst case: Location+File 320 (dev 47, path 255), Author 48, Version 33, Category 34, Artwork 265 (art 255) = 700 > 640. Line 134 then calls snprintf(body + 700, (size_t)(640 - 700), ...), a huge size, writing up to 289 bytes past body on the UI-thread stack. Trigger: Details on an app with path+art lengths of about 450-600 chars (deep USB/HDD folder or an absolute cover= in title.cfg) and filled author/version/category.",
+      "fix": "Enlarge body to 1024 bytes: every field is bounded (worst case 700 + 288 Metadata line + NUL = 989), so no append can pass the end and the arithmetic cannot underflow.",
+      "justification": "Changes one constant; costs 384 bytes of UI-thread stack while the Details dialog is built. Smaller than adding a clamp after each of the six appends.",
+      "benefit": "Removes a stack buffer overflow (crash) on rare long paths; no code added (INFERRED: arithmetic from DashApp field sizes).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Field sizes from include/dash_internal.h:34-37,692-698 (path/art 256, author 40, version/category 24). dev[48] filled by dashLibDeviceLabel (dash_lib.c:167-227, longest 'Internal HDD: '+39 chars, truncated to 47). meta from dashLibMetadataPath (dash_lib.c:363-369, dir <=255 + 'title.cfg'). art reaches FOUND only below 256 chars (dash_art.c:371, dash_lib.c:572 via nextField). cover= with ':' is copied as given (dash_lib.c:318-319). Reachable from dashAppActions case 4 (dash_apps.c:285-287)."
+    },
+    {
+      "n": 3,
+      "title": "Apps screen treats dashStoreToggleFavorite/TogglePinned failure (-1, list full) as a removal and shows 'Removed from Favorites'/'Unpinned'",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_apps.c", "start": 277, "end": 284},
+        {"path": "src/dash_apps.c", "start": 452, "end": 455},
+        {"path": "src/dash_store.c", "start": 807, "end": 833}
+      ],
+      "problem": "Both toggles return -1 when 48 entries already exist (DASH_MAX_FAV) and change nothing. dash_apps.c tests only r > 0, so -1 shows 'Removed from Favorites' or 'Unpinned from Home'. Home handles the same return correctly with 'Favorites full' (dash_home.c:318-320). Trigger: 48 favorites, press Square (or Options > Add to Favorites / Pin to Home) on a non-favorite app.",
+      "fix": "At the three call sites, show 'Favorites full' (or 'Pins full') when r < 0, as dash_home.c:319-320 does.",
+      "justification": "Adds one branch per site; the current message tells the user an app was removed when nothing changed.",
+      "benefit": "Correct feedback when the list is full; about 4 lines added.",
+      "benefit_rank": 2,
+      "lines_removed": -4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_store.c:807-833 (return -1 when nfav/npin >= DASH_MAX_FAV, return idx < 0 otherwise); DASH_MAX_FAV 48 at dash_internal.h:42. Grep dashStoreToggle(Favorite|Pinned) over src: dash_apps.c:278,282,454 (r > 0 only) and dash_home.c:318 (handles r < 0)."
+    },
+    {
+      "n": 4,
+      "title": "dashBgSceneClouds applies the drift direction twice: no cloud moves left and even-indexed clouds leave the screen for good (cloud 0 is never shown)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_bg_ps2.c", "start": 800, "end": 809}
+      ],
+      "problem": "x = fmodf(dir * t * sp + i * 211, span) followed by x = span - x when dir < 0. While the argument is positive, span - (i*211 - t*sp) grows with t, so 'left' clouds also drift right. Once t*sp > i*211 the argument is negative, fmodf returns a negative value, and x - 180 stays in [820, 1820), off the 640-wide screen. Cloud 0 is gone at t > 0, and after about 211 s of scene time only the 4 odd clouds remain (2 of 5 in SUBTLE). Reachable by choosing the 'Drift clouds' background (dash_themes.c:114,119).",
+      "fix": "Drop dir from the fmodf argument (fmodf(t * sp + i * 211.0f, span)); the existing mirror then gives the intended leftward drift.",
+      "justification": "",
+      "benefit": "Scene shows all 9 (FULL) or 5 (SUBTLE) clouds drifting both ways as designed; one-token change.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_bg_ps2.c:795-822. C fmodf keeps the sign of the dividend. span = 1000 (DASH_VW 640 + 360, dash_internal.h:17). Cloud rx is at most 270 (line 812), so at x >= 820 the glow (radius rx, dash_gfx.c:815-823) starts at x >= 550 with its edge alpha, and cloud 0 (rx <= 180) never reaches the screen. Scene selectable: bg_ids/bg_names in dash_themes.c:112-119, dispatched at dash_bg.c:524-525. No test references dashBgSceneClouds (grep tests/)."
+    },
+    {
+      "n": 5,
+      "title": "Crystal light streak ends at 2.2 s but is drawn on a 2.6 s path, so it vanishes mid-screen at about 47 % brightness",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_bg.c", "start": 192, "end": 196},
+        {"path": "src/dash_bg.c", "start": 330, "end": 336}
+      ],
+      "problem": "dashBgUpdate resets streak_t once it passes 2.2 s, but sceneCrystal computes p = streak_t / 2.6. The last drawn frame has p = 0.846: centre x = 680, a 240 px radius glow covering x 440-640, alpha 110*sin(0.846*pi) = 51 additive. It disappears in one frame instead of fading out off-screen. Visible in Crystal with effects at 100 %.",
+      "fix": "Use the same duration in both places (reset at 2.6f).",
+      "justification": "",
+      "benefit": "Removes a visible pop in the Crystal scene; one constant changed.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read dash_bg.c:184-197 (streak lifetime 2.2) and 330-336 (p = streak_t / 2.6f, sx = -200 + p * (DASH_VW + 400)). DASH_VW 640 (dash_internal.h:17); dashGlow radius semantics at dash_gfx.c:815-823. That the pop is noticeable on a TV is INFERRED."
+    },
+    {
+      "n": 6,
+      "title": "artRun probes each candidate with fileExists before dashPngLoadFile, which already does the same genFixPath+genOpen and fails on a missing file",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_art.c", "start": 151, "end": 163},
+        {"path": "src/dash_art.c", "start": 375, "end": 376}
+      ],
+      "problem": "fileExists opens and closes the file, then tryDecode -> dashPngLoadFile -> dashLoadTextFile runs genFixPath and genOpen on the same path and returns NULL when it is missing (dash_store.c:115-119). For missing candidates both cost one failed open; for the found file the worker does an extra open/close, which is slow on memory cards and network devices.",
+      "fix": "Delete fileExists and call tryDecode(j, cand) directly at line 375.",
+      "justification": "",
+      "benefit": "One open+close less per discovered artwork file on the worker thread; 14 lines removed (READ).",
+      "benefit_rank": 1,
+      "lines_removed": 14,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_art.c:151-163, 341-378 and dash_png.c:226-238 (dashPngLoadFile -> dashLoadTextFile, -1 on NULL) and dash_store.c:105-146 (genFixPath, genOpen, NULL on failure). Grep fileExists in src/dash_art.c: definition at 151 and the single call at 375."
+    }
+  ]
+}

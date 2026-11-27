@@ -1,0 +1,8 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/pccf/iop/pccf/pccf_hw.o		4060	64	4	0	8244	0	1912	14284
+first-party	build/obj/pccf/iop/pccf/pccf_ata.o		4308	0	0	0	1024	0	890	6222
+linker-internal	<internal>		0	5039	0	0	0	0	0	5039
+first-party	build/obj/pccf/iop/pccf/pcdiag_cis.o		2476	136	0	0	0	0	880	3492
+first-party	build/obj/pccf/iop/pccf/main.o		1604	9	140	0	208	0	1173	3134
+first-party	build/obj/pccf/iop/pccf/pcdiag_cf.o		904	60	0	0	0	0	216	1180
+first-party	build/obj/pccf/imports.o		280	0	0	0	0	0	0	280

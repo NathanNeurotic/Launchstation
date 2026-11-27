@@ -1,0 +1,57 @@
+category	file	member	section	kind	size_bytes
+first-party	build/obj/smb2man/imports.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/imports.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/imports.o		.data	data	0
+first-party	build/obj/smb2man/imports.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.text.smb2auth_init	code	100
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.rel.text.smb2auth_init	non-alloc	40
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/smb2auth.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.text.usmb2_init_context	code	296
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.text.usmb2_size	code	192
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.text.usmb2_negotiateprotocol	code	128
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.rel.text.usmb2_init_context	non-alloc	88
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.text.usmb2_open	code	76
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.rel.text.usmb2_negotiateprotocol	non-alloc	16
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.rel.text.usmb2_size	non-alloc	16
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.rel.text.usmb2_open	non-alloc	8
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/smb2man.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md4c.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md4c.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md4c.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md4c.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md4c.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.text.rotateLeft	code	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/md5.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/ntlm.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/ntlm.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/ntlm.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/ntlm.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/ntlm.o		.bss	bss	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.text.utf16_to_utf8	code	408
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.rel.text.utf16_to_utf8	non-alloc	40
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.reginfo	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.MIPS.abiflags	metadata	24
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.text	code	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.data	data	0
+first-party	build/obj/smb2man/iop/smb2man/usmb2/unicode.o		.bss	bss	0
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	.reginfo	metadata	24
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	.MIPS.abiflags	metadata	24
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	.data	data	0
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	.bss	bss	0

@@ -1,0 +1,29 @@
+Link: smb2man
+Source: smb2man.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 56
+Discarded code/data sections (ABI metadata excluded): 32, of which non-empty: 7, 1224 bytes
+  first-party: 7 non-empty sections, 1224 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 0 non-empty sections, 0 bytes
+  third-party-dep: 0 non-empty sections, 0 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+first-party	bss (empty)	8	0
+first-party	code	7	1224
+first-party	code (empty)	7	0
+first-party	data (empty)	8	0
+first-party	metadata	16	384
+first-party	non-alloc	6	208
+sdk	bss (empty)	1	0
+sdk	data (empty)	1	0
+sdk	metadata	2	48
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file
+692	4	build/obj/smb2man/iop/smb2man/smb2man.o
+408	1	build/obj/smb2man/iop/smb2man/usmb2/unicode.o
+100	1	build/obj/smb2man/iop/smb2man/smb2auth.o
+24	1	build/obj/smb2man/iop/smb2man/usmb2/md5.o

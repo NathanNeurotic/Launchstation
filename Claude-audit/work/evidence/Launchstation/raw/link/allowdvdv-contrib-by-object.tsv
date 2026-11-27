@@ -1,0 +1,4 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o		536	11	160	0	161	0	329	1197
+first-party	build/obj/allowdvdv/imports.o		88	0	0	0	0	0	0	88
+linker-internal	<internal>		0	42	0	0	0	0	0	42

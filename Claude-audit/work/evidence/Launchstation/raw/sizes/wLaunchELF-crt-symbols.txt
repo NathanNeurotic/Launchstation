@@ -1,0 +1,12 @@
+# stack/heap related symbols in the unstripped main ELF
+_stack	value=0xffffffff	shndx=65521	type=NOTYPE
+_stack_size	value=0x20000	shndx=65521	type=NOTYPE
+_heap_size	value=0xffffffff	shndx=65521	type=NOTYPE
+_end	value=0x797bd4	shndx=12	type=NOTYPE
+_end_bss	value=0x797bd4	shndx=12	type=NOTYPE
+_fbss	value=0x60dd00	shndx=11	type=NOTYPE
+_edata	value=0x60dc04	shndx=9	type=NOTYPE
+_gp	value=0x615bf0	shndx=65521	type=NOTYPE
+_ftext	value=0x100000	shndx=1	type=NOTYPE
+__start	value=0x30f2a8	shndx=1	type=FUNC
+_fdata	value=0x316700	shndx=6	type=NOTYPE

@@ -1,0 +1,146 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-11.b",
+  "coverage": [
+    {"path": "src/dash_main.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_png.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_ps1_card.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_main.c is the dashboard shell: section/tab switching, the never-returning DashRun loop (input, per-section callbacks, throttled remote-command/disc/device polls, deferred saves, rendering), the launch paths (dashLaunchApp and runMiscCommand, both ending in ExecuteMainAction), boot-time launch keys and the auto-launch countdown, SELECT+button quick launch, the START menu and the scene-override stack for nested full-screen tools. dash_png.c decodes PNG files through libpng with a streaming box filter straight into a CT32 thumbnail; it is used by the artwork and theme-texture worker jobs (dash_art.c) and by the image viewer on the UI thread (dash_image.c). dash_ps1_card.c is the PS1 card image tool: lists saves, imports/exports/deletes with a re-read check, a safety copy, an in-place rewrite and a read-back compare, converts single saves between .mcs/.psv/.psx/raw and creates new cards in several containers; the format work lives in mc_ps1_card.c and mc_save_export.c.",
+  "reusable_helpers": [
+    {"name": "p1Base", "path": "src/dash_ps1_card.c", "line": 38, "what": "returns the file name part of a path (after the last '/' or ':')"},
+    {"name": "p1ReadAll", "path": "src/dash_ps1_card.c", "line": 84, "what": "reads exactly n bytes from an fd, looping over short reads"},
+    {"name": "p1ReadFile", "path": "src/dash_ps1_card.c", "line": 202, "what": "reads a whole small file (size-capped) into a malloc buffer"},
+    {"name": "p1FreeName", "path": "src/dash_ps1_card.c", "line": 298, "what": "builds folder+stem+ext and finds a free name with -2..-99 suffixes"},
+    {"name": "dashPngDecode", "path": "src/dash_png.c", "line": 49, "what": "PNG decode with streaming box-filter downscale to CT32, GS alpha range"},
+    {"name": "dashPngLoadFile", "path": "src/dash_png.c", "line": 226, "what": "loads a PNG file through the gen* layer and decodes it"},
+    {"name": "argSidecarExists", "path": "src/dash_main.c", "line": 542, "what": "derives the .arg sidecar path of an ELF and tests that it opens"},
+    {"name": "lkLabel", "path": "src/dash_main.c", "line": 1021, "what": "label for a launch key: its title or the path basename after '/' or ':'"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dashLaunchApp rewrites DASHAPPS.CNF before every launch even when the Recent list did not change (or Recent is off)",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_main.c", "start": 649, "end": 655},
+        {"path": "src/dash_store.c", "start": 853, "end": 860},
+        {"path": "src/dash_main.c", "start": 263, "end": 264}
+      ],
+      "problem": "dashLaunchApp calls dashStorePushRecent unconditionally, and dashStorePushRecent marks the lists dirty even when the path is already recent[0]. settleBackgroundWork (dashStoreFlushWait) then writes the whole DASHAPPS.CNF and reads it back (dashWriteFile, dash_store.c:148-175) and the launch waits for it. Relaunching the top app, the common case, costs a store-dir (often memory card) write each time. It also records Recent when dashCfg.recent_count is 0 (Recent off), which dashLaunchHook (:263) honours.",
+      "fix": "In dashStorePushRecent return before dashStoreSaveLists when idx is 0 (already first). In dashLaunchApp call dashStorePushRecent only when dashCfg.recent_count > 0, as dashLaunchHook does.",
+      "justification": "Adds one early return and one condition. Without them every relaunch of the most recent app waits on a full DASHAPPS.CNF write plus read-back on the store device (mc0:/SYS-CONF or beside the ELF). Two conditions are the smallest way to skip that write.",
+      "benefit": "One DASHAPPS.CNF write + verify read and the launch wait for it saved per launch of the top Recent app or with Recent set to 0 (INFERRED from the call path; time not measured).",
+      "benefit_rank": 3,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_main.c:592-682 (push at :649, settleBackgroundWork :652 -> dashStoreFlushWait dash_store.c:670-681 -> dashStoreFlush(1) -> submitSave(SAVE_LISTS) :622-657 -> saveRun -> dashWriteFile :148-175, which always truncates, writes and reads back). dashStorePushRecent :843-861: idx==0 leaves the list unchanged but still calls dashStoreSaveLists (:716-720 sets save_dirty). recent_count 0 means Recent off: dash_settings.c:968 options {0,4,8,12,16}, dash_home.c:104-111 shows only recent_count entries; grep dashLists.recent: no other reader."
+    },
+    {
+      "n": 2,
+      "title": "runLaunchKey writes the launch-key title into the shared library entry",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_main.c", "start": 965, "end": 969},
+        {"path": "src/dash_lib.c", "start": 471, "end": 476},
+        {"path": "src/dash_lib.c", "start": 628, "end": 629}
+      ],
+      "problem": "dashLibResolve returns &dashApps[i] when the ELF is in the library, and runLaunchKey then copies setting->LK_Title over a->title. After a boot or SELECT+button launch through a titled key, the library entry keeps the key's title (shown on Home/Applications, out of title sort order) if the launch fails. If dashLaunchApp saves the cache (dash_main.c:647-648, art dirty), dashLibBuildCache writes that title to DASHLIB.CNF and it survives reboots until a rescan.",
+      "fix": "Apply the title to a copy: when dashLibResolve returned a library entry, memcpy it into tmp first and set tmp.title, then launch &tmp (dashLaunchApp already works on its own copy).",
+      "justification": "Adds one memcpy. It is the smallest change that keeps a per-key label from overwriting the library title in RAM and in DASHLIB.CNF.",
+      "benefit": "Library titles and DASHLIB.CNF no longer pick up launch-key labels (minor persistent display bug fixed).",
+      "benefit_rank": 2,
+      "lines_removed": -1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_main.c:959-972 (runLaunchKey), :1072-1128 (callers from boot), :979-1019 (quick launch caller). dash_lib.c:454-482: dashLibFind returns &dashApps[i], dashLibResolve returns it before using transient. dash_lib.c:604-640: dashLibSaveCache marks SAVE_CACHE dirty; dashLibBuildCache writes a->title; dashLibLoadCache :583-601 reads it back and sorts by title (titleCmp :484-490). dashLaunchApp :601 copies the app, so launching from a copy changes nothing else."
+    },
+    {
+      "n": 3,
+      "title": "First-run welcome dialog opens during the auto-launch countdown, which then cannot be cancelled",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_main.c", "start": 1527, "end": 1536},
+        {"path": "src/dash_main.c", "start": 1119, "end": 1126}
+      ],
+      "problem": "The intro check uses boot_phase != 1, so it fires while boot_phase is 2 (auto-launch countdown). dashModalMessage blocks and takes all input, so 'Press any button to stay' (bootUpdate needs in->any) cannot cancel, while bootDraw keeps showing the countdown underneath. If the user reads past the deadline, the auto key launches on the next frame after the dialog closes. Trigger: from_boot with LK_Path[SETTING_LK_AUTO] set and intro_done 0, i.e. first boot with an existing auto-launch config, or after 'show welcome again' (dash_settings.c:3295-3298).",
+      "fix": "Show the welcome only when boot_phase is 0 (change the condition to !boot_phase), so it appears after the countdown is cancelled, or not at all when the auto launch happens.",
+      "justification": "",
+      "benefit": "Auto-launch countdown stays cancellable on the first boot (minor bug fixed, no size change).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "boot_phase is file-static; every use read in dash_main.c (:39, :741, :772, :868, :1072-1153, :1411-1426, :1486, :1517, :1527), none in modal code. bootBegin :1084-1087 sets phase 2 when Init_Delay is 0 and LK auto is set; :1114-1117 after the delay. bootUpdate :1119-1126 cancels only on in->any from the main loop. dashRenderScene :1216 calls bootDraw, so the countdown is drawn under modals. intro_done defaults to 0 (dash_store.c:248). Whether the closing button press is flushed was not traced, hence Med."
+    },
+    {
+      "n": 4,
+      "title": "dashPngDecode leaks the interlaced full-image buffer and row table when libpng fails mid-image",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_png.c", "start": 77, "end": 84},
+        {"path": "src/dash_png.c", "start": 139, "end": 154}
+      ],
+      "problem": "For interlaced images the decoder mallocs full (w*h*4, up to 256*256*4 = 256 KB) and rows (h pointers) as plain locals. A corrupt or truncated interlaced PNG makes png_read_image call png_error, pngErr longjmps to the handler at :77-84, which frees only row, acc, acc_n and dst. full and rows are lost. Covers, theme images and files opened in the image viewer come from user devices, and each failed open leaks again.",
+      "fix": "Declare full and rows with the other volatile pointers at the top of the function and free them in the setjmp handler, setting them to NULL after their normal frees.",
+      "justification": "Adds two frees and two declarations. Without them each corrupt interlaced PNG leaks up to 257 KB of EE heap per decode attempt (image viewer re-opens, slideshow over a folder). Freeing in the existing handler is the smallest fix.",
+      "benefit": "Up to 256 KB + 8 KB (rows) of EE heap no longer leaked per failed interlaced decode (INFERRED: w*h <= 65536 enforced at :96, 4 bytes per pixel; h <= 2048 pointers).",
+      "benefit_rank": 2,
+      "lines_removed": -3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_png.c:43-224. pngErr :43-47 longjmps; png_read_image :153 runs after full/rows are allocated at :141/:146 and before free(rows) :154 / free(full) :178. Handler :77-84 frees only row/acc/acc_n/dst. Callers: dash_art.c:343 (artRun worker job), dash_art.c:513 (themeTexRun worker job), dash_image.c:111 (image viewer, UI thread); grep dashPngLoadFile/dashPngDecode over src include: no other callers."
+    },
+    {
+      "n": 5,
+      "title": "dashPngDecode does a 64-bit division per source pixel to map columns and rows",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_png.c", "start": 156, "end": 156},
+        {"path": "src/dash_png.c", "start": 169, "end": 169},
+        {"path": "src/dash_png.c", "start": 181, "end": 181},
+        {"path": "src/dash_png.c", "start": 194, "end": 194}
+      ],
+      "problem": "dx = (u64)x * dw / w is computed for every source pixel (and dy per row). The R5900 has no 64-bit divide, so each one is a __udivdi3 call (the builtin is linked into the ELF). A 2048x2048 PNG means about 4.2 million calls. That time lands on the worker (art, theme) or on the UI thread behind the loading overlay (image viewer, dash_image.c:111). The operands never need 64 bits: x, y < 2048 and dw <= w, dh <= h <= 2048, so the products stay below 2^22.",
+      "fix": "Use 32-bit unsigned arithmetic for dx and dy (drop the u64 casts). Optionally hoist dx into a per-column table computed once per image.",
+      "justification": "",
+      "benefit": "Removes one 64-bit division call per source pixel: about 4.2M calls for a 2048x2048 image, 1M for 1024x1024 (INFERRED; per-call cycle cost not measured).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_png.c:93-203: w,h <= DASH_PNG_MAX_DIM 2048 (:16, :93); dw/dh only shrink (:115-128). evidence/Launchstation/raw/link/wLaunchELF-archive-members.tsv:181 shows __udivdi3 from libclang_rt.builtins-mips64el.a linked into wLaunchELF (first requester main_title.o). That dash_png.o calls it for these lines is INFERRED from the u64 operands and the R5900 lacking DDIVU; no disassembly was available. Callers and threads: dash_art.c:343/513 (worker jobs), dash_image.c:111 (UI thread with dashLoadingBegin)."
+    },
+    {
+      "n": 6,
+      "title": "dash_ps1_card.c keeps 8 KB of tool-only state in .bss for the whole run",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_ps1_card.c", "start": 30, "end": 36},
+        {"path": "src/dash_ps1_card.c", "start": 719, "end": 737}
+      ],
+      "problem": "p1_saves, p1_titles, p1_details, p1_items and p1_head are static arrays used only while the PS1 card tool is open. The three card buffers are already allocated in p1Hold and freed in p1Drop, but these 8 KB stay resident from boot to exit.",
+      "fix": "Allocate these arrays in the same p1Hold memalign block as the card buffers (one larger allocation) and drop them with it in p1Drop.",
+      "justification": "",
+      "benefit": "8092 B of .bss returned to the heap while the tool is closed (MEASURED: evidence/Launchstation/raw/link/wLaunchELF-contrib-by-object.tsv:74, dash_ps1_card.o .bss 8092).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_ps1_card.c:29-36 and every use: p1_saves/p1_titles/p1_details/p1_items only in p1CardTool :592-653; p1_head in p1Load call :600, p1Safety :150, p1Commit :176, p1CopyAs :588. All run between p1Hold :719-731 and p1Drop :733-737 (dashPs1CardTool :739-748, dashPs1CardNew :750-759). Sizes: PS1_CARD_HEAD_MAX 3904 (mc_save_export.h:52), 15*96 + 15*64 + 17*16 (DashMenuItem dash_internal.h:902-908) + 15*sizeof(Ps1CardSave) (mc_ps1_card.h:66-74), totalling the measured 8092."
+    }
+  ]
+}

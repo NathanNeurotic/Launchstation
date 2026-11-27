@@ -1,0 +1,38 @@
+# build/obj/wle_igr/wle_igr.unstripped.elf (1011280 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+.text	1	AX	100000	165440
+.ctors	1	A	128640	0
+.init_array	14	AW	128640	16
+.reginfo	1879048198	A	128650	24
+.MIPS.abiflags	1879048234	A	128668	24
+.data	1	AW	128680	344316
+.rodata	1	A	17c780	7534
+.eh_frame_hdr	1	A	17e4ee	0
+.sdata	1	AW	17e500	4
+.got	1	AW	17e510	20
+.sbss	1	AW	17e580	0
+.bss	8	AW	17e580	66628
+.mdebug.abiN32	1		0	0
+.pdr	1		0	31360
+.comment	1		0	204
+.debug_loc	1879048222		0	76570
+.debug_abbrev	1879048222		0	37097
+.debug_info	1879048222		0	191325
+.debug_str	1879048222		0	16496
+.debug_frame	1879048222		0	8748
+.debug_line	1879048222		0	91241
+.debug_ranges	1879048222		0	4176
+.debug_aranges	1879048222		0	48
+.symtab	2		0	18752
+.shstrtab	3		0	258
+.strtab	3		0	16161
+# totals
+# bss (NOBITS)	66628
+# data (AW)	344356
+# non-alloc	492436
+# rodata (A)	7582
+# text (AX)	165440
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x100	0x100000	517504	584132	7
+# PHDR	1879048192	0x28750	0x128650	24	24	4
+# PHDR	1879048195	0x28768	0x128668	24	24	4

@@ -1,0 +1,48 @@
+# source: wle_igr-contrib-by-object.tsv (bytes of input sections placed in each output section, from the ld.lld map)
+category	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+embed-blob	0	0	337400	0	0	0	0	337400
+sdk	161712	4170	6137	4	66171	0	16	238210
+linker-internal	176	3348	0	0	0	0	20	3544
+first-party	2328	0	556	0	0	0	0	2884
+ALL	164216	7518	344093	4	66171	0	36	582038
+
+archive	members_in_link	.text	.rodata	.data	.bss	total
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	121	91924	3738	1808	441	97915
+$SDK/packages-llvm/core/kernel/lib/libkernel.a	28	27808	288	4268	20990	53354
+$SDK/packages-llvm/core/filexio/lib/libfilexio.a	2	9244	0	0	32056	41304
+$SDK/packages-llvm/core/cglue/lib/libcglue.a	9	13444	0	28	1984	15468
+$SDK/packages-llvm/core/cdvd/lib/libcdvd.a	3	1048	0	0	6944	7992
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	12	6860	0	0	0	6860
+$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	25	5380	16	33	52	5481
+$SDK/packages-llvm/core/pthreadglue/lib/libpthreadglue.a	2	2556	0	0	2080	4636
+$SDK/packages-llvm/core/patches/lib/libpatches.a	5	2528	128	0	1296	3952
+$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	1	920	0	0	328	1248
+
+Top 40 first-party / embed-blob / linker-internal contributors to .text
+2328	build/obj/wle_igr/igr/wle_igr.o
+176	<internal>
+
+Top 40 first-party / embed-blob / linker-internal contributors to .rodata
+3348	<internal>
+
+Top 40 first-party / embed-blob / linker-internal contributors to .data
+71372	build/obj/_embed/mcman_irx.o
+43632	build/obj/_embed/ps2fs_irx.o
+39105	build/obj/_embed/bdmfs_fatfs_irx.o
+27565	build/obj/_embed/ps2hdd_irx.o
+23791	build/obj/_embed/usbd_irx.o
+20674	build/obj/_embed/mmceman_irx.o
+13247	build/obj/_embed/iLinkman_irx.o
+12869	build/obj/_embed/mx4sio_bd_irx.o
+12449	build/obj/_embed/usbmass_bd_irx.o
+12290	build/obj/_embed/ata_bd_irx.o
+11414	build/obj/_embed/ps2dev9_irx.o
+11082	build/obj/_embed/iomanx_irx.o
+11080	build/obj/_embed/bdm_irx.o
+8965	build/obj/_embed/mcserv_irx.o
+6942	build/obj/_embed/IEEE1394_bd_irx.o
+5707	build/obj/_embed/filexio_irx.o
+5216	build/obj/_embed/sio2man_irx.o
+556	build/obj/wle_igr/igr/wle_igr.o
+
+Top 40 first-party / embed-blob / linker-internal contributors to .bss

@@ -1,0 +1,5 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/xparam/iop/xparam/src/database_merged.o		0	5840	0	0	0	0	0	5840
+first-party	build/obj/xparam/iop/xparam/src/xparam.o		116	0	8	0	0	0	57	181
+first-party	build/obj/xparam/imports.o		44	0	0	0	0	0	0	44
+linker-internal	<internal>		0	7	0	0	0	0	0	7

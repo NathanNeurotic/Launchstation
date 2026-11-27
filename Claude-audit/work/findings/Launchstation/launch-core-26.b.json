@@ -1,0 +1,91 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-26.b",
+  "coverage": [
+    {"path": "src/mc_card_view.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_card_write.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_card_write.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_ps1_card.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_ps1_card.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_save_export.h", "status": "read_full", "note": ""},
+    {"path": "src/mc_save_export.c", "status": "read_full", "note": ""},
+    {"path": "include/mc_save_formats.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "Host-testable pure-C memory card image code used by the dashboard card tool (src/dash_card_tool.c), MMCE backup fingerprinting (src/mmce_backup.c) and save versions (src/mmce_save_versions.c). mc_card_view.c reads PS2 card images (.mcd/.bin and ECC .ps2) through a read callback: superblock validation, bounded FAT/chain walks, save listing, free-cluster count and a SHA-256 index fingerprint. mc_card_write.c adds crash-ordered save copy/delete with read-back, .psu import/export, blank card formatting and Game ID helpers. mc_ps1_card.c handles 128 KB PS1 card images and single-save files (.mcs/.psv/.psx/raw) in memory; mc_save_export.c writes signed .psv, .psx, stored .zip and the PS1 card containers (.gme/.vgs/.vmp/.mcx) using Mbed TLS AES/HMAC. mc_save_formats.h only declares the readers implemented in src/mc_save_formats.c (another unit). Input validation is thorough: every walk is bounded and every parsed length is checked; no overflow or reachable crash was found.",
+  "reusable_helpers": [
+    {"name": "mcCardNameOk", "path": "src/mc_card_write.c", "line": 41, "what": "validates a 32-byte card name field: 1..31 printable ASCII, not . or .., no / \\ * ?"},
+    {"name": "mcGameIdValid", "path": "src/mc_card_write.c", "line": 999, "what": "checks an AAAA-12345 Game ID string"},
+    {"name": "mcSaveGameId", "path": "src/mc_card_write.c", "line": 1016, "what": "extracts the Game ID from a PS2 save folder name (BASLUS-21050SAVE -> SLUS-21050)"},
+    {"name": "mcCardFormat", "path": "src/mc_card_write.c", "line": 1031, "what": "writes a complete empty PS2 card image of 1..64 MB in 32 KB pieces through a write callback"},
+    {"name": "mcCardBlankIdentity", "path": "src/mc_card_write.c", "line": 969, "what": "builds a default PS2 card superblock and root directory cluster"},
+    {"name": "ps1NameOk", "path": "src/mc_ps1_card.c", "line": 49, "what": "validates a PS1 save name (1..20 printable ASCII)"},
+    {"name": "zipCrc", "path": "src/mc_save_export.c", "line": 375, "what": "CRC-32 (zip, reflected 0xEDB88320) with a 16-entry nibble table"},
+    {"name": "zipTime", "path": "src/mc_save_export.c", "line": 391, "what": "converts a card time stamp (sec..year) into a DOS time/date word"},
+    {"name": "mcPsvFileName", "path": "src/mc_save_export.c", "line": 246, "what": "builds the PS3 .PSV file name from a save name (12 chars then hex)"},
+    {"name": "aes", "path": "src/mc_save_export.c", "line": 35, "what": "AES-128 ECB single block or CBC in place over Mbed TLS"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Imported save is read back twice: mcCardWriteSave verifies, then ctPutSave reopens and reads the whole save again",
+      "category": 5,
+      "locations": [
+        {"path": "src/mc_card_write.c", "start": 653, "end": 662},
+        {"path": "src/dash_card_tool.c", "start": 415, "end": 426}
+      ],
+      "problem": "mcCardWriteSave step 6 already reopens the view (fresh mcViewOpen), reads the whole save into a second McSaveData and compares it with sameSave. ctPutSave then closes, reopens the image read-only and does the same full mcCardReadSave + mcCardSameSave again. Every single-save import (5 ctPutSave callers) therefore reads, mallocs and compares the full save data twice, synchronously on the UI thread under the loading overlay.",
+      "fix": "Delete the second read-back in ctPutSave (dash_card_tool.c:415-426) and return the mcCardWriteSave result once ctClose succeeded. Keep the verify inside mcCardWriteSave, which the batch paths (dash_card_tool.c:1088 and 1170) rely on.",
+      "justification": "",
+      "benefit": "One full read of the save (all its data clusters through fileXio) plus one full-size malloc/compare removed per import; ~11 lines removed (INFERRED: count of dash_card_tool.c:415-426).",
+      "benefit_rank": 2,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read mc_card_write.c:653-662 (reopen, mcCardReadSave, sameSave) and dash_card_tool.c:392-427 (ctPutSave: mcCardWriteSave at 408, ctClose, ctOpen, mcCardReadSave, mcCardSameSave at 417-425). grep ctPutSave: callers at dash_card_tool.c:523, 937, 1892, 2114, 2500. grep dashWorker in dash_card_tool.c: no matches, so these run on the UI thread (dashLoadingStatus, dash_ui.c:1406). INFERRED part: the post-close read catches no failure the in-function read misses, because both read through fileXio on the same device and ctClose's return is already checked at 409-413."
+    },
+    {
+      "n": 2,
+      "title": "mcCardWriteSave writes save data one 1 KB cluster per lseek+write RPC pair, copying each through a bounce buffer",
+      "category": 5,
+      "locations": [
+        {"path": "src/mc_card_write.c", "start": 408, "end": 416},
+        {"path": "src/mc_card_write.c", "start": 581, "end": 588},
+        {"path": "src/dash_card_tool.c", "start": 96, "end": 117}
+      ],
+      "problem": "Each data cluster is memset+memcpy'd into buf and written with its own writeAt call; the card tool's write callback ctWrite does genLseek (fileXioLseek64) plus genWrite (fileXioWrite) per call. A 1 MB save costs 1024 writes = 2048 EE-to-IOP RPCs on the UI thread. writerAlloc hands out the lowest free clusters in ascending order (mc_card_write.c:374-386), so a chain is usually a few runs of consecutive clusters that could each be one write.",
+      "fix": "In step 1, write each run of consecutive chain clusters with one writeAt straight from fl->data (no memset/memcpy), and send only the final partial cluster through buf with its zero padding.",
+      "justification": "Adds about 4 lines to the write loop. The concrete problem is per-cluster RPC pairs and a 1 KB bounce copy for every cluster of every imported save; grouping consecutive clusters is the smallest change that cuts the call count by the run length without a new buffer or cache.",
+      "benefit": "Write calls per save drop from one per KB to one per contiguous run (often 1-3 per file); removes the per-cluster memcpy. Time saved INFERRED, not measured (roughly 2 RPCs per KB of save data).",
+      "benefit_rank": 2,
+      "lines_removed": -4,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read mc_card_write.c:408-416 (writeAt/writeCluster, 1024-byte writes), 569-590 (per-cluster memset, memcpy, writeCluster), 374-386 (writerAlloc scans upward from w->scan). dash_card_tool.c:96-117 ctWrite: genLseek then genWrite loop per call, no write cache. filer_fileops.c:690 genLseek -> fileXioLseek64, :747 genWrite -> fileXioWrite. Callers mcCardWriteSave at dash_card_tool.c:408, 1088, 1170 run on the UI thread (no dashWorker use in that file). Timing per RPC not measured."
+    },
+    {
+      "n": 3,
+      "title": "mcViewListSaves and describeSave re-walk the directory chain from its first cluster for every entry (quadratic)",
+      "category": 5,
+      "locations": [
+        {"path": "src/mc_card_view.c", "start": 165, "end": 178},
+        {"path": "src/mc_card_view.c", "start": 295, "end": 297},
+        {"path": "src/mc_card_view.c", "start": 334, "end": 341}
+      ],
+      "problem": "Both loops call dirEntry(v, first, i), which uses chainRead from the first cluster, so entry i costs i/2 chainNext FAT lookups plus one full cluster read; a root of L entries costs about L*L/4 FAT lookups and L cluster reads instead of L/2. The file already has walkDir (lines 383-409), written for exactly this ('instead of re-walking the chain per entry'), used by the fingerprint and rootFind but not by the listing, which the card tool runs on the UI thread after every open and operation.",
+      "fix": "Drive the root loop of mcViewListSaves and the loop of describeSave with walkDir callbacks, as rootFind (mc_card_write.c:139-151) does.",
+      "justification": "",
+      "benefit": "INFERRED: root of 600 entries (large 64 MB card) ~90,000 cached FAT lookups and 600 cluster reads become ~300 of each; on typical 8 MB cards (under ~150 entries) the gain is milliseconds. About the same line count.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read mc_card_view.c:121-156 chainRead (skip = offset/1024 chainNext steps from 'first'), 165-178 dirEntry (chainRead at i*512), 288-319 describeSave and 321-360 mcViewListSaves (dirEntry per i), 381-409 walkDir comment and code. grep mcViewListSaves: UI-thread callers dash_card_tool.c:451, 1005, 1102, 1180, 1231, 1486, 1566, 1745; mmce_save_versions.c:408, 411. Arithmetic: sum over i<L of i/2 = L*L/4."
+    }
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-14",
+  "coverage": [
+    {"path": "src/dash_tools.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_ui.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_tools.c is the dashboard Tools tab: a static table of tools dispatched through dashRunMisc or native screens, plus the MMCE backup status worker job, the OPL IGR helper setup, the GitHub self-update check (release JSON parsing, commit ancestry compare, worker-run install), the Google Drive link/sync/browse/recover menus (ETH && WLE_NATIVE_CLOUD) and a USB unit diagnostic. dash_ui.c holds the shared dashboard widgets: pad input mapping and repeat logic, button glyphs and the sorted footer hint bar, header tabs and clock, panels/selection/glow primitives, toasts, the modal menu/choice/confirm/message dialogs, and the loading overlay with file-progress and storage-probe hooks used by classic filer code and the worker.",
+  "reusable_helpers": [
+    {"name": "dashModalMenu", "path": "src/dash_ui.c", "line": 928, "what": "modal list menu with icons, details, disabled rows, optional marks/edit/preview callbacks"},
+    {"name": "dashModalChoice", "path": "src/dash_ui.c", "line": 1126, "what": "modal pick-one from a string array with the current item checked"},
+    {"name": "dashModalConfirm", "path": "src/dash_ui.c", "line": 1262, "what": "OK/Cancel confirmation dialog, danger variant defaults to Cancel"},
+    {"name": "dashModalMessage", "path": "src/dash_ui.c", "line": 1276, "what": "single-button message dialog with icon and detail line"},
+    {"name": "dashLoadingStatus", "path": "src/dash_ui.c", "line": 1406, "what": "throttled loading overlay status/progress, routed to the worker status when called on the worker thread"},
+    {"name": "DashPause", "path": "src/dash_ui.c", "line": 1535, "what": "sleep that keeps redrawing the loading overlay for waits of 50 ms or more"},
+    {"name": "dashToast", "path": "src/dash_ui.c", "line": 759, "what": "queues a short toast message (max 3) with sound"},
+    {"name": "dashDrawScrollbar", "path": "src/dash_ui.c", "line": 597, "what": "draws a list scrollbar from first/visible/total"},
+    {"name": "hintOrder", "path": "src/dash_ui.c", "line": 317, "what": "stable insertion sort of footer hints by physical button rank"},
+    {"name": "appendClockTemperature", "path": "src/dash_ui.c", "line": 410, "what": "appends console temperature in C or F to a clock string"},
+    {"name": "updateIsCommitId", "path": "src/dash_tools.c", "line": 818, "what": "checks a 7-40 character hex commit id"},
+    {"name": "releaseJsonString", "path": "src/dash_tools.c", "line": 715, "what": "extracts a quoted JSON string value by key (duplicate of cloud_google.c json_string)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "releaseJsonString and the asset size parse re-implement cloud_google.c json_string/json_int",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 715, "end": 745},
+        {"path": "src/dash_tools.c", "start": 779, "end": 785},
+        {"path": "src/cloud_google.c", "start": 61, "end": 121}
+      ],
+      "problem": "dash_tools.c releaseJsonString (needle \"key\", strstr, skip to ':', whitespace, quoted value copy) is the same algorithm as the static json_string in cloud_google.c, which also handles escapes; the inline \"size\" parse in releaseAssetDigest (skip spaces and ':' then atoi) is json_int's body. Both files are linked into the same ELF and the dash_tools.c code is only built with ETH && WLE_NATIVE_CLOUD, where cloud_google.c is also compiled.",
+      "fix": "Make cloud_google.c json_string (and json_int) non-static with a prototype in cloud_google.h, delete releaseJsonString and call the shared one; replace the inline size parse with json_int on the asset slice. Results are equivalent for the fields used (status, target_commitish, digest, name), which are then validated anyway.",
+      "justification": "",
+      "benefit": "~33 source lines removed and one copy of the parser in .text (a few hundred bytes, INFERRED from the 31-line function at -Os)",
+      "benefit_rank": 2,
+      "lines_removed": 33,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_tools.c:715-790 and cloud_google.c:61-121. Grep for the needle pattern snprintf(needle,...,\"\\\"%s\\\"\") over src/: only cloud_google.c:69,113 and dash_tools.c:723. ps2.yaml:506 compiles src/cloud_google.c unconditionally (no file-level #if; only WLE_GOOGLE_CLIENT_ID blocks at :207,238). releaseJsonString callers: dash_tools.c:760,772,864,968. Empty-string difference (releaseJsonString rejects n<=0) is covered by later checks: updateIsCommitId, strncmp sha256:, unknown status."
+    },
+    {
+      "n": 2,
+      "title": "dashOkLabelKey and dashDrawFocusFrame are never called",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_ui.c", "start": 176, "end": 179},
+        {"path": "src/dash_ui.c", "start": 611, "end": 633},
+        {"path": "include/dash_internal.h", "start": 884, "end": 884},
+        {"path": "include/dash_internal.h", "start": 1130, "end": 1130}
+      ],
+      "problem": "The only matches for dashOkLabelKey and dashDrawFocusFrame in the whole repo (src, include, tests, docs) are their definitions in dash_ui.c and their prototypes in dash_internal.h.",
+      "fix": "Delete both functions and both prototypes.",
+      "justification": "",
+      "benefit": "~29 lines removed; no ELF change: BUILD-EVIDENCE.md lists dashDrawFocusFrame (524 bytes) among --gc-sections discards (MEASURED), dashOkLabelKey is likewise unreferenced",
+      "benefit_rank": 2,
+      "lines_removed": 29,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep dashOkLabelKey|dashDrawFocusFrame over src/Launchstation (all file types incl. tests, docs): dash_ui.c:176, dash_ui.c:611, dash_internal.h:884, dash_internal.h:1130 only. evidence/Launchstation/BUILD-EVIDENCE.md:123 lists 'dash_ui.o dashDrawFocusFrame 524' in discarded sections."
+    },
+    {
+      "n": 3,
+      "title": "Five exported dash_ui.c functions only forward to a static twin",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_ui.c", "start": 241, "end": 244},
+        {"path": "src/dash_ui.c", "start": 862, "end": 880}
+      ],
+      "problem": "dashButtonWidth, dashModalBackdrop, dashModalPanel, dashModalHintRow and dashDrawButton each just call the static buttonWidth, modalBackdrop, modalPanel, modalHintRow and drawButton with the same arguments. Each operation exists under two names.",
+      "fix": "Remove static from the five originals and give them the public names (or keep the public names and delete the static ones, renaming the in-file calls). Update the source-slicing host tests that look the static names up (tests/test_editor_keyboard.py:240, test_file_operation_overlay.py:63,84, test_modal_animation.py:101, test_hint_bar_fit.py:32-33, test_hint_order.py:36-37, test_pad_icon_order.py:23).",
+      "justification": "",
+      "benefit": "~20 source lines removed; ELF effect a few tail-call stubs (tens of bytes, INFERRED)",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_ui.c:231-279, 825-880. External callers exist (dash_widgets.c:426 dashButtonWidth; dashModalPanel/HintRow/Backdrop used in dash_tools.c:277-295 and other dash_*.c), so only the duplication is removed, not the API. Grep of tests/ shows the static names are extracted by several host tests listed in the fix."
+    },
+    {
+      "n": 4,
+      "title": "Cloud history: save-version and card-snapshot recovery are two near-identical blocks",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 1293, "end": 1340}
+      ],
+      "problem": "In cloudBrowseHistory the .psu branch (1293-1317) and the .mcd snapshot branch (1318-1340) run the same sequence: dashPickPath folder, dashModalConfirm, dashWorkerAwaitAll, clear buffers, loading begin, call a recover function with the identical (item, folder, result, size, error, size) signature, loading end, success/failure message. Only the strings and the function differ.",
+      "fix": "Pick the five strings and the recover function pointer (cloudGoogleRecoverSaveVersion or cloudGoogleRecoverSnapshot) from genCmpFileExt(item->name, \"PSU\") once, then run one copy of the sequence.",
+      "justification": "",
+      "benefit": "~18 source lines removed (INFERRED from the two 24-line blocks); small .text reduction",
+      "benefit_rank": 2,
+      "lines_removed": 18,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_tools.c:1278-1352 line by line; both recover calls at 1306 and 1329 take identical argument lists."
+    },
+    {
+      "n": 5,
+      "title": "Tools table: TA_BROWSER_AT and Tool.path duplicate TA_BROWSER",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 27, "end": 27},
+        {"path": "src/dash_tools.c", "start": 46, "end": 46},
+        {"path": "src/dash_tools.c", "start": 56, "end": 58},
+        {"path": "src/dash_tools.c", "start": 1615, "end": 1617}
+      ],
+      "problem": "Tool.path is NULL for every entry except the three TA_BROWSER_AT rows, where it is \"\"; runTool passes t->path ? t->path : \"\" to dashOpenBrowser, which is exactly what TA_BROWSER does with dashOpenBrowser(\"\"). The extra action and the field never carry information.",
+      "fix": "Change the three rows to TA_BROWSER, delete TA_BROWSER_AT, its case and the path member (and the trailing NULL/\"\" initializer of all 28 rows).",
+      "justification": "",
+      "benefit": "~4 lines plus 28 initializers shortened; 112 bytes of .rodata (28 entries x 4-byte pointer, INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_tools.c:37-84 and 1596-1646. Grep TA_BROWSER_AT over the repo: only dash_tools.c:27,56,57,58,1615. t->path is read only at :1616."
+    },
+    {
+      "n": 6,
+      "title": "dashModalMenu resets the one-shot callbacks three times and duplicates the Up/Down skip loop",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_ui.c", "start": 945, "end": 963},
+        {"path": "src/dash_ui.c", "start": 972, "end": 989}
+      ],
+      "problem": "modal_preview, modal_marks and modal_edit are already copied into locals at 931-934, yet the same three NULL assignments are written out at 946-948, 954-956 and 961-963. The Up and Down handlers are the same do/while skip-disabled loop with the direction flipped.",
+      "fix": "Clear the three globals once right after copying them (before the early returns) and drop the other two copies; fold Up/Down into one step with d = -1/+1.",
+      "justification": "",
+      "benefit": "~12 source lines removed (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 12,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_ui.c:928-1036. The locals preview/marks/edit/edit_arg are captured at 931-934 before any return, so clearing the globals immediately is equivalent."
+    },
+    {
+      "n": 7,
+      "title": "Unused parameter and return value in dash_ui.c header/clock code",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_ui.c", "start": 520, "end": 530},
+        {"path": "include/dash_internal.h", "start": 879, "end": 879},
+        {"path": "src/dash_main.c", "start": 1205, "end": 1205},
+        {"path": "src/dash_ui.c", "start": 428, "end": 464}
+      ],
+      "problem": "dashDrawHeader takes section_anim and discards it with (void)section_anim; its only caller dash_main.c:1205 passes it. clockText returns 0/1 but both callers (dash_ui.c:473 and :501) ignore the result.",
+      "fix": "Drop the section_anim parameter (prototype, definition, the one call and the (void) line) and make clockText void. tests/test_files_tab_lifecycle.py:35 asserts the call text and needs the same edit.",
+      "justification": "",
+      "benefit": "~4 lines; no measurable size change (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep section_anim over src/include/tests: dash_ui.c:520,530 are the only uses inside dashDrawHeader; dashDrawHeader called only at dash_main.c:1205. clockText called only at dash_ui.c:473 and :501, both as statements."
+    },
+    {
+      "n": 8,
+      "title": "dash_tools.c includes mmce_igr.h twice and re-declares dashToolsRefreshMmceStatus",
+      "category": 7,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 10, "end": 12},
+        {"path": "src/dash_tools.c", "start": 428, "end": 428}
+      ],
+      "problem": "#include \"mmce_igr.h\" appears on lines 10 and 12; the forward declaration of dashToolsRefreshMmceStatus at 428 repeats the prototype already in dash_internal.h:1031, which the file includes at line 8.",
+      "fix": "Delete line 12 and line 428.",
+      "justification": "",
+      "benefit": "2 lines; no binary change",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_tools.c:1-21 and 428; grep dashToolsRefreshMmceStatus shows the prototype at include/dash_internal.h:1031."
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-24.b",
+  "coverage": [
+    {"path": "src/main_exploit_installer.c", "status": "read_full", "note": ""},
+    {"path": "src/main_fileops.c", "status": "read_full", "note": ""},
+    {"path": "include/main_gameid.h", "status": "read_full", "note": ""},
+    {"path": "src/main_gameid.c", "status": "read_full", "note": ""},
+    {"path": "src/main_gameid_table.c", "status": "read_full", "note": ""},
+    {"path": "include/main_history.h", "status": "read_full", "note": ""},
+    {"path": "src/main_history.c", "status": "read_full", "note": ""},
+    {"path": "include/main_info_screens.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "main_exploit_installer.c is the memory-card system-update exploit installer (FMCB-style B?EXEC-SYSTEM folders): it identifies the console, builds an install plan per mode, estimates card space, optionally signs a user ELF with PS2KEYS.dat through kelf_signer.c, binds payloads to the card with SecrDownloadFile after an IOP reboot into the signer IOPRP, and writes payloads, icon.sys and list.icn; the dashboard runs it synchronously on the UI thread with its own menu/progress callbacks (dash_exploit.c). main_fileops.c holds small file helpers (wleExists, uLE:/ path resolution, file-type tests). main_gameid.c builds a title ID from a launch path or a PS1 disc PVD timestamp (table in main_gameid_table.c, derived from OSDMenu) and flashes it as a RetroGEM bar code with a temporary gsKit context. main_history.c updates the OSD history file (BxDATA-SYSTEM/history) on every formatted PS2 card at disc/app launch. The two remaining headers only declare prototypes.",
+  "reusable_helpers": [
+    {"name": "build_sibling_file_path", "path": "src/main_exploit_installer.c", "line": 861, "what": "replaces the file name of a path with another name, with a length check"},
+    {"name": "append_filename_to_path", "path": "src/main_exploit_installer.c", "line": 937, "what": "joins a directory and a file name, adding '/' when needed, with a length check"},
+    {"name": "bytes_to_mc_kb", "path": "src/main_exploit_installer.c", "line": 583, "what": "rounds a byte size up to 1 KB memory-card clusters"},
+    {"name": "mc_folder_exists", "path": "src/main_exploit_installer.c", "line": 1097, "what": "tests a memory-card folder with genDopen/genDclose"},
+    {"name": "ensure_mc_folder", "path": "src/main_exploit_installer.c", "line": 1159, "what": "mcMkDir that treats 'already exists' (-4) as success"},
+    {"name": "wipe_mc_folder", "path": "src/main_exploit_installer.c", "line": 1231, "what": "recursive delete of a memory-card folder with mcGetDir/mcDelete"},
+    {"name": "estimate_existing_folder_kb", "path": "src/main_exploit_installer.c", "line": 1687, "what": "recursive folder size in 1 KB clusters via fileXioDread"},
+    {"name": "copy_printable_prefix", "path": "src/main_exploit_installer.c", "line": 248, "what": "copies up to N printable ASCII characters"},
+    {"name": "starts_with_model", "path": "src/main_exploit_installer.c", "line": 313, "what": "case-insensitive prefix compare"},
+    {"name": "wleExists", "path": "src/main_fileops.c", "line": 7, "what": "file exists test via open/close"},
+    {"name": "uLE_related", "path": "src/main_fileops.c", "line": 27, "what": "resolves uLE:/ paths to the launch folder or mcN:/SYS-CONF"},
+    {"name": "ensureHistoryDirectory", "path": "src/main_history.c", "line": 54, "what": "mcMkDir treating -4 as success (same pattern as ensure_mc_folder)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Exploit install deletes or creates the update folders before the first MagicGate bind, so a bind failure loses the old install",
+      "category": 6,
+      "locations": [
+        {"path": "src/main_exploit_installer.c", "start": 1963, "end": 1969},
+        {"path": "src/main_exploit_installer.c", "start": 1642, "end": 1669},
+        {"path": "src/main_exploit_installer.c", "start": 1887, "end": 1903},
+        {"path": "src/main_exploit_installer.c", "start": 1565, "end": 1577},
+        {"path": "src/main_exploit_installer.c", "start": 1595, "end": 1604},
+        {"path": "src/main_exploit_installer.c", "start": 1320, "end": 1356}
+      ],
+      "problem": "install_selected_ps2_updates calls prepare_needed_folders (1967), which deletes the existing B?EXEC-SYSTEM folders when the user chose Delete (1650-1654) and creates empty folders (1666), before any payload is bound to the card. The first SecrDownloadFile bind comes later, in install_system_xlf_targets (1901) or bind_custom_payload_to_memory_card (1575, 1602). If that bind fails (bind_payload_to_memory_card returns -ENODEV/-EINVAL/-EIO, 1327-1352), the install returns with the old exploit folders gone and empty folders without icon.sys left on the card.",
+      "fix": "Bind first, touch the card second. In the stock path sign the needed payloads into memory with sign_payload_to_memory before prepare_needed_folders (the custom path already pre-signs with prepare_custom_signed_payloads). In the custom path move the two bind_custom_payload_to_memory_card calls ahead of prepare_needed_folders. Binding works on an in-RAM buffer and does not use the card's file system, so only the order changes.",
+      "justification": "Fixes a real data-loss path on the memory card. Nothing new is added; the stock path only holds its signed buffers (under 42 KB) until the writes finish instead of signing one at a time.",
+      "benefit": "A failed MagicGate bind no longer deletes a working exploit install or leaves empty folders (shown as corrupted data by the browser, INFERRED). RAM: under 42 KB held briefly (SYSTEM.XLF 13896 + XSYSTEM 13896 + 2 x ~7 KB KERNEL, MEASURED from exploits/).",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "M",
+      "risk": "High",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "READ: install_selected_ps2_updates 1944-2015 (custom sign 1953-1961, prepare_magicgate_signer 1963, prepare_needed_folders 1967, then binds at 1901 via sign_payload_to_memory 1358-1390 -> bind_payload_to_memory_card 1381, and at 1575/1602). prepare_needed_folders 1642-1672 runs wipe_existing_update_folders 1651 then ensure_mc_folder 1666. bind_payload_to_memory_card 1320-1356 only calls SecrDownloadFile on the RAM buffer. Runs on the UI thread from dash_exploit.c:160. INFERRED: how often a bind fails; the MagicGate Test mode (2282-2298) and its failure messages (2097-2120) exist because binds do fail on some cards/consoles. Sizes: ls -l exploits/."
+    },
+    {
+      "n": 2,
+      "title": "choose_custom_output_path passes keyboard(name, 36) for char name[36]; the dashboard keyboard writes one byte past the array",
+      "category": 6,
+      "locations": [
+        {"path": "src/main_exploit_installer.c", "start": 962, "end": 962},
+        {"path": "src/main_exploit_installer.c", "start": 979, "end": 982},
+        {"path": "src/dash_widgets.c", "start": 341, "end": 350},
+        {"path": "src/dash_widgets.c", "start": 663, "end": 668},
+        {"path": "src/dash_main.c", "start": 1358, "end": 1358}
+      ],
+      "problem": "keyboard()'s max is a character count, so the buffer needs max+1 bytes (classic gui.c:249 inserts while len < max; dashboard kbInsert dash_widgets.c:345 inserts while len < max_len). name is char[36] and is passed with max 36. DashRun installs the dashboard keyboard override (dash_main.c:1358), which accepts 36 characters, and the terminating NUL is written at name[36], past the stack array. Reached when a dongle console (COH/Python) exports a signed custom ELF (2398-2399 -> export_custom_payload 1539 -> choose_custom_output_path).",
+      "fix": "Pass sizeof(name) - 1 to keyboard().",
+      "justification": "",
+      "benefit": "Removes a 1-byte stack overflow (INFERRED: 36 characters + NUL = 37 bytes into char[36]). No size change.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read main_exploit_installer.c 959-1009 (name[36], keyboard(name, 36) at 981) and 2393-2403 (dongle export path). gui.c 143-164: keyboard() calls keyboardOverride when set; classic path caps at i < max && i < 33 (gui.c:249, 308), so it stays in bounds. dash_widgets.c 442-529: modalKeyboard limits max_len to 255 and calls kbInsert (341-350), which inserts while strlen < max_len and moves the NUL to len+1. classicKeyboard 663-668 forwards max unchanged; dashClassicUiInstall(1) at dash_main.c:1358 in DashRun; the installer is entered from dash_main.c:475 -> dashExploitInstaller. Other keyboard(tmp, 36) callers use MAX_PATH buffers (editor_file.c:256, filer_browser.c:1094)."
+    },
+    {
+      "n": 3,
+      "title": "wipe_mc_folder_contents loops forever when a nested sub-folder path is longer than 63 characters",
+      "category": 6,
+      "locations": [
+        {"path": "src/main_exploit_installer.c", "start": 1097, "end": 1103},
+        {"path": "src/main_exploit_installer.c", "start": 1195, "end": 1228},
+        {"path": "src/main_exploit_installer.c", "start": 1231, "end": 1236}
+      ],
+      "problem": "For a sub-folder entry wipe_mc_folder_contents calls wipe_mc_folder (1217), which first calls mc_folder_exists. That helper builds 'mcN:/<path>' in a 64-byte buffer and returns 0 ('missing') when snprintf truncates (1102-1103), so wipe_mc_folder returns 0 without deleting (1235-1236). The loop handles only the first entry per pass (break at 1223), rescans (1199-1201), gets the same sub-folder again and never ends. Trigger: Delete update folders on a card where an update folder holds a two-level sub-folder tree longer than 63 characters. It runs on the dashboard UI thread (dash_exploit.c:160), so the console hangs.",
+      "fix": "In the sub-folder branch call wipe_mc_folder_contents(port, child) and then delete_mc_path(port, child) directly: mcGetDir has just listed the entry, so the existence check and its 64-byte path are not needed there.",
+      "justification": "",
+      "benefit": "Removes a possible permanent UI hang during the exploit install, and saves one fileXioDopen per sub-folder (INFERRED). Net lines about 0.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "High",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read 1097-1110, 1184-1244 and the call path wipe_existing_update_folders 1246-1266 <- prepare_needed_folders 1650-1654 <- install_selected_ps2_updates 1967 <- install_for_plan 2491. Path arithmetic: 'mc0:/' (5) + 'BIEXEC-SYSTEM' (13) + '/' + a + '/' + b + NUL > 64 when a + b >= 44; MC names allow up to 31 characters each, so the first level always fits and depth 2 can overflow. genDopen (filer_fileops.c:615-676) is a plain fileXioDopen for mc paths, so the false 'missing' comes from the truncation or a dopen error. Confidence Med because nested folders inside B?EXEC-SYSTEM are unusual."
+    },
+    {
+      "n": 4,
+      "title": "Exploit install repeats file and folder probes: custom ELF and PS2KEYS.dat checked again before signing, mc_folder_exists twice per folder",
+      "category": 5,
+      "locations": [
+        {"path": "src/main_exploit_installer.c", "start": 1077, "end": 1082},
+        {"path": "src/kelf_signer.c", "start": 1014, "end": 1018},
+        {"path": "src/main_exploit_installer.c", "start": 1159, "end": 1164},
+        {"path": "src/main_exploit_installer.c", "start": 1664, "end": 1666}
+      ],
+      "problem": "reload_custom_payload_source parses PS2KEYS.dat again (KelfSignValidateKeys) and opens the ELF again to measure it (KelfSignGetOutputSize, 1077-1082), right before prepare_custom_signed_payloads calls KelfSignElfToMemory, which parses the keys and reads the whole ELF anyway (kelf_signer.c:1014-1018) and reports its own failure. prepare_needed_folders calls mc_folder_exists (1664) and then ensure_mc_folder, which calls mc_folder_exists on the same folder again (1163-1164).",
+      "fix": "Delete lines 1077-1082 and the signed_size variable in reload_custom_payload_source; keep the two ensurePathDeviceStackReady calls. Delete the check at 1163-1164 in ensure_mc_folder and call ensure_mc_folder only when folder_assets_to_write[i] was set (folder missing); mcMkDir's -4 result is already accepted.",
+      "justification": "",
+      "benefit": "One keys-file parse and one ELF open/seek/tail read less per custom install; one memory-card directory open less per needed folder (up to 4). INFERRED, tens of ms. About 9 lines removed.",
+      "benefit_rank": 1,
+      "lines_removed": 9,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read main_exploit_installer.c 1059-1090, 1159-1171, 1423-1449 (build_custom_payload_to_memory reports Exploit_Custom_ELF_Sign_failed), 1642-1672, 1944-1969. kelf_signer.c 734-742 (KelfSignValidateKeys -> parse_key_store), 764-793 (KelfSignGetOutputSize opens, seeks and reads the ELF tail), 924-979 and 981-1020 (KelfSignElfToMemory: parse_key_store at 1014, load_elf_into_output at 1018 reads the full ELF). grep reload_custom_payload_source: only the definition and the call at 1954."
+    }
+  ]
+}

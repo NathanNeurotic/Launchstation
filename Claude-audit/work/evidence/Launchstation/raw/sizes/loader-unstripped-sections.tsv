@@ -1,0 +1,34 @@
+# build/obj/loader/loader.unstripped.elf (39832 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+.text	1	AX	84000	15244
+.ctors	1	A	87b90	0
+.init_array	1	A	87b90	0
+.reginfo	1879048198	A	87b90	24
+.MIPS.abiflags	1879048234	A	87ba8	24
+.data	1	AW	87c00	4
+.got	1	AW	87c10	8
+.rodata	1	A	87c80	73
+.sbss	1	A	87d00	0
+.bss	8	AW	87d00	39592
+.mdebug.abiN32	1		0	0
+.pdr	1		0	10048
+.comment	1		0	204
+.debug_loc	1879048222		0	536
+.debug_abbrev	1879048222		0	510
+.debug_info	1879048222		0	731
+.debug_str	1879048222		0	504
+.debug_frame	1879048222		0	128
+.debug_line	1879048222		0	1363
+.symtab	2		0	4848
+.shstrtab	3		0	208
+.strtab	3		0	3954
+# totals
+# bss (NOBITS)	39592
+# data (AW)	12
+# non-alloc	23034
+# rodata (A)	121
+# text (AX)	15244
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x100	0x84000	15616	55208	7
+# PHDR	1879048192	0x3c90	0x87b90	24	24	4
+# PHDR	1879048195	0x3ca8	0x87ba8	24	24	4

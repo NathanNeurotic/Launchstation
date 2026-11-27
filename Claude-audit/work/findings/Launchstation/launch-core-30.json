@@ -1,0 +1,231 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-30",
+  "coverage": [
+    {"path": "src/smb_cnf.c", "status": "read_full", "note": ""},
+    {"path": "include/smb_shares.h", "status": "read_full", "note": ""},
+    {"path": "src/smb_shares.c", "status": "read_full", "note": ""},
+    {"path": "src/timer.c", "status": "read_full", "note": ""},
+    {"path": "src/update_psu.c", "status": "read_full", "note": ""},
+    {"path": "src/virtual_keyboard.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "smb_cnf.c is the host-testable text core for network shares: it parses SMB2.CNF / the LAUNCHSTATION.CNF share section into SmbConfig (smb://, \\\\ UNC and nfs:// URLs, IPv4 only), and composes and splices share blocks for the Settings share editor. smb_shares.c is the PS2 side: it finds the config text (LAUNCHSTATION.CNF section, else SMB2.CNF beside the ELF or in mcN:/SYS-CONF), connects shares through smb2man, smbman and nfsman devctls, rate-limits retries and formats status lines for the browser. timer.c is the 64-bit millisecond Timer(). update_psu.c validates an app PSU held in RAM, locates its ELF and extracts the CA/BGM sidecars for self_update.c. virtual_keyboard.c holds the six on-screen keyboard layouts and grid navigation used by the classic text editor (editor.c), the classic keyboard dialog (gui.c) and the dashboard keyboard widget (dash_widgets.c).",
+  "reusable_helpers": [
+    {"name": "sameText", "path": "src/smb_cnf.c", "line": 23, "what": "static ASCII case-insensitive string equality without libc stricmp"},
+    {"name": "trim", "path": "src/smb_cnf.c", "line": 60, "what": "in-place trim of spaces/tabs/CR/LF at both ends"},
+    {"name": "isIpv4", "path": "src/smb_cnf.c", "line": 149, "what": "strict dotted IPv4 check (0-255, no leading zeros)"},
+    {"name": "smbConfigParse", "path": "src/smb_cnf.c", "line": 345, "what": "KEY = value line parser with BOM skip, CR/LF/CRLF, comments"},
+    {"name": "smbTextHash", "path": "src/smb_shares.c", "line": 125, "what": "32-bit FNV-1a hash of a NUL-terminated string"},
+    {"name": "psu32", "path": "src/update_psu.c", "line": 5, "what": "little-endian 32-bit read from a byte pointer"},
+    {"name": "record_is", "path": "src/update_psu.c", "line": 61, "what": "matches a PSU directory record by mode and name"},
+    {"name": "Timer", "path": "src/timer.c", "line": 8, "what": "64-bit milliseconds since boot from the bus clock"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "update_psu.c: file-based and ELF-writing extract paths (selfUpdateExtractPsu, ...Mem, ...Sidecar, selfUpdateWriteProgress) are test-only",
+      "category": 1,
+      "locations": [
+        {"path": "src/update_psu.c", "start": 18, "end": 18},
+        {"path": "src/update_psu.c", "start": 29, "end": 35},
+        {"path": "src/update_psu.c", "start": 41, "end": 42},
+        {"path": "src/update_psu.c", "start": 49, "end": 59},
+        {"path": "src/update_psu.c", "start": 102, "end": 134},
+        {"path": "src/update_psu.c", "start": 174, "end": 179},
+        {"path": "src/update_psu.c", "start": 183, "end": 208},
+        {"path": "src/update_psu.c", "start": 335, "end": 354},
+        {"path": "include/self_update.h", "start": 13, "end": 17},
+        {"path": "include/self_update.h", "start": 23, "end": 24},
+        {"path": "src/self_update.c", "start": 203, "end": 203}
+      ],
+      "problem": "The updater only calls selfUpdateLocatePsuElf (self_update.c:306, stage NULL) and selfUpdateExtractPsuSidecarMem (:327, :333). selfUpdateExtractPsu, selfUpdateExtractPsuMem and selfUpdateExtractPsuSidecar are called only by tests/test_app_packages.py:69-73, and test_self_update.py:29 even asserts selfUpdateExtractPsu( is gone from self_update.c. So the fd input path (in_open, genRead/genLseek branches, PsuIn.fd), the stage-writing branch of extract_elf with its write loop and cleanup, and selfUpdateWriteProgress (only read inside that branch, set at self_update.c:203) never run.",
+      "fix": "Delete selfUpdateExtractPsu, selfUpdateExtractPsuMem, selfUpdateExtractPsuSidecar, in_open, the fd branches of read_exact/in_seek and PsuIn.fd; make extract_elf locate-only (drop stage, output, buffer, the write loop and the remove at 176-179); delete selfUpdateWriteProgress, its extern and the assignment at self_update.c:203. Point tests/test_app_packages.py at selfUpdateLocatePsuElf and selfUpdateExtractPsuSidecarMem.",
+      "justification": "",
+      "benefit": "~95 source lines. MEASURED: the 3 public functions (752 B) are already gc-discarded (evidence raw/experiment-fdata/link/wLaunchELF-gc-discarded-first-party.tsv:95-97); the live extract_elf write branch, fd branches and pointer go too, INFERRED a few hundred bytes of .text.",
+      "benefit_rank": 3,
+      "lines_removed": 95,
+      "effort": "M",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep selfUpdateExtractPsu|selfUpdateLocatePsuElf|selfUpdateWriteProgress over src/Launchstation: production callers only self_update.c:306 (Locate), :327/:333 (SidecarMem), :203 (assigns WriteProgress); update_psu.c:125 is the only reader of WriteProgress and sits under stage != NULL; Locate passes stage NULL (update_psu.c:219). Other uses: tests/test_app_packages.py:69-78, tests/test_update_sidecar_transaction.py stubs, docs-site. Build: -ffunction-sections + --gc-sections (BUILD-EVIDENCE.md:107-108)."
+    },
+    {
+      "n": 2,
+      "title": "extract_sidecar walks every PSU record twice with the same validation code",
+      "category": 2,
+      "locations": [
+        {"path": "src/update_psu.c", "start": 253, "end": 286},
+        {"path": "src/update_psu.c", "start": 84, "end": 96}
+      ],
+      "problem": "extract_sidecar runs a full validation pass (255-269) and then a second pass (274-286) that repeats the same seek/read/length/padding checks line for line before looking for the record. In production self_update.c:306 has already validated the same RAM package with selfUpdateLocatePsuElf, whose loop (update_psu.c:84-96) performs the same record checks.",
+      "fix": "Make it one pass: in the single loop, remember the position and length of the record named name, check position == size after the loop, then seek to the remembered record and copy it. Drop the second loop.",
+      "justification": "",
+      "benefit": "~15 source lines and one walk over the package removed; INFERRED ~100-200 B of .text.",
+      "benefit_rank": 2,
+      "lines_removed": 15,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read update_psu.c:227-333 and 67-181; the two loops 255-269 and 274-286 differ only in that the second checks record_is(entry, 0x8017, name) (the dupes-blocks lead 255-267 == 274-286, 13 normalised lines). self_update.c:306 calls selfUpdateLocatePsuElf before the SidecarMem calls at :327 and :333. tests/test_app_packages.py exercises sidecar extraction and would keep its coverage."
+    },
+    {
+      "n": 3,
+      "title": "SMB3 share kind (kind 3, VERSION = 3) is a marker that is lost when the share is reopened in the editor",
+      "category": 8,
+      "locations": [
+        {"path": "src/smb_cnf.c", "start": 483, "end": 483},
+        {"path": "src/smb_cnf.c", "start": 502, "end": 507},
+        {"path": "src/smb_cnf.c", "start": 143, "end": 144},
+        {"path": "include/smb_shares.h", "start": 81, "end": 86},
+        {"path": "src/dash_settings.c", "start": 535, "end": 535},
+        {"path": "src/dash_settings.c", "start": 1025, "end": 1029},
+        {"path": "src/dash_settings.c", "start": 1860, "end": 1862}
+      ],
+      "problem": "The editor offers SMB2/SMB3/SMB1 and writes VERSION = 3 for SMB3 (smbCnfBuildBlock kind 3), but the parser maps 3 to version 2 (smb_cnf.c:143), no code acts on the mark (both use connectSmb2), and the editor reloads kind = sh->version (dash_settings.c:535). Reopening an SMB3 share shows SMB2, and saving it again drops the VERSION line.",
+      "fix": "Delete the SMB3 choice: editor list becomes SMB2/SMB1, smbCnfBuildBlock accepts kinds 1 and 2 only, header comment updated. Keep the parser accepting VERSION = 3 as SMB2 for existing files. Adjust tests/test_smb_cnf_edit.py calls with kind 3.",
+      "justification": "",
+      "benefit": "~6 source lines and one editor option that does nothing; no measurable size change (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 6,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read smb_cnf.c:139-146, 475-537; dash_settings.c:526-540, 1020-1031, 1855-1864; grep 'kind' in dash_settings.c: 3869 shows label SMB3 for kind 3, 3437 template text says 3 only marks a server. smbSharesConnect (smb_shares.c:384) picks connectSmb2 for every version other than 1 and NFS. tests/test_smb_cnf_edit.py:64,82,143 build kind 3 blocks."
+    },
+    {
+      "n": 4,
+      "title": "splitSmbUrl and splitNfsUrl repeat the same host/port parsing",
+      "category": 2,
+      "locations": [
+        {"path": "src/smb_cnf.c", "start": 188, "end": 213},
+        {"path": "src/smb_cnf.c", "start": 240, "end": 265}
+      ],
+      "problem": "The colon search, digit loop, 65535/0 checks, server copy and isIpv4 test are identical in both functions (26 lines each); they differ only in the default port (445 vs 2049).",
+      "fix": "Move the block into one static helper taking sh, host, slash and the default port and returning the problem string; call it from both.",
+      "justification": "Same logic in 2 places; the helper replaces two 26-line copies with one copy plus two one-line calls, net fewer lines.",
+      "benefit": "~20 source lines; INFERRED ~150 B .text (one copy of the loop).",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read smb_cnf.c:173-289 side by side; dupes-blocks lead 194-213 == 246-265 (18 normalised lines) plus 188-193/240-245 differ only in the default port constant and the '@'/';' check that stays in splitSmbUrl. Both are static and called only from closeShare (smb_cnf.c:320, 333). Host tests tests/test_smb_shares.py and test_nfs_shares.py cover both."
+    },
+    {
+      "n": 5,
+      "title": "Four virtual keyboard char getters return the same value; getVirtualKeyboardEditorDisplayChar is unused",
+      "category": 2,
+      "locations": [
+        {"path": "src/virtual_keyboard.c", "start": 193, "end": 205},
+        {"path": "src/virtual_keyboard.c", "start": 216, "end": 219},
+        {"path": "src/virtual_keyboard.c", "start": 371, "end": 378},
+        {"path": "include/launchelf.h", "start": 696, "end": 698},
+        {"path": "include/launchelf.h", "start": 703, "end": 703},
+        {"path": "src/dash_widgets.c", "start": 19, "end": 22},
+        {"path": "src/dash_widgets.c", "start": 222, "end": 224},
+        {"path": "src/dash_widgets.c", "start": 315, "end": 316}
+      ],
+      "problem": "getVirtualKeyboardLayoutDisplayChar and getVirtualKeyboardLayoutChar have identical bodies, getVirtualKeyboardFilenameChar only forwards to LayoutChar, and getVirtualKeyboardEditorDisplayChar (no caller; equal to EditorChar) is the lead. dash_widgets.c then chooses between FilenameChar and LayoutChar/DisplayChar in two ternaries that yield the same char, and kbFilenameChar only forwards to isVirtualKeyboardFilenameChar.",
+      "fix": "Keep getVirtualKeyboardLayoutChar; delete LayoutDisplayChar, FilenameChar and EditorDisplayChar with their prototypes; replace callers (editor.c:514, gui.c:356, dash_widgets.c:83/223/315) with LayoutChar and drop the two ternaries and kbFilenameChar. Update tests/test_editor_keyboard.py:494.",
+      "justification": "",
+      "benefit": "~28 source lines. MEASURED: EditorDisplayChar (380 B) already gc-discarded (gc-discarded-first-party.tsv:99); the rest INFERRED a few tens of bytes.",
+      "benefit_rank": 2,
+      "lines_removed": 28,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep over src/Launchstation for the getter names: EditorDisplayChar only virtual_keyboard.c:371 and launchelf.h:703; DisplayChar used at editor.c:514, gui.c:356, dash_widgets.c:316; FilenameChar at dash_widgets.c:83, 223, 315 and tests/test_editor_keyboard.py:494; isVirtualKeyboardFilenameChar only via dash_widgets.c:21 and test_portable_filename.py:32 (text). Read dash_widgets.c:15-26, 215-226, 308-319."
+    },
+    {
+      "n": 6,
+      "title": "Keyboard row search and next-key walk written twice (layout grid and editor grid)",
+      "category": 2,
+      "locations": [
+        {"path": "src/virtual_keyboard.c", "start": 272, "end": 296},
+        {"path": "src/virtual_keyboard.c", "start": 380, "end": 404},
+        {"path": "src/virtual_keyboard.c", "start": 316, "end": 322},
+        {"path": "src/virtual_keyboard.c", "start": 442, "end": 448}
+      ],
+      "problem": "findSelectableInRow and getVirtualKeyboardEditorNextInRow are the same outward search (25 lines each) differing only in the column count (VKEY_LAYOUT_COLS vs VKEY_EDITOR_COLS) and the key test (isVirtualKeyboardLayoutKey vs isVirtualKeyboardEditorKey); the dx loops of the two NextKey functions differ the same way.",
+      "fix": "Keep one row search that takes the column count and a 0/1 grid selector (layout or editor key test) and call it from both NextKey functions; the editor's special dy handling stays.",
+      "justification": "Same loop in 2 places; one parameterised copy removes about 20 lines net without a new layer.",
+      "benefit": "~20 source lines; INFERRED ~100 B .text.",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read virtual_keyboard.c:272-461. Both row searches are static; callers: findSelectableInRow at 307, 309, 326, 418; EditorNextInRow at 433, 435, 455. Navigation is covered by tests/test_editor_keyboard.py (compiles virtual_keyboard.c, line 54) and used by editor_input.c:180-198 and gui.c:190-221."
+    },
+    {
+      "n": 7,
+      "title": "SmbShare.error is written but never read",
+      "category": 1,
+      "locations": [
+        {"path": "include/smb_shares.h", "start": 63, "end": 63},
+        {"path": "src/smb_shares.c", "start": 385, "end": 385},
+        {"path": "src/smb_shares.c", "start": 467, "end": 467}
+      ],
+      "problem": "The field is set from the connect return and cleared on forget; status text uses sh->problem instead. No reader of .error/->error on a share exists in src, include or tests.",
+      "fix": "Delete the field and its two assignments.",
+      "justification": "",
+      "benefit": "3 lines; 4 B per SmbShare, 32 B per SmbConfig (static smb_cfg plus snapshot copies) INFERRED.",
+      "benefit_rank": 1,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep '(share\\[..\\]|sh|share|snap..)(\\.|->)error' over src/Launchstation: only smb_shares.c:385 and :467. Grep '\\.error|->error' over src: other hits are filer_copy.c move_manifest/copy_diag, unrelated."
+    },
+    {
+      "n": 8,
+      "title": "smbSharesConnect retry_failed parameter is always 1",
+      "category": 3,
+      "locations": [
+        {"path": "src/smb_shares.c", "start": 363, "end": 373},
+        {"path": "include/smb_shares.h", "start": 130, "end": 130}
+      ],
+      "problem": "All five callers pass retry_failed = 1 (dash_devices.c:648, 653; filer.c:826, 1922; init.c:988), so the if (retry_failed) guard is always entered; only the rate limit can clear it.",
+      "fix": "Drop the parameter; keep the rate-limit test as a local flag.",
+      "justification": "",
+      "benefit": "~2 lines and one argument at 5 call sites; no size change (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep 'smbSharesConnect\\(' over src/Launchstation/src: the five calls listed, each with second argument 1; tests define no caller with 0."
+    },
+    {
+      "n": 9,
+      "title": "Small SMB leftovers: SMB_CNF_MAX_SIZE defined twice, stale header comments, dead store",
+      "category": 7,
+      "locations": [
+        {"path": "src/smb_shares.c", "start": 20, "end": 20},
+        {"path": "include/smb_shares.h", "start": 129, "end": 129},
+        {"path": "include/smb_shares.h", "start": 84, "end": 85},
+        {"path": "include/smb_shares.h", "start": 140, "end": 140},
+        {"path": "src/smb_cnf.c", "start": 602, "end": 602}
+      ],
+      "problem": "smb_shares.c:20 redefines SMB_CNF_MAX_SIZE already defined by the header it includes (line 11, under SMB). smb_shares.h:84-85 says a 445 port is left out of the URL, but smbCnfBuildBlock always writes it (smb_cnf.c:528-529). smb_shares.h:140 carries a second comment that belongs to the section functions. smb_cnf.c:602 sets i = 0 just before i = text_len.",
+      "fix": "Delete smb_shares.c:20 and smb_cnf.c:602; correct the 445 sentence; drop the misplaced comment on line 140.",
+      "justification": "",
+      "benefit": "~3 lines; no size change (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read smb_shares.h:81-141 and smb_shares.c:9-20 (smb_shares.h included at line 11; SMB defined by ps2.yaml:627 per brief); smb_cnf.c:528-536 writes ':%d' unconditionally; smb_cnf.c:602-604."
+    }
+  ]
+}

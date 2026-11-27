@@ -1,0 +1,23 @@
+Link: nfsman
+Source: nfsman.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 13
+Discarded code/data sections (ABI metadata excluded): 7, of which non-empty: 2, 228 bytes
+  first-party: 2 non-empty sections, 228 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 0 non-empty sections, 0 bytes
+  third-party-dep: 0 non-empty sections, 0 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+first-party	bss (empty)	2	0
+first-party	code	2	228
+first-party	code (empty)	1	0
+first-party	data (empty)	2	0
+first-party	metadata	4	96
+first-party	non-alloc	2	64
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file
+228	2	build/obj/nfsman/iop/nfsman/nfsman.o

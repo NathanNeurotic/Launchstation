@@ -1,0 +1,758 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     3e78     4 .rel.text
+       0        0      1b0     4         obj/vmcman/exports.o:(.rel.text)
+     1b0      1b0     21a0     4         obj/vmcman/iop/vmcman/src/main.o:(.rel.text)
+    2350     2350      990     4         obj/vmcman/iop/vmcman/src/mcdev.o:(.rel.text)
+    2ce0     2ce0      250     4         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.rel.text)
+    2f30     2f30       a8     4         obj/vmcman/iop/vmcman/src/mcsio2.o:(.rel.text)
+    2fd8     2fd8      aa8     4         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.rel.text)
+    3a80     3a80      3f8     4         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.rel.text)
+       0        0       f8     4 .rel.data
+       0        0        8     4         obj/vmcman/iop/vmcman/src/main.o:(.rel.data)
+       8        8       f0     4         obj/vmcman/iop/vmcman/src/mcdev.o:(.rel.data)
+       0        0     db40    16 .text
+       0        0       f8    16         obj/vmcman/exports.o:(.text)
+       0        0        0     1                 _exp_mcman
+      f0       f0        8     1                 _dummy
+     100      100     8188    16         obj/vmcman/iop/vmcman/src/main.o:(.text)
+     100      100      114     1                 long_multiply
+     214      214       74     1                 mcman_chrpos
+     288      288       b4     1                 _start
+     33c      33c       84     1                 McCloseAll
+     3c0      3c0       ec     1                 mcman_initcache
+     4ac      4ac       34     1                 McGetFormat
+     4e0      4e0       34     1                 McGetMcType
+     514      514        c     1                 McGetModuleInfo
+     520      520        c     1                 McSetPS1CardFlag
+     52c      52c       ac     1                 McGetFreeClusters
+     5d8      5d8      228     1                 mcman_findfree2
+     800      800      100     1                 mcman_findfree1
+     900      900       28     1                 mcman_wmemset
+     928      928       2c     1                 mcman_calcEDC
+     954      954       44     1                 mcman_checkpath
+     998      998      18c     1                 mcman_checkdirpath
+     b24      b24       48     1                 mcman_invhandles
+     b6c      b6c      170     1                 McClose
+     cdc      cdc        8     1                 McDetectCard
+     ce4      ce4       c8     1                 mcman_detectcard
+     dac      dac      158     1                 mcman_clearcache
+     f04      f04       c8     1                 McDetectCard2
+     fcc      fcc      108     1                 McOpen
+    10d4     10d4       a4     1                 McFlushCache
+    1178     1178      19c     1                 McFlush
+    1314     1314       bc     1                 McSeek
+    13d0     13d0      13c     1                 McRead
+    150c     150c      13c     1                 McWrite
+    1648     1648       bc     1                 McGetEntSpace
+    1704     1704      140     1                 mcman_getentspace
+    1844     1844       f8     1                 McGetDir
+    193c     193c      12c     1                 mcman_dread
+    1a68     1a68       e8     1                 mcman_getstat
+    1b50     1b50      11c     1                 McSetFileInfo
+    1c6c     1c6c       dc     1                 McChDir
+    1d48     1d48       e8     1                 McDelete
+    1e30     1e30       dc     1                 McFormat
+    1f0c     1f0c       e8     1                 McUnformat
+    1ff4     1ff4      15c     1                 mcman_getmcrtime
+    2150     2150       30     1                 McEraseBlock
+    2180     2180        c     1                 McEraseBlock2
+    218c     218c      204     1                 McReadPage
+    2390     2390       3c     1                 mcman_sparesize
+    23cc     23cc       fc     1                 mcman_correctdata
+    24c8     24c8       90     1                 McDataChecksum
+    2558     2558       10     1                 mcman_getcnum
+    2568     2568      150     1                 mcman_setdevspec
+    26b8     26b8      380     1                 mcman_setdevinfos
+    2a38     2a38      388     1                 mcman_checkBackupBlocks
+    2dc0     2dc0      30c     1                 McReadDirEntry
+    30cc     30cc      23c     1                 mcman_reportBadBlocks
+    3308     3308      1cc     1                 McCreateDirentry
+    34d4     34d4      2b8     1                 McReadCluster
+    378c     378c      15c     1                 mcman_fatRseek
+    38e8     38e8      140     1                 McGetFATentry
+    3a28     3a28      21c     1                 mcman_fatWseek
+    3c44     3c44       10     1                 mcman_get1stcacheEntp
+    3c54     3c54       6c     1                 mcman_addcacheentry
+    3cc0     3cc0      144     1                 McSetFATentry
+    3e04     3e04      2f8     1                 mcman_cachedirentry
+    40fc     40fc      520     1                 mcman_getdirinfo
+    461c     461c      48c     1                 mcman_writecluster
+    4aa8     4aa8      244     1                 McSetDirEntryState
+    4cec     4cec       14     1                 Mc1stCacheEntSetWrFlagOff
+    4d00     4d00       60     1                 mcman_freecluster
+    4d60     4d60      638     1                 McCheckBlock
+    5398     5398      1d0     1                 mcman_setPS1devinfos
+    5568     5568      330     1                 mcman_cachePS1dirs
+    5898     5898      104     1                 mcman_getPS1direntry
+    599c     599c       d8     1                 mcman_readdirentryPS1
+    5a74     5a74      230     1                 mcman_clearPS1direntry
+    5ca4     5ca4      154     1                 mcman_fatRseekPS1
+    5df8     5df8      108     1                 mcman_fatWseekPS1
+    5f00     5f00      510     1                 mcman_FNC8ca4
+    6410     6410      154     1                 mcman_readclusterPS1
+    6564     6564      168     1                 mcman_PS1pagetest
+    66cc     66cc      19c     1                 mcman_fillPS1backuparea
+    6868     6868        8     1                 McRetOnly
+    6870     6870       54     1                 mcman_getcacheentry
+    68c4     68c4       4c     1                 mcman_getFATindex
+    6910     6910      ad8     1                 mcman_flushcacheentry
+    73e8     73e8       d8     1                 mcman_replaceBackupBlock
+    74c0     74c0      218     1                 mcman_fillbackupblock1
+    76d8     76d8      adc     1                 McReplaceBadBlock
+    81b4     81b4       d4     1                 mcman_clearsuperblock
+    8290     8290     10f8    16         obj/vmcman/iop/vmcman/src/mcdev.o:(.text)
+    8290     8290        8     1                 mc_init
+    8298     8298       34     1                 mcman_ioerrcode
+    82cc     82cc      154     1                 mcman_modloadcb
+    8420     8420       10     1                 mcman_unit2card
+    8430     8430       78     1                 mcman_initdev
+    84a8     84a8       2c     1                 mcman_deinitdev
+    84d4     84d4       30     1                 mc_deinit
+    8504     8504      180     1                 mc_open
+    8684     8684       50     1                 mc_close
+    86d4     86d4       6c     1                 mc_lseek
+    8740     8740       6c     1                 mc_read
+    87ac     87ac       6c     1                 mc_write
+    8818     8818       a4     1                 mc_format
+    88bc     88bc       b8     1                 mc_remove
+    8974     8974      184     1                 mc_mkdir
+    8af8     8af8       b8     1                 mc_rmdir
+    8bb0     8bb0       c8     1                 mc_dopen
+    8c78     8c78       50     1                 mc_dclose
+    8cc8     8cc8       5c     1                 mc_dread
+    8d24     8d24       c4     1                 mc_getstat
+    8de8     8de8      1dc     1                 mc_chstat
+    8fc4     8fc4       38     1                 mc_ioctl
+    8ffc     8ffc      14c     1                 mc_rename
+    9148     9148       38     1                 mc_chdir
+    9180     9180       38     1                 mc_sync
+    91b8     91b8       6c     1                 mc_mount
+    9224     9224       5c     1                 mc_umount
+    9280     9280       28     1                 mc_lseek64
+    92a8     92a8       38     1                 mc_devctl
+    92e0     92e0       38     1                 mc_symlink
+    9318     9318       38     1                 mc_readlink
+    9350     9350       38     1                 mc_ioctl2
+    9390     9390      7b8    16         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.text)
+    9390     9390      1d8     1                 mcman_iomanx_backing_mount
+    9568     9568       7c     1                 mcman_iomanx_backing_clear_slot
+    95e4     95e4       60     1                 mcman_iomanx_backing_umount
+    9644     9644       94     1                 mcman_iomanx_backing_getcardspec
+    96d8     96d8       fc     1                 mcman_iomanx_backing_erase
+    97d4     97d4      160     1                 mcman_iomanx_backing_write
+    9934     9934      214     1                 mcman_iomanx_backing_read
+    9b50     9b50      438    16         obj/vmcman/iop/vmcman/src/mcsio2.o:(.text)
+    9b50     9b50        8     1                 mcman_initPS2com
+    9b58     9b58        8     1                 mcman_deinitPS2com
+    9b60     9b60        8     1                 mcman_initPS1PDAcom
+    9b68     9b68        8     1                 mcman_deinitPS1PDAcom
+    9b70     9b70        8     1                 mcman_cardchanged
+    9b78     9b78      210     1                 mcman_eraseblock
+    9d88     9d88       90     1                 McWritePage
+    9e18     9e18       28     1                 mcman_readpage
+    9e40     9e40       3c     1                 McGetCardSpec
+    9e7c     9e7c        8     1                 mcman_resetauth
+    9e84     9e84       78     1                 mcman_probePS2Card2
+    9efc     9efc       64     1                 mcman_probePS2Card
+    9f60     9f60        8     1                 mcman_probePS1Card2
+    9f68     9f68        8     1                 mcman_probePS1Card
+    9f70     9f70        8     1                 mcman_probePDACard
+    9f78     9f78        8     1                 McWritePS1PDACard
+    9f80     9f80        8     1                 McReadPS1PDACard
+    9f90     9f90     2828    16         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.text)
+    9f90     9f90      67c     1                 mcman_format2
+    a60c     a60c      1c0     1                 mcman_dread2
+    a7cc     a7cc      134     1                 mcman_getstat2
+    a900     a900      37c     1                 mcman_setinfo2
+    ac7c     ac7c      18c     1                 mcman_read2
+    ae08     ae08      210     1                 mcman_write2
+    b018     b018      114     1                 mcman_close2
+    b12c     b12c      aa4     1                 mcman_open2
+    bbd0     bbd0      2bc     1                 mcman_chdir
+    be8c     be8c      44c     1                 mcman_getdir2
+    c2d8     c2d8      19c     1                 mcman_delete2
+    c474     c474      344     1                 mcman_unformat2
+    c7c0     c7c0     11c0    16         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.text)
+    c7c0     c7c0      200     1                 mcman_format1
+    c9c0     c9c0      400     1                 mcman_open1
+    cdc0     cdc0      160     1                 mcman_read1
+    cf20     cf20      1d8     1                 mcman_write1
+    d0f8     d0f8      12c     1                 mcman_close1
+    d224     d224      160     1                 mcman_dread1
+    d384     d384       d8     1                 mcman_getstat1
+    d45c     d45c      1e0     1                 mcman_setinfo1
+    d63c     d63c      240     1                 mcman_getdir1
+    d87c     d87c       64     1                 mcman_delete1
+    d8e0     d8e0       a0     1                 mcman_unformat1
+    d980     d980      1c0    16         obj/vmcman/imports.o:(.text)
+    d994     d994        0     1                 RegisterLibraryEntries
+    d99c     d99c        0     1                 ReleaseLibraryEntries
+    d9a4     d9a4        0     1                 GetLoadcoreInternalData
+    d9c8     d9c8        0     1                 CpuEnableIntr
+    d9d0     d9d0        0     1                 CpuSuspendIntr
+    d9d8     d9d8        0     1                 CpuResumeIntr
+    d9fc     d9fc        0     1                 memcpy
+    da04     da04        0     1                 memset
+    da0c     da0c        0     1                 strcat
+    da14     da14        0     1                 strcmp
+    da1c     da1c        0     1                 strcpy
+    da24     da24        0     1                 strlen
+    da2c     da2c        0     1                 strncmp
+    da34     da34        0     1                 strncpy
+    da58     da58        0     1                 DelayThread
+    da7c     da7c        0     1                 CreateSema
+    da84     da84        0     1                 DeleteSema
+    da8c     da8c        0     1                 SignalSema
+    da94     da94        0     1                 WaitSema
+    dab8     dab8        0     1                 iomanX_AddDrv
+    dac0     dac0        0     1                 iomanX_DelDrv
+    dac8     dac8        0     1                 iomanX_open
+    dad0     dad0        0     1                 iomanX_close
+    dad8     dad8        0     1                 iomanX_lseek
+    dae0     dae0        0     1                 iomanX_read
+    dae8     dae8        0     1                 iomanX_write
+    db0c     db0c        0     1                 sceCdRC
+    db30     db30        0     1                 printf
+       0        0      6c7    16 .rodata
+       0        0      100    16         obj/vmcman/iop/vmcman/src/main.o:(.rodata)
+       0        0      100     1                 mcman_xortable
+     100      100       1c    16         obj/vmcman/iop/vmcman/src/mcdev.o:(.rodata)
+     120      120      5a7    16         <internal>:(.rodata.str1.1)
+  40e227   40e227    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       d0    16 .data
+       0        0        0    16         obj/vmcman/exports.o:(.data)
+       0        0       48    16         obj/vmcman/iop/vmcman/src/main.o:(.data)
+       0        0        8     1                 _irx_id
+       8        8       1d     1                 SUPERBLOCK_MAGIC
+      25       25        8     1                 SUPERBLOCK_VERSION
+      30       30        4     1                 mcman_wr_port
+      34       34        4     1                 mcman_wr_slot
+      38       38        4     1                 mcman_wr_block
+      3c       3c        4     1                 mcman_wr_flag3
+      40       40        4     1                 mcman_curdircluster
+      44       44        4     1                 PS1CardFlag
+      50       50       80    16         obj/vmcman/iop/vmcman/src/mcdev.o:(.data)
+      50       50       14     1                 mcman_mcdev
+      64       64       6c     1                 mcman_mcops
+      d0       d0        0    16         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.data)
+      d0       d0        0    16         obj/vmcman/iop/vmcman/src/mcsio2.o:(.data)
+      d0       d0        0    16         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.data)
+      d0       d0        0    16         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.data)
+      d0       d0        0    16         obj/vmcman/imports.o:(.data)
+  44e300   44e300        0     1 __bss_start = .
+       0        0    1c2f0    16 .bss
+       0        0        0    16         obj/vmcman/exports.o:(.bss)
+       0        0    1bd74    16         obj/vmcman/iop/vmcman/src/main.o:(.bss)
+       0        0     3c00     1                 mcman_devinfos
+    3c00     3c00       90     1                 mcman_fdhandles
+    3c90     3c90      420     1                 mcman_pagebuf
+    40b0     40b0        4     1                 mcman_badblock
+    40b4     40b4      600     1                 mcman_dircache
+    46b4     46b4       80     1                 mcman_pagedata
+    4734     4734      200     1                 mcman_eccdata
+    4934     4934       80     1                 mcman_PS1PDApagebuf
+    49b4     49b4     9000     1                 mcman_cachebuf
+    d9b4     d9b4      240     1                 mcman_entrycache
+    dbf4     dbf4       90     1                 mcman_mccache
+    dc84     dc84        4     1                 pmcman_entrycache
+    dc88     dc88        4     1                 pmcman_mccache
+    dc8c     dc8c     a050     1                 mcman_fatcache
+   17cdc    17cdc        4     1                 mcman_flushcacheentry.clusters_per_block
+   17ce0    17ce0        4     1                 mcman_flushcacheentry.blocksize
+   17ce4    17ce4        4     1                 mcman_flushcacheentry.cardtype
+   17ce8    17ce8        4     1                 mcman_flushcacheentry.pagesize
+   17cec    17cec        4     1                 mcman_flushcacheentry.sparesize
+   17cf0    17cf0        1     1                 mcman_flushcacheentry.flag
+   17cf4    17cf4        4     1                 mcman_flushcacheentry.cluster
+   17cf8    17cf8        4     1                 mcman_flushcacheentry.block
+   17cfc    17cfc        4     1                 mcman_flushcacheentry.pages_per_fatclust
+   17d00    17d00       20     1                 mcman_flushcacheentry.eccbuf
+   17d20    17d20     4000     1                 mcman_backupbuf
+   1bd20    1bd20        4     1                 mcman_badblock_port
+   1bd24    1bd24        4     1                 mcman_badblock_slot
+   1bd28    1bd28       40     1                 mcman_replacementcluster
+   1bd68    1bd68        4     1                 McReadDirEntry.maxent
+   1bd6c    1bd6c        4     1                 McReadDirEntry.__builtin_index
+   1bd70    1bd70        4     1                 McReadDirEntry.clust
+   1bd80    1bd80        8    16         obj/vmcman/iop/vmcman/src/mcdev.o:(.bss)
+   1bd80    1bd80        4     1                 mcman_mc_slot
+   1bd84    1bd84        4     1                 mcman_io_sema
+   1bd90    1bd90       f0    16         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.bss)
+   1bd90    1bd90       f0     1                 mcman_vmc_cardinfo
+   1be80    1be80        0    16         obj/vmcman/iop/vmcman/src/mcsio2.o:(.bss)
+   1be80    1be80      414    16         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.bss)
+   1be80    1be80        8     1                 mcman_fsmodtime.0
+   1be88    1be88      400     1                 mcman_curdirpath
+   1c288    1c288        4     1                 mcman_curdirname
+   1c28c    1c28c        4     1                 mcman_curdirlength
+   1c290    1c290        4     1                 mcman_curdirmaxent
+   1c2a0    1c2a0       44    16         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.bss)
+   1c2a0    1c2a0        4     1                 mcman_PS1curcluster
+   1c2a4    1c2a4       40     1                 mcman_PS1curdir
+   1c2f0    1c2f0        0    16         obj/vmcman/imports.o:(.bss)
+  46a5f0   46a5f0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/vmcman/exports.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/mcdev.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/mcsio2.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.mdebug.abi32)
+       0        0        0     1         obj/vmcman/imports.o:(.mdebug.abi32)
+       0        0     14a0     4 .pdr
+       0        0       20     4         obj/vmcman/exports.o:(.pdr)
+      20       20      aa0     4         obj/vmcman/iop/vmcman/src/main.o:(.pdr)
+     ac0      ac0      400     4         obj/vmcman/iop/vmcman/src/mcdev.o:(.pdr)
+     ec0      ec0       e0     4         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.pdr)
+     fa0      fa0      220     4         obj/vmcman/iop/vmcman/src/mcsio2.o:(.pdr)
+    11c0     11c0      180     4         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.pdr)
+    1340     1340      160     4         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.pdr)
+       0        0      528     4 .rel.pdr
+       0        0        8     4         obj/vmcman/exports.o:(.rel.pdr)
+       8        8      2a8     4         obj/vmcman/iop/vmcman/src/main.o:(.rel.pdr)
+     2b0      2b0      100     4         obj/vmcman/iop/vmcman/src/mcdev.o:(.rel.pdr)
+     3b0      3b0       38     4         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.rel.pdr)
+     3e8      3e8       88     4         obj/vmcman/iop/vmcman/src/mcsio2.o:(.rel.pdr)
+     470      470       60     4         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.rel.pdr)
+     4d0      4d0       58     4         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.rel.pdr)
+       0        0       3f     1 .llvm_addrsig
+       0        0        0     1         obj/vmcman/exports.o:(.llvm_addrsig)
+       0        0       16     1         obj/vmcman/iop/vmcman/src/main.o:(.llvm_addrsig)
+      16       16       1d     1         obj/vmcman/iop/vmcman/src/mcdev.o:(.llvm_addrsig)
+      33       33        1     1         obj/vmcman/iop/vmcman/src/mciomanx_backing.o:(.llvm_addrsig)
+      34       34        0     1         obj/vmcman/iop/vmcman/src/mcsio2.o:(.llvm_addrsig)
+      34       34        8     1         obj/vmcman/iop/vmcman/src/ps2mc_fio.o:(.llvm_addrsig)
+      3c       3c        3     1         obj/vmcman/iop/vmcman/src/ps1mc_fio.o:(.llvm_addrsig)
+      3f       3f        0     1         obj/vmcman/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0     12b0     4 .symtab
+       0        0     12b0     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0     10ab     1 .strtab
+       0        0     10ab     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_exp_mcman                                        obj/vmcman/exports.o
+_start                                            obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+_dummy                                            obj/vmcman/exports.o
+McDetectCard                                      obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McOpen                                            obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McClose                                           obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McRead                                            obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McWrite                                           obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McSeek                                            obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McFormat                                          obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McGetDir                                          obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McDelete                                          obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McFlush                                           obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McChDir                                           obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McSetFileInfo                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McEraseBlock2                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McReadPage                                        obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McWritePage                                       obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McDataChecksum                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+McDetectCard2                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McGetFormat                                       obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+McGetEntSpace                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McReplaceBadBlock                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McCloseAll                                        obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+McReadPS1PDACard                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+McWritePS1PDACard                                 obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+McUnformat                                        obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McRetOnly                                         obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McGetFreeClusters                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McGetMcType                                       obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McSetPS1CardFlag                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McGetModuleInfo                                   obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McGetCardSpec                                     obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+McGetFATentry                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McCheckBlock                                      obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+McSetFATentry                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McReadDirEntry                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+Mc1stCacheEntSetWrFlagOff                         obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McCreateDirentry                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McReadCluster                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+McFlushCache                                      obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+McSetDirEntryState                                obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/exports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+long_multiply                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_chrpos                                      obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+printf                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+CpuEnableIntr                                     obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_initPS2com                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_initPS1PDAcom                               obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_initcache                                   obj/vmcman/iop/vmcman/src/main.o
+mcman_initdev                                     obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_deinitdev                                   obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_deinitPS2com                                obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_deinitPS1PDAcom                             obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_fdhandles                                   obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_devinfos                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+memset                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+_irx_id                                           obj/vmcman/iop/vmcman/src/main.o
+PS1CardFlag                                       obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_findfree2                                   obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_findfree1                                   obj/vmcman/iop/vmcman/src/main.o
+mcman_readdirentryPS1                             obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_wmemset                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_calcEDC                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_checkpath                                   obj/vmcman/iop/vmcman/src/main.o
+mcman_checkdirpath                                obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+strncmp                                           obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+strcmp                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_invhandles                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_detectcard                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_clearcache                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_close2                                      obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_close1                                      obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_probePS2Card2                               obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_probePS2Card                                obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+mcman_open2                                       obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_open1                                       obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_flushcacheentry                             obj/vmcman/iop/vmcman/src/main.o
+mcman_read2                                       obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_read1                                       obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_write2                                      obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_write1                                      obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_getentspace                                 obj/vmcman/iop/vmcman/src/main.o
+mcman_cachedirentry                               obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_getdir2                                     obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_getdir1                                     obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_dread                                       obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_dread2                                      obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_dread1                                      obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_getstat                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_getstat2                                    obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_getstat1                                    obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_setinfo2                                    obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_setinfo1                                    obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_chdir                                       obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_delete2                                     obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_delete1                                     obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_format2                                     obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_format1                                     obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_unformat2                                   obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_unformat1                                   obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_getmcrtime                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+sceCdRC                                           obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+McEraseBlock                                      obj/vmcman/iop/vmcman/src/main.o
+mcman_eraseblock                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_readpage                                    obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_correctdata                                 obj/vmcman/iop/vmcman/src/main.o
+mcman_sparesize                                   obj/vmcman/iop/vmcman/src/main.o
+mcman_getcnum                                     obj/vmcman/iop/vmcman/src/main.o
+mcman_setdevspec                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_setdevinfos                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_pagebuf                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+SUPERBLOCK_MAGIC                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_checkBackupBlocks                           obj/vmcman/iop/vmcman/src/main.o
+mcman_eccdata                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_freecluster                                 obj/vmcman/iop/vmcman/src/main.o
+mcman_reportBadBlocks                             obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_getcacheentry                               obj/vmcman/iop/vmcman/src/main.o
+mcman_addcacheentry                               obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_fatRseek                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_fatWseek                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_get1stcacheEntp                             obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_dircache                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_getdirinfo                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+strlen                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_writecluster                                obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_wr_port                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_wr_slot                                     obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_wr_block                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_wr_flag3                                    obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_setPS1devinfos                              obj/vmcman/iop/vmcman/src/main.o
+mcman_PS1PDApagebuf                               obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_cachePS1dirs                                obj/vmcman/iop/vmcman/src/main.o
+mcman_getPS1direntry                              obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_readclusterPS1                              obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_clearPS1direntry                            obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_fatRseekPS1                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_fatWseekPS1                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_FNC8ca4                                     obj/vmcman/iop/vmcman/src/main.o
+mcman_PS1pagetest                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_fillPS1backuparea                           obj/vmcman/iop/vmcman/src/main.o
+mcman_getFATindex                                 obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mcman_replaceBackupBlock                          obj/vmcman/iop/vmcman/src/main.o
+mcman_fillbackupblock1                            obj/vmcman/iop/vmcman/src/main.o
+mcman_probePS1Card2                               obj/vmcman/iop/vmcman/src/mcsio2.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+mcman_clearsuperblock                             obj/vmcman/iop/vmcman/src/main.o
+strcpy                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+SUPERBLOCK_VERSION                                obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+strcat                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+memcpy                                            obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+mcman_curdircluster                               obj/vmcman/iop/vmcman/src/main.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+mc_init                                           obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_ioerrcode                                   obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_modloadcb                                   obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_unit2card                                   obj/vmcman/iop/vmcman/src/mcdev.o
+iomanX_DelDrv                                     obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+iomanX_AddDrv                                     obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+CreateSema                                        obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+WaitSema                                          obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mc_deinit                                         obj/vmcman/iop/vmcman/src/mcdev.o
+DeleteSema                                        obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mc_open                                           obj/vmcman/iop/vmcman/src/mcdev.o
+SignalSema                                        obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mc_close                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_lseek                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_read                                           obj/vmcman/iop/vmcman/src/mcdev.o
+mc_write                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_format                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_remove                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_mkdir                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_rmdir                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_dopen                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_dclose                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_dread                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_getstat                                        obj/vmcman/iop/vmcman/src/mcdev.o
+mc_chstat                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_ioctl                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_rename                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_chdir                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mc_sync                                           obj/vmcman/iop/vmcman/src/mcdev.o
+mc_mount                                          obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_iomanx_backing_mount                        obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mc_umount                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mcman_iomanx_backing_umount                       obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcdev.o
+mc_lseek64                                        obj/vmcman/iop/vmcman/src/mcdev.o
+mc_devctl                                         obj/vmcman/iop/vmcman/src/mcdev.o
+mc_symlink                                        obj/vmcman/iop/vmcman/src/mcdev.o
+mc_readlink                                       obj/vmcman/iop/vmcman/src/mcdev.o
+mc_ioctl2                                         obj/vmcman/iop/vmcman/src/mcdev.o
+iomanX_open                                       obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+iomanX_lseek                                      obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+iomanX_read                                       obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+iomanX_close                                      obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+mcman_iomanx_backing_getcardspec                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_iomanx_backing_erase                        obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+iomanX_write                                      obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+mcman_iomanx_backing_write                        obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_iomanx_backing_read                         obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+                                                  obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_cardchanged                                 obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_resetauth                                   obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_probePS1Card                                obj/vmcman/iop/vmcman/src/mcsio2.o
+mcman_probePDACard                                obj/vmcman/iop/vmcman/src/mcsio2.o
+strncpy                                           obj/vmcman/imports.o
+                                                  obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+                                                  obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+RegisterLibraryEntries                            obj/vmcman/imports.o
+ReleaseLibraryEntries                             obj/vmcman/imports.o
+GetLoadcoreInternalData                           obj/vmcman/imports.o
+CpuSuspendIntr                                    obj/vmcman/imports.o
+CpuResumeIntr                                     obj/vmcman/imports.o
+DelayThread                                       obj/vmcman/imports.o

@@ -1,0 +1,23 @@
+# build/bin/loader.elf (16444 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+.text	1	AX	84000	15244
+.ctors	1	A	87b90	0
+.init_array	1	A	87b90	0
+.reginfo	1879048198	A	87b90	24
+.MIPS.abiflags	1879048234	A	87ba8	24
+.data	1	AW	87c00	4
+.got	1	AW	87c10	8
+.rodata	1	A	87c80	73
+.sbss	1	A	87d00	0
+.bss	8	AW	87d00	39592
+.shstrtab	3		0	90
+# totals
+# bss (NOBITS)	39592
+# data (AW)	12
+# non-alloc	90
+# rodata (A)	121
+# text (AX)	15244
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x100	0x84000	15616	55208	7
+# PHDR	1879048192	0x3c90	0x87b90	24	24	4
+# PHDR	1879048195	0x3ca8	0x87ba8	24	24	4

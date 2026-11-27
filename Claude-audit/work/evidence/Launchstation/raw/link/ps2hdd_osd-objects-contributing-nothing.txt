@@ -1,0 +1,3 @@
+# Objects on the ps2hdd_osd link line with zero bytes in any allocated output section (from the map)
+build/obj/ps2hdd_osd/iop/ps2hdd_osd/hdd_blkio.o
+# count: 1 of 10 objects on the link line

@@ -1,0 +1,228 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      c78     4 .rel.text
+       0        0      5e8     4         obj/ps2host/iop/ps2host/net_fsys.o:(.rel.text)
+     5e8      5e8      670     4         obj/ps2host/iop/ps2host/net_fio.o:(.rel.text)
+     c58      c58       20     4         obj/ps2host/iop/ps2host/ps2host.o:(.rel.text)
+       0        0       a0     4 .rel.data
+       0        0       a0     4         obj/ps2host/iop/ps2host/net_fsys.o:(.rel.data)
+       0        0     1c14    16 .text
+       0        0      768    16         obj/ps2host/iop/ps2host/net_fsys.o:(.text)
+       0        0       88     1                 fsysInit
+      88       88       58     1                 fsysDestroy
+      e0       e0       2c     1                 dummyFormat
+     10c      10c       84     1                 fsysOpen
+     190      190       78     1                 fsysClose
+     208      208       70     1                 fsysRead
+     278      278       70     1                 fsysWrite
+     2e8      2e8       70     1                 fsysLseek
+     358      358       c8     1                 fsysIoctl
+     420      420       5c     1                 fsysRemove
+     47c      47c       80     1                 fsysMkdir
+     4fc      4fc       50     1                 fsysRmdir
+     54c      54c       74     1                 fsysDopen
+     5c0      5c0       78     1                 fsysDclose
+     638      638       60     1                 fsysDread
+     698      698       2c     1                 dummyGetstat
+     6c4      6c4       2c     1                 dummyChstat
+     6f0      6f0       54     1                 fsysMount
+     744      744       24     1                 fsysUnmount
+     770      770     12a0    16         obj/ps2host/iop/ps2host/net_fio.o:(.text)
+     770      770       48     1                 pko_close_socket
+     7b8      7b8       38     1                 pko_close_fsys
+     7f0      7f0       80     1                 pko_recv_bytes
+     870      870       c8     1                 pko_accept_pkt
+     938      938      130     1                 pko_open_file
+     a68      a68      108     1                 pko_close_file
+     b70      b70      164     1                 pko_lseek_file
+     cd4      cd4      1c8     1                 pko_write_file
+     e9c      e9c      160     1                 pko_read_file
+     ffc      ffc      154     1                 pko_ioctl
+    1150     1150      100     1                 pko_remove
+    1250     1250      10c     1                 pko_mkdir
+    135c     135c      100     1                 pko_rmdir
+    145c     145c      108     1                 pko_open_dir
+    1564     1564      20c     1                 pko_read_dir
+    1770     1770      108     1                 pko_close_dir
+    1878     1878      198     1                 pko_file_serv
+    1a10     1a10       38    16         obj/ps2host/iop/ps2host/ps2host.o:(.text)
+    1a10     1a10       38     1                 _start
+    1a50     1a50      1c4    16         obj/ps2host/imports.o:(.text)
+    1a64     1a64        0     1                 printf
+    1a6c     1a6c        0     1                 puts
+    1a90     1a90        0     1                 memset
+    1a98     1a98        0     1                 memcpy
+    1aa0     1aa0        0     1                 strncpy
+    1ac4     1ac4        0     1                 CreateSema
+    1acc     1acc        0     1                 SignalSema
+    1ad4     1ad4        0     1                 WaitSema
+    1adc     1adc        0     1                 DeleteSema
+    1b00     1b00        0     1                 CreateThread
+    1b08     1b08        0     1                 StartThread
+    1b10     1b10        0     1                 DelayThread
+    1b18     1b18        0     1                 ExitDeleteThread
+    1b3c     1b3c        0     1                 AddDrv
+    1b44     1b44        0     1                 DelDrv
+    1b68     1b68        0     1                 lwip_send
+    1b70     1b70        0     1                 lwip_socket
+    1b78     1b78        0     1                 lwip_listen
+    1b80     1b80        0     1                 lwip_recv
+    1b88     1b88        0     1                 lwip_close
+    1b90     1b90        0     1                 lwip_bind
+    1b98     1b98        0     1                 lwip_accept
+    1bbc     1bbc        0     1                 sceSifInitRpc
+    1be0     1be0        0     1                 CpuEnableIntr
+    1c04     1c04        0     1                 FlushDcache
+       0        0      14e    16 .rodata
+       0        0      14e    16         <internal>:(.rodata.str1.1)
+  401d8e   401d8e    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       70    16 .data
+       0        0       60    16         obj/ps2host/iop/ps2host/net_fsys.o:(.data)
+       0        0       44     1                 fsys_functarray
+      44       44        5     1                 fsname
+      4c       4c       14     1                 fsys_driver
+      60       60        8    16         obj/ps2host/iop/ps2host/net_fio.o:(.data)
+      60       60        4     1                 remote_pc_addr
+      64       64        4     1                 pko_fileio_sock
+      70       70        0    16         obj/ps2host/iop/ps2host/ps2host.o:(.data)
+      70       70        0    16         obj/ps2host/imports.o:(.data)
+  441e00   441e00        0     1 __bss_start = .
+       0        0     2030    16 .bss
+       0        0       14    16         obj/ps2host/iop/ps2host/net_fsys.o:(.bss)
+       0        0        4     1                 remove_flag
+       4        4        4     1                 fsys_sema
+       8        8        4     1                 lastopen_fd
+       c        c        4     1                 renamed_fd
+      10       10        4     1                 remove_result
+      20       20     2010    16         obj/ps2host/iop/ps2host/net_fio.o:(.bss)
+      20       20        1     1                 pko_fileio_active
+      30       30     1000     1                 send_packet
+    1030     1030     1000     1                 recv_packet
+    2030     2030        0    16         obj/ps2host/iop/ps2host/ps2host.o:(.bss)
+    2030     2030        0    16         obj/ps2host/imports.o:(.bss)
+  443e30   443e30        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/ps2host/iop/ps2host/net_fsys.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2host/iop/ps2host/net_fio.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2host/iop/ps2host/ps2host.o:(.mdebug.abi32)
+       0        0        0     1         obj/ps2host/imports.o:(.mdebug.abi32)
+       0        0      4a0     4 .pdr
+       0        0      260     4         obj/ps2host/iop/ps2host/net_fsys.o:(.pdr)
+     260      260      220     4         obj/ps2host/iop/ps2host/net_fio.o:(.pdr)
+     480      480       20     4         obj/ps2host/iop/ps2host/ps2host.o:(.pdr)
+       0        0      128     4 .rel.pdr
+       0        0       98     4         obj/ps2host/iop/ps2host/net_fsys.o:(.rel.pdr)
+      98       98       88     4         obj/ps2host/iop/ps2host/net_fio.o:(.rel.pdr)
+     120      120        8     4         obj/ps2host/iop/ps2host/ps2host.o:(.rel.pdr)
+       0        0       17     1 .llvm_addrsig
+       0        0       15     1         obj/ps2host/iop/ps2host/net_fsys.o:(.llvm_addrsig)
+      15       15        2     1         obj/ps2host/iop/ps2host/net_fio.o:(.llvm_addrsig)
+      17       17        0     1         obj/ps2host/iop/ps2host/ps2host.o:(.llvm_addrsig)
+      17       17        0     1         obj/ps2host/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      630     4 .symtab
+       0        0      630     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0      3f2     1 .strtab
+       0        0      3f2     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+remove_flag                                       obj/ps2host/iop/ps2host/net_fsys.o
+pko_file_serv                                     obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+CreateThread                                      obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+StartThread                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+printf                                            obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+WaitSema                                          obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_close_fsys                                    obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+SignalSema                                        obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+DeleteSema                                        obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_open_file                                     obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+renamed_fd                                        obj/ps2host/iop/ps2host/net_fsys.o
+lastopen_fd                                       obj/ps2host/iop/ps2host/net_fsys.o
+pko_close_file                                    obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_read_file                                     obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_write_file                                    obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_lseek_file                                    obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_ioctl                                         obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_remove                                        obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+remove_result                                     obj/ps2host/iop/ps2host/net_fsys.o
+pko_mkdir                                         obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_rmdir                                         obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_open_dir                                      obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_close_dir                                     obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+pko_read_dir                                      obj/ps2host/iop/ps2host/net_fio.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+fsysMount                                         obj/ps2host/iop/ps2host/net_fsys.o
+                                                  obj/ps2host/iop/ps2host/ps2host.o
+CreateSema                                        obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+DelDrv                                            obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+fsys_driver                                       obj/ps2host/iop/ps2host/net_fsys.o
+AddDrv                                            obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fsys.o
+fsysUnmount                                       obj/ps2host/iop/ps2host/net_fsys.o
+fsys_functarray                                   obj/ps2host/iop/ps2host/net_fsys.o
+pko_close_socket                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_close                                        obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+pko_recv_bytes                                    obj/ps2host/iop/ps2host/net_fio.o
+lwip_recv                                         obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+pko_accept_pkt                                    obj/ps2host/iop/ps2host/net_fio.o
+strncpy                                           obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_send                                         obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+memcpy                                            obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_socket                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_bind                                         obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_listen                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+lwip_accept                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+remote_pc_addr                                    obj/ps2host/iop/ps2host/net_fio.o
+ExitDeleteThread                                  obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+DelayThread                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/net_fio.o
+_start                                            obj/ps2host/iop/ps2host/ps2host.o
+FlushDcache                                       obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/ps2host.o
+CpuEnableIntr                                     obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/ps2host.o
+sceSifInitRpc                                     obj/ps2host/imports.o
+                                                  obj/ps2host/iop/ps2host/ps2host.o
+puts                                              obj/ps2host/imports.o
+memset                                            obj/ps2host/imports.o

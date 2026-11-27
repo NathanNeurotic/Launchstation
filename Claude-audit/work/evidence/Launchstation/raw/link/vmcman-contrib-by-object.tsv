@@ -1,0 +1,10 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/vmcman/iop/vmcman/src/main.o		33160	256	72	0	114036	0	9318	156842
+first-party	build/obj/vmcman/iop/vmcman/src/ps2mc_fio.o		10280	0	0	0	1044	0	2832	14156
+first-party	build/obj/vmcman/iop/vmcman/src/mcdev.o		4344	28	128	0	8	0	2973	7481
+first-party	build/obj/vmcman/iop/vmcman/src/ps1mc_fio.o		4544	0	0	0	68	0	1107	5719
+first-party	build/obj/vmcman/iop/vmcman/src/mciomanx_backing.o		1976	0	0	0	240	0	649	2865
+linker-internal	<internal>		0	1447	0	0	0	0	0	1447
+first-party	build/obj/vmcman/iop/vmcman/src/mcsio2.o		1080	0	0	0	0	0	304	1384
+first-party	build/obj/vmcman/exports.o		248	0	0	0	0	0	440	688
+first-party	build/obj/vmcman/imports.o		448	0	0	0	0	0	0	448

@@ -1,0 +1,4 @@
+# Objects on the wLaunchELF link line with zero bytes in any allocated output section (from the map)
+build-fdata/obj/wLaunchELF/src/icon.o
+build-fdata/obj/_embed/ps2atad_irx.o
+# count: 2 of 175 objects on the link line

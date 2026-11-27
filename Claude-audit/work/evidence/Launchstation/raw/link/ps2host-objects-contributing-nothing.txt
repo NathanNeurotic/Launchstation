@@ -1,0 +1,2 @@
+# Objects on the ps2host link line with zero bytes in any allocated output section (from the map)
+# count: 0 of 4 objects on the link line

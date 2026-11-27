@@ -1,0 +1,270 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-10",
+  "coverage": [
+    {"path": "src/dash_home.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_icons.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_image.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_info.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_jpeg.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_lib.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "Dashboard UI pieces. dash_home.c is the HOME section (hero panel, Continue carousel of pinned/recent/favorite apps, shortcut chips, nested Applications screen). dash_icons.c rasterises every dashboard icon once from signed distance functions into one 512x580 PSMT8 atlas and draws icons with tinting and pad-glyph backings. dash_image.c is the PNG/JPEG viewer (rotate, zoom, pan, fullscreen, slideshow) and dash_jpeg.c the bounded libjpeg decoder that box-downscales into a CT32 texture. dash_info.c holds the scrollable text sheet used by About, Build info, System info and the font viewer, plus the cached console identity summary. dash_lib.c is the application library: friendly naming, sidecar metadata (title.cfg / <ELF>.cfg), the DASHLIB.CNF cache, device label/icon mapping and the background scan run on the dashboard worker.",
+  "reusable_helpers": [
+    {"name": "dashLibPrettyName", "path": "src/dash_lib.c", "line": 106, "what": "derives a friendly program name from an ELF path (known-name table, generic-name fallback to folder, APP_ prefix and underscore cleanup)"},
+    {"name": "dashLibDeviceLabel", "path": "src/dash_lib.c", "line": 167, "what": "maps a device path prefix (mc0, mass, hdd, mmce, smb...) to a human device label"},
+    {"name": "dashLibDeviceIcon", "path": "src/dash_lib.c", "line": 229, "what": "maps a device path prefix to a dashboard icon id"},
+    {"name": "splitPath", "path": "src/dash_lib.c", "line": 341, "what": "splits a PS2 path into directory (with trailing / or :), file name and extensionless base"},
+    {"name": "hashHue", "path": "src/dash_lib.c", "line": 158, "what": "djb2-style string hash reduced to a 0..359 hue"},
+    {"name": "nextField", "path": "src/dash_lib.c", "line": 531, "what": "pops the next '|' separated field of a cache line into a bounded buffer"},
+    {"name": "dashJpegDecode", "path": "src/dash_jpeg.c", "line": 43, "what": "bounded JPEG decode from memory with libjpeg scale_denom plus box downscale into a GS CT32 buffer"},
+    {"name": "dashJpegLoadFile", "path": "src/dash_jpeg.c", "line": 165, "what": "loads a JPEG through the gen* file layer (size-capped) and decodes it"},
+    {"name": "dashShowTextLines", "path": "src/dash_info.c", "line": 127, "what": "shows an array of text lines in a scrollable modal sheet"},
+    {"name": "dashConsoleSummaryText", "path": "src/dash_info.c", "line": 326, "what": "formats model, region, ROM and DVD version into one summary line from cached data"},
+    {"name": "dashIconTint", "path": "src/dash_icons.c", "line": 958, "what": "applies the theme icon tint mode (text, accent, mono) to a colour"},
+    {"name": "dashIconMany", "path": "src/dash_icons.c", "line": 979, "what": "draws many copies of one atlas icon in a single sprite batch"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dash_icons.c: dashHeaderIcon, dashIconsShutdown, dashIconsTexture are never called; the header-icon atlas parts exist only for dashHeaderIcon",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_icons.c", "start": 924, "end": 954},
+        {"path": "src/dash_icons.c", "start": 759, "end": 776},
+        {"path": "src/dash_icons.c", "start": 835, "end": 835},
+        {"path": "src/dash_icons.c", "start": 859, "end": 867},
+        {"path": "src/dash_icons.c", "start": 17, "end": 22},
+        {"path": "include/dash_internal.h", "start": 511, "end": 511},
+        {"path": "include/dash_internal.h", "start": 514, "end": 514}
+      ],
+      "problem": "dashHeaderIcon (939) has no caller and no prototype; dashIconsShutdown (859) and dashIconsTexture (864) appear only in their prototypes. drawHeaderIconPart (925) is called only by dashHeaderIcon, and initHeaderIconParts (761, called at 835) rasterises the two 32px header parts that only drawHeaderIconPart samples, so that atlas space and startup work serve dead code.",
+      "fix": "Delete dashHeaderIcon, drawHeaderIconPart, initHeaderIconParts and its call, dashIconsShutdown, dashIconsTexture and the two prototypes. Optionally set CLIP_ICON_Y to 0 so the margin icons start at the top of the freed column, and update the comment at 17-18.",
+      "justification": "",
+      "benefit": "~60 lines removed. dashHeaderIcon 600 B, dashIconsShutdown 32 B, dashIconsTexture 28 B are already gc-discarded (MEASURED, link/wLaunchELF-gc-discarded-first-party.tsv); initHeaderIconParts is static and still linked into dashIconsInit (INFERRED a few hundred bytes) plus 2048 SDF evaluations at startup.",
+      "benefit_rank": 2,
+      "lines_removed": 60,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep over src/Launchstation (all files incl. tests): dashHeaderIcon only dash_icons.c:939; dashIconsShutdown only dash_icons.c:859 and dash_internal.h:511; dashIconsTexture only dash_icons.c:864 and dash_internal.h:514; drawHeaderIconPart only 925/952/953; initHeaderIconParts only 761/835. appHexagonSdf/appTriangleSdf stay used by DI_APP (393). dashTexDrawQuadUV stays used by dash_image.c:67. evidence/Launchstation/raw/link-raw/wLaunchELF.gc-sections.log lists .text.dashHeaderIcon, .text.dashIconsShutdown, .text.dashIconsTexture as removed."
+    },
+    {
+      "n": 2,
+      "title": "Three hand-rolled case-insensitive prefix compares duplicate strncasecmp (dash_lib.c prefixMatchNoCase and two others)",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_lib.c", "start": 741, "end": 760},
+        {"path": "src/main_exploit_installer.c", "start": 313, "end": 328},
+        {"path": "src/popstarter_path.c", "start": 171, "end": 182}
+      ],
+      "problem": "prefixMatchNoCase (dash_lib.c), starts_with_model (main_exploit_installer.c) and prefixCaseCmp (popstarter_path.c) each loop with wle_ascii_tolower to test a case-insensitive prefix. That is exactly strncasecmp(s, prefix, strlen(prefix)) (or the given length), which newlib provides and the repo already uses (dash_main.c:403, dash_themes.c:910, mmce_card_switch.c:68).",
+      "fix": "Replace the bodies with strncasecmp: in dash_lib.c call !strncasecmp(path, dirs[i], strlen(dirs[i])) inside dirPrefixMatch and delete prefixMatchNoCase; make starts_with_model and prefixCaseCmp one-line strncasecmp calls (or inline them at their callers).",
+      "justification": "",
+      "benefit": "~30 lines removed across three files (INFERRED from cited ranges); a few hundred bytes of duplicated loop code, offset by strncasecmp already being linked (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 28,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_lib.c:741-760, main_exploit_installer.c:313-328, popstarter_path.c:171-182. Grep strncasecmp over src: cloud_http.c:509, dash_main.c:403, dash_themes.c:910, mmce_card_switch.c:68,72, mc_save_export.c:466. Grep prefixMatchNoCase: only dash_lib.c:741,757. prefixCaseCmp callers: popstarter_gameid.c:32,72-74,135,232, popstarter_path.c:210 (all compare against literals with explicit length; return value 0 on match, same as strncasecmp)."
+    },
+    {
+      "n": 3,
+      "title": "dash_lib.c: dashLibShutdown (empty) and dashLibRemove are never called; DashProgressFn typedef unused",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_lib.c", "start": 501, "end": 503},
+        {"path": "src/dash_lib.c", "start": 517, "end": 526},
+        {"path": "include/dash_internal.h", "start": 707, "end": 707},
+        {"path": "include/dash_internal.h", "start": 710, "end": 710},
+        {"path": "include/dash_internal.h", "start": 731, "end": 731}
+      ],
+      "problem": "dashLibShutdown has an empty body and dashLibRemove has no caller; both names appear only in their definitions and prototypes. The DashProgressFn typedef next to them has no user anywhere.",
+      "fix": "Delete both functions, their prototypes and the DashProgressFn typedef.",
+      "justification": "",
+      "benefit": "~16 lines removed; .text.dashLibShutdown 8 B and .text.dashLibRemove 232 B are already gc-discarded, so no ELF change (MEASURED, link/wLaunchELF-gc-discarded-first-party.tsv).",
+      "benefit_rank": 2,
+      "lines_removed": 16,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep dashLibShutdown|dashLibRemove over src/Launchstation (src, include, tests, scripts): only dash_lib.c:501, 517 and dash_internal.h:710, 731. Grep DashProgressFn: only dash_internal.h:707. gc-sections log lists .text.dashLibShutdown and .text.dashLibRemove as removed."
+    },
+    {
+      "n": 4,
+      "title": "dash_icons.c: 64px-grid vs 32px-margin icon geometry is copy-pasted in the rasteriser and in dashIcon/dashIconMany",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_icons.c", "start": 879, "end": 890},
+        {"path": "src/dash_icons.c", "start": 986, "end": 997},
+        {"path": "src/dash_icons.c", "start": 779, "end": 800},
+        {"path": "src/dash_icons.c", "start": 814, "end": 833}
+      ],
+      "problem": "dashIcon and dashIconMany repeat the same 12 lines that pick slot size, atlas origin (marginSlot or grid) and gutter pad by id >= DI_CUT. initClipboardIcons and the loop in dashIconsInit are the same SDF-to-alpha rasteriser, differing only in tile size, origin and the DI_PAD_BADGE light.",
+      "fix": "Add one static helper that returns u0, v0, slot and pad for an id and size, used by both draw functions; rasterise all ids in one loop that picks size and origin by id >= DI_CUT, and delete initClipboardIcons.",
+      "justification": "The helper replaces two identical 12-line blocks and one of two rasteriser loops, so it removes code overall (net ~20 lines).",
+      "benefit": "~20 lines net removed (INFERRED: 2x12 lines replaced by a ~10-line helper, ~10 lines saved by merging the two raster loops); a few hundred bytes of duplicated code (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_icons.c:779-800, 814-833, 869-923, 979-1003. Lines 879-890 and 986-997 are textually identical. marginSlot used at 786, 883, 990 only."
+    },
+    {
+      "n": 5,
+      "title": "dash_home.c: row_anim, col_anim[1] and cam[1] are animated or set but never read",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_home.c", "start": 43, "end": 45},
+        {"path": "src/dash_home.c", "start": 176, "end": 176},
+        {"path": "src/dash_home.c", "start": 354, "end": 367}
+      ],
+      "problem": "row_anim is written at 354 and never read; col_anim[1] is written at 176 and 357 but only col_anim[0] is read (152, 458); cam[1] is never used. homeUpdate loops r over 0..1 with a slot of 0 for row 1 only to update these unused values.",
+      "fix": "Delete row_anim and line 354, turn col_anim and cam into scalars, delete line 176, and replace the loop in homeUpdate with the row-0 body. Update tests/test_home_focus.py:65, which declares col_anim[2], cam[2].",
+      "justification": "",
+      "benefit": "~10 lines removed and one approach call per frame saved (INFERRED); 12 B .bss (row_anim, col_anim[1], cam[1]).",
+      "benefit_rank": 1,
+      "lines_removed": 10,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep row_anim over src/Launchstation: dash_home.c:45, 354 only. Read every use of col_anim/cam in dash_home.c: 43, 44, 152, 153, 154, 155, 176, 357, 365, 457, 458; reads only use index 0. tests/test_home_focus.py:65 re-declares the arrays for its harness."
+    },
+    {
+      "n": 6,
+      "title": "dash_home.c: identical UP/DOWN branches, NULL checks on the const dashAppsScreen callbacks, and geometry computed twice",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_home.c", "start": 267, "end": 278},
+        {"path": "src/dash_home.c", "start": 171, "end": 172},
+        {"path": "src/dash_home.c", "start": 262, "end": 263},
+        {"path": "src/dash_home.c", "start": 349, "end": 350},
+        {"path": "src/dash_home.c", "start": 427, "end": 428},
+        {"path": "src/dash_home.c", "start": 539, "end": 540},
+        {"path": "src/dash_home.c", "start": 150, "end": 155},
+        {"path": "src/dash_home.c", "start": 359, "end": 364},
+        {"path": "src/dash_home.c", "start": 489, "end": 491},
+        {"path": "src/dash_home.c", "start": 505, "end": 508}
+      ],
+      "problem": "The DASH_IN_UP and DASH_IN_DOWN branches of homeInput are identical. dashAppsScreen is a const struct with all five callbacks set (dash_apps.c:799), and dash_files.c:685-687 calls such screens without checks, so the five NULL tests are dead. The Continue-row camera clamp (150-155, 359-364) and the chip width clamp (489-491, 505-508) are each written twice.",
+      "fix": "Test (DASH_IN_UP | DASH_IN_DOWN) in one branch; call dashAppsScreen callbacks directly; compute the camera target in one small static function and the chip width once per chip.",
+      "justification": "",
+      "benefit": "~15 lines removed (INFERRED from the cited ranges).",
+      "benefit_rank": 1,
+      "lines_removed": 15,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_home.c in full. dash_apps.c:799: const DashScreen dashAppsScreen = {appsEnter, appsInput, appsUpdate, appsDraw, appsHints}; dash_internal.h:1020 extern const. dash_files.c:685,687 call dashDevicesGridScreen.enter() / dashFilesListScreen.enter() unchecked."
+    },
+    {
+      "n": 7,
+      "title": "dashHomeRebuild is a forwarding wrapper placed after the end-of-file banner, with a duplicate prototype in dash_apps.c",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_home.c", "start": 558, "end": 565},
+        {"path": "src/dash_apps.c", "start": 12, "end": 12}
+      ],
+      "problem": "dashHomeRebuild only calls the static homeRebuild and sits below the 'End of file' banner. dash_apps.c:12 re-declares it although dash_internal.h:733 already does and dash_apps.c includes that header.",
+      "fix": "Rename homeRebuild to dashHomeRebuild (non-static), delete the wrapper and the duplicate prototype in dash_apps.c, and keep the banner at the real end. tests/test_home_focus.py:80 extracts 'static void homeRebuild(' and must follow the rename.",
+      "justification": "",
+      "benefit": "~6 lines removed; no ELF change (INFERRED: the wrapper is a tail call).",
+      "benefit_rank": 1,
+      "lines_removed": 6,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep dashHomeRebuild: definition dash_home.c:562, prototypes dash_internal.h:733 and dash_apps.c:12, callers dash_apps.c:91,459, dash_main.c:719, dash_settings.c:1781,1810,2259,2590,2601,3291; test stubs only. Grep homeRebuild in tests: test_home_focus.py:80-120 extracts the static function by its signature."
+    },
+    {
+      "n": 8,
+      "title": "DI_RECENT icon is rasterised into the atlas but never drawn",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_icons.c", "start": 726, "end": 732},
+        {"path": "include/dash_internal.h", "start": 486, "end": 486}
+      ],
+      "problem": "DI_RECENT appears only in its enum entry and its iconSdf case; no code passes it (directly or by DI_x + n arithmetic) to dashIcon, dashIconMany or any menu/hint table. It was added with three other icons in commit 26c06e6; the others are used.",
+      "fix": "Delete the DI_RECENT enum entry and its iconSdf case.",
+      "justification": "",
+      "benefit": "~8 lines removed; one 64x64 SDF tile no longer rasterised at boot and a few hundred bytes of iconSdf code (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 8,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Loop over every DI_ name in dash_internal.h:434-506 with git grep -lw over src include igr loader, excluding dash_icons.c and dash_internal.h: only DI_VIEW_CAROUSEL, DI_PAD_BADGE, DI_RECENT unreferenced. DI_VIEW_CAROUSEL is reached via DI_VIEW_GRID + view (dash_apps.c:316, 511); DI_PAD_BADGE is used inside dash_icons.c:828, 899. No arithmetic reaching DI_RECENT found (git grep for DI_x + / + DI_ patterns). Tests do not mention DI_RECENT."
+    },
+    {
+      "n": 9,
+      "title": "dash_image.c / dash_jpeg.c: defaults and NULL checks for states the single caller never produces",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_image.c", "start": 90, "end": 90},
+        {"path": "src/dash_image.c", "start": 96, "end": 104},
+        {"path": "src/dash_jpeg.c", "start": 171, "end": 173}
+      ],
+      "problem": "dashShowImageViewer has one caller (dash_browser.c:752), which passes a fullPath()-built non-empty path and &iv with slide_seconds = 5 (dash_browser.c:744-745); the viewer itself keeps slide_seconds in 1..60. So the empty-path return, the local_state fallback and the slide_seconds<1 reset are dead. dashJpegLoadFile re-checks out and clears *out, which dashJpegDecode does again at 56-58.",
+      "fix": "Delete the NULL/empty path check, local_state and the state NULL/slide_seconds fallback in dashShowImageViewer, and the out check in dashJpegLoadFile.",
+      "justification": "",
+      "benefit": "~11 lines removed (INFERRED); a few dozen bytes of code.",
+      "benefit_rank": 1,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep dashShowImageViewer: dash_image.c:82, dash_internal.h:1108, dash_browser.c:752 only. Read dash_browser.c:740-764 (memset iv, slide_seconds = 5, fullPath gate). Grep dashJpegLoadFile: only dash_image.c:115 (passes &pixels) and a test text assertion."
+    },
+    {
+      "n": 10,
+      "title": "dash_info.c: 'Debug features' block tests UDPTTY/SIO_DEBUG/POWERPC_UART/NO_IOP_RESET, which no build defines",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_info.c", "start": 269, "end": 285}
+      ],
+      "problem": "The block is compiled only when one of four macros is defined. None is set by ps2.yaml or scripts/configure_ds34.py; SIO_DEBUG appears only as a commented-out define (include/launchelf.h:38). The same macro family is tested elsewhere (init.c, launchelf.h:5-10), so it is a manual debug-build switch, not a shipped feature.",
+      "fix": "Delete the block, or delete it together with the rest of the UDPTTY/SIO_DEBUG/POWERPC_UART/NO_IOP_RESET support if the owner retires those debug builds (that wider cleanup belongs to the units owning init.c and launchelf.h).",
+      "justification": "",
+      "benefit": "17 lines removed; no ELF change, the block is never compiled (INFERRED from the build defines).",
+      "benefit_rank": 1,
+      "lines_removed": 17,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Grep SIO_DEBUG|UDPTTY|POWERPC_UART|NO_IOP_RESET in non-.c files: only include/launchelf.h:5-10, 38 (commented define), 157-160, iop/vmcman sources, docs/changes.txt; none in ps2.yaml or scripts. Brief section 2 lists them as undefined by ps2.yaml/configure_ds34.py."
+    },
+    {
+      "n": 11,
+      "title": "dashShowSystemInfo copies cached_console_info into a second static SysInfo",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_info.c", "start": 348, "end": 348},
+        {"path": "src/dash_info.c", "start": 355, "end": 355},
+        {"path": "src/dash_info.c", "start": 359, "end": 371}
+      ],
+      "problem": "static SysInfo job is filled by a plain copy of cached_console_info and then only read; the name is left over from when the identity was produced by a worker job.",
+      "fix": "Delete job and the copy, and read cached_console_info directly at 359-371.",
+      "justification": "",
+      "benefit": "~2 lines and 92 B .bss removed (INFERRED: SysInfo = 25 + 64 + 2 bytes, padded).",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_info.c:300-382. CONSOLE_MODEL_NAME_MAX_LEN is 24 (include/main_console_info.h:6). job is used only at 355, 359, 361, 362, 370, 371."
+    }
+  ]
+}

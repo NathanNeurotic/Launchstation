@@ -1,0 +1,16 @@
+# zero-size sections and ABI metadata (.reginfo, .MIPS.abiflags, .pdr) are left out
+category	file	section	kind	size_bytes
+first-party	build/obj/loader/loader/loader.o	.discard.linker_only	code	172
+first-party	build/obj/loader/loader/loader.o	.text.iRotateThreadReadyQueue	code	32
+first-party	build/obj/loader/loader/loader.o	.text.iSuspendThread	code	32
+first-party	build/obj/loader/loader/loader.o	.text.ExecPS2	code	32
+first-party	build/obj/loader/loader/loader.o	.text.pthread_setcancelstate	code	24
+first-party	build/obj/loader/loader/loader.o	.text.LoadExecPS2	code	16
+first-party	build/obj/loader/loader/loader.o	.text._libcglue_timezone_update	code	8
+first-party	build/obj/loader/loader/loader.o	.text._libcglue_rtc_update	code	8
+first-party	build/obj/loader/loader/loader.o	.text._ps2sdk_fileXio_set_block_size	code	8
+first-party	build/obj/loader/loader/loader.o	.text.InitTLB	code	8
+first-party	build/obj/loader/loader/loader.o	.text._ps2sdk_deinit_timer	code	8
+first-party	build/obj/loader/loader/loader.o	.text.ForTimer_InitAlarm	code	8
+first-party	build/obj/loader/loader/loader.o	.text.__libpthreadglue_init	code	8
+first-party	build/obj/loader/loader/loader.o	.text.__libpthreadglue_deinit	code	8

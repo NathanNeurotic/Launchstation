@@ -1,0 +1,786 @@
+     VMA      LMA     Size Align Out     In      Symbol
+   84000    84000     3b8c    16 .text
+   84000    84000        0     1         _ftext = . 
+   84000    84000       38    16         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.text)
+   84000    84000       38     1                 memcpy
+   84040    84040       2c    16         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.text)
+   84040    84040       2c     1                 memset
+   84070    84070       8c    16         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.text)
+   84070    84070       8c     1                 strncmp
+   84100    84100      ffc    16         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o):(.text)
+   84100    84100       4c     1                 __syscall
+   8411c    8411c        0     1                 _kMode
+   84150    84150       10     1                 ResetEE
+   84160    84160       10     1                 SetGsCrt
+   84170    84170       10     1                 KExit
+   84180    84180       10     1                 _LoadExecPS2
+   84190    84190       10     1                 _ExecPS2
+   841a0    841a0       10     1                 RFU009
+   841b0    841b0       10     1                 AddSbusIntcHandler
+   841c0    841c0       10     1                 RemoveSbusIntcHandler
+   841d0    841d0       10     1                 Interrupt2Iop
+   841e0    841e0       10     1                 SetVTLBRefillHandler
+   841f0    841f0       10     1                 SetVCommonHandler
+   84200    84200       10     1                 SetVInterruptHandler
+   84210    84210       10     1                 AddIntcHandler
+   84220    84220       10     1                 AddIntcHandler2
+   84230    84230       10     1                 RemoveIntcHandler
+   84240    84240       10     1                 AddDmacHandler
+   84250    84250       10     1                 AddDmacHandler2
+   84260    84260       10     1                 RemoveDmacHandler
+   84270    84270       10     1                 _EnableIntc
+   84280    84280       10     1                 _DisableIntc
+   84290    84290       10     1                 _EnableDmac
+   842a0    842a0       10     1                 _DisableDmac
+   842b0    842b0       10     1                 _SetAlarm
+   842c0    842c0       10     1                 SetAlarm
+   842d0    842d0       10     1                 _ReleaseAlarm
+   842e0    842e0       10     1                 ReleaseAlarm
+   842f0    842f0       10     1                 _iEnableIntc
+   84300    84300       10     1                 _iDisableIntc
+   84310    84310       10     1                 _iEnableDmac
+   84320    84320       10     1                 _iDisableDmac
+   84330    84330       10     1                 _iSetAlarm
+   84340    84340       10     1                 iSetAlarm
+   84350    84350       10     1                 _iReleaseAlarm
+   84360    84360       10     1                 iReleaseAlarm
+   84370    84370       10     1                 CreateThread
+   84380    84380       10     1                 DeleteThread
+   84390    84390       10     1                 StartThread
+   843a0    843a0       10     1                 ExitThread
+   843b0    843b0       10     1                 ExitDeleteThread
+   843c0    843c0       10     1                 TerminateThread
+   843d0    843d0       10     1                 iTerminateThread
+   843e0    843e0       10     1                 DisableDispatchThread
+   843f0    843f0       10     1                 EnableDispatchThread
+   84400    84400       10     1                 ChangeThreadPriority
+   84410    84410       10     1                 iChangeThreadPriority
+   84420    84420       10     1                 RotateThreadReadyQueue
+   84430    84430       10     1                 _iRotateThreadReadyQueue
+   84440    84440       10     1                 ReleaseWaitThread
+   84450    84450       10     1                 iReleaseWaitThread
+   84460    84460       10     1                 GetThreadId
+   84470    84470       10     1                 _iGetThreadId
+   84480    84480       10     1                 ReferThreadStatus
+   84490    84490       10     1                 iReferThreadStatus
+   844a0    844a0       10     1                 SleepThread
+   844b0    844b0       10     1                 WakeupThread
+   844c0    844c0       10     1                 _iWakeupThread
+   844d0    844d0       10     1                 CancelWakeupThread
+   844e0    844e0       10     1                 iCancelWakeupThread
+   844f0    844f0       10     1                 SuspendThread
+   84500    84500       10     1                 _iSuspendThread
+   84510    84510       10     1                 ResumeThread
+   84520    84520       10     1                 iResumeThread
+   84530    84530       10     1                 RFU059
+   84540    84540       10     1                 RFU060
+   84550    84550       10     1                 SetupThread
+   84560    84560       10     1                 RFU061
+   84570    84570       10     1                 SetupHeap
+   84580    84580       10     1                 EndOfHeap
+   84590    84590       10     1                 CreateSema
+   845a0    845a0       10     1                 DeleteSema
+   845b0    845b0       10     1                 SignalSema
+   845c0    845c0       10     1                 iSignalSema
+   845d0    845d0       10     1                 WaitSema
+   845e0    845e0       10     1                 PollSema
+   845f0    845f0       10     1                 iPollSema
+   84600    84600       10     1                 ReferSemaStatus
+   84610    84610       10     1                 iReferSemaStatus
+   84620    84620       10     1                 iDeleteSema
+   84630    84630       10     1                 SetOsdConfigParam
+   84640    84640       10     1                 GetOsdConfigParam
+   84650    84650       10     1                 GetGsHParam
+   84660    84660       10     1                 GetGsVParam
+   84670    84670       10     1                 SetGsHParam
+   84680    84680       10     1                 SetGsVParam
+   84690    84690       10     1                 CreateEventFlag
+   846a0    846a0       10     1                 DeleteEventFlag
+   846b0    846b0       10     1                 SetEventFlag
+   846c0    846c0       10     1                 iSetEventFlag
+   846d0    846d0       10     1                 PutTLBEntry
+   846e0    846e0       10     1                 iPutTLBEntry
+   846f0    846f0       10     1                 _SetTLBEntry
+   84700    84700       10     1                 iSetTLBEntry
+   84710    84710       10     1                 GetTLBEntry
+   84720    84720       10     1                 iGetTLBEntry
+   84730    84730       10     1                 ProbeTLBEntry
+   84740    84740       10     1                 iProbeTLBEntry
+   84750    84750       10     1                 ExpandScratchPad
+   84760    84760       10     1                 EnableIntcHandler
+   84770    84770       10     1                 iEnableIntcHandler
+   84780    84780       10     1                 DisableIntcHandler
+   84790    84790       10     1                 iDisableIntcHandler
+   847a0    847a0       10     1                 EnableDmacHandler
+   847b0    847b0       10     1                 iEnableDmacHandler
+   847c0    847c0       10     1                 DisableDmacHandler
+   847d0    847d0       10     1                 iDisableDmacHandler
+   847e0    847e0       10     1                 KSeg0
+   847f0    847f0       10     1                 EnableCache
+   84800    84800       10     1                 DisableCache
+   84810    84810       10     1                 GetCop0
+   84820    84820       10     1                 FlushCache
+   84830    84830       10     1                 CpuConfig
+   84840    84840       10     1                 iGetCop0
+   84850    84850       10     1                 iFlushCache
+   84860    84860       10     1                 RFU105
+   84870    84870       10     1                 iCpuConfig
+   84880    84880       10     1                 sceSifStopDma
+   84890    84890       10     1                 SetCPUTimerHandler
+   848a0    848a0       10     1                 SetCPUTimer
+   848b0    848b0       10     1                 SetOsdConfigParam2
+   848c0    848c0       10     1                 GetOsdConfigParam2
+   848d0    848d0       10     1                 GsGetIMR
+   848e0    848e0       10     1                 iGsGetIMR
+   848f0    848f0       10     1                 GsPutIMR
+   84900    84900       10     1                 iGsPutIMR
+   84910    84910       10     1                 SetPgifHandler
+   84920    84920       10     1                 SetVSyncFlag
+   84930    84930       10     1                 SetSyscall
+   84940    84940       10     1                 _print
+   84950    84950       10     1                 sceSifDmaStat
+   84960    84960       10     1                 isceSifDmaStat
+   84970    84970       10     1                 sceSifSetDma
+   84980    84980       10     1                 isceSifSetDma
+   84990    84990       10     1                 sceSifSetDChain
+   849a0    849a0       10     1                 isceSifSetDChain
+   849b0    849b0       10     1                 sceSifSetReg
+   849c0    849c0       10     1                 sceSifGetReg
+   849d0    849d0       10     1                 _ExecOSD
+   849e0    849e0       10     1                 Deci2Call
+   849f0    849f0       10     1                 PSMode
+   84a00    84a00       10     1                 MachineType
+   84a10    84a10       10     1                 GetMemorySize
+   84a20    84a20       10     1                 _GetGsDxDyOffset
+   84a30    84a30       10     1                 _InitTLB
+   84a40    84a40       10     1                 SetMemoryMode
+   84a50    84a50       10     1                 GetMemoryMode
+   84a60    84a60       10     1                 ChangeGP
+   84a70    84a70        c     1                 SetGP
+   84a7c    84a7c        c     1                 GetGP
+   84a88    84a88       ac     1                 sceSifWriteBackDCache
+   84abc    84abc        0     1                 loop1
+   84ad8    84ad8        0     1                 eight
+   84adc    84adc        0     1                 loop8
+   84b2c    84b2c        0     1                 last
+   84b38    84b38       a4     1                 _SyncDCache
+   84be0    84be0       a4     1                 _InvalidDCache
+   84c84    84c84       14     1                 __errno
+   84c98    84c98      138     1                 strlen
+   84d10    84d10        0     1                 $L14_strlen
+   84d3c    84d3c        0     1                 $L12_strlen
+   84d8c    84d8c        0     1                 $L16_strlen
+   84dac    84dac        0     1                 $L15_strlen
+   84dac    84dac        0     1                 $L9_strlen
+   84dd0    84dd0      1bc     1                 strncpy
+   84df8    84df8        0     1                 $L31_strncpy
+   84e60    84e60        0     1                 $L39_strncpy
+   84ea4    84ea4        0     1                 $L17_strncpy
+   84f00    84f00        0     1                 $L19_strncpy
+   84f34    84f34        0     1                 $L5_strncpy
+   84f38    84f38        0     1                 $L9_strncpy
+   84f60    84f60        0     1                 $L20_strncpy
+   84f68    84f68        0     1                 $L16_strncpy
+   84f84    84f84        0     1                 $L18_strncpy
+   84fb0    84fb0        0     1                 $L5_memcpy
+   84fe8    84fe8        0     1                 $L9_memcpy
+   85008    85008        0     1                 $L2_memcpy
+   8500c    8500c        0     1                 $L20_memcpy
+   85018    85018        0     1                 $L13_memcpy
+   85034    85034        0     1                 $L12_memcpy
+   85078    85078        0     1                 $L12_memset
+   8509c    8509c        0     1                 $L16_memset
+   850a8    850a8        0     1                 $L31_memset
+   850bc    850bc        0     1                 $L2_memset
+   850d8    850d8        0     1                 $L20_memset
+   850f4    850f4        0     1                 $L19_memset
+   85100    85100       6c    16         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.text)
+   85100    85100       6c     1                 strlcpy
+   85170    85170        8     8         obj/loader/loader/loader.o:(.text._libcglue_init)
+   85170    85170        8     1                 _libcglue_init
+   85178    85178        8     8         obj/loader/loader/loader.o:(.text._libcglue_deinit)
+   85178    85178        8     1                 _libcglue_deinit
+   85180    85180        8     8         obj/loader/loader/loader.o:(.text._libcglue_args_parse)
+   85180    85180        8     1                 _libcglue_args_parse
+   85188    85188        8     8         obj/loader/loader/loader.o:(.text._ps2sdk_fileXio_init)
+   85188    85188        8     1                 _ps2sdk_fileXio_init
+   85190    85190        8     8         obj/loader/loader/loader.o:(.text._ps2sdk_fileXio_deinit)
+   85190    85190        8     1                 _ps2sdk_fileXio_deinit
+   85198    85198        8     8         obj/loader/loader/loader.o:(.text.InitAlarm)
+   85198    85198        8     1                 InitAlarm
+   851a0    851a0        8     8         obj/loader/loader/loader.o:(.text.InitThread)
+   851a0    851a0        8     1                 InitThread
+   851a8    851a8       20     8         obj/loader/loader/loader.o:(.text.iWakeupThread)
+   851a8    851a8       20     1                 iWakeupThread
+   851c8    851c8        8     8         obj/loader/loader/loader.o:(.text.InitExecPS2)
+   851c8    851c8        8     1                 InitExecPS2
+   851d0    851d0        8     8         obj/loader/loader/loader.o:(.text.InitTLBFunctions)
+   851d0    851d0        8     1                 InitTLBFunctions
+   851d8    851d8       10     8         obj/loader/loader/loader.o:(.text.Exit)
+   851d8    851d8       10     1                 Exit
+   851e8    851e8        8     8         obj/loader/loader/loader.o:(.text._ps2sdk_init_timer)
+   851e8    851e8        8     1                 _ps2sdk_init_timer
+   851f0    851f0      594     8         obj/loader/loader/loader.o:(.text.main)
+   851f0    851f0      594     1                 main
+   85788    85788      124     8         obj/loader/loader/loader.o:(.text.cleanupDev9ForLaunch)
+   85788    85788      124     1                 cleanupDev9ForLaunch
+   858b0    858b0       50     8         obj/loader/loader/loader.o:(.text.resetIOP)
+   858b0    858b0       50     1                 resetIOP
+   85900    85900      1f0     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text.sceSifBindRpc)
+   85900    85900      1f0     1                 sceSifBindRpc
+   85af0    85af0      2a8     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text.sceSifCallRpc)
+   85af0    85af0      2a8     1                 sceSifCallRpc
+   85d98    85d98      2a0     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text.sceSifInitRpc)
+   85d98    85d98      2a0     1                 sceSifInitRpc
+   86038    86038       ac     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text._request_end)
+   86038    86038       ac     1                 _request_end
+   860e8    860e8       ec     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text._request_bind)
+   860e8    860e8       ec     1                 _request_bind
+   861d8    861d8       a4     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text._request_call)
+   861d8    861d8       a4     1                 _request_call
+   86280    86280       7c     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text._request_rdata)
+   86280    86280       7c     1                 _request_rdata
+   86300    86300       24     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.text.sceSifExitRpc)
+   86300    86300       24     1                 sceSifExitRpc
+   86328    86328       c4     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.sceSifSendCmd)
+   86328    86328       c4     1                 sceSifSendCmd
+   863f0    863f0       c4     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.isceSifSendCmd)
+   863f0    863f0       c4     1                 isceSifSendCmd
+   864b8    864b8      1e8     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text._SifCmdIntHandler)
+   864b8    864b8      1e8     1                 _SifCmdIntHandler
+   866a0    866a0      38c     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.sceSifInitCmd)
+   866a0    866a0      38c     1                 sceSifInitCmd
+   86a30    86a30       44     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.sceSifExitCmd)
+   86a30    86a30       44     1                 sceSifExitCmd
+   86a78    86a78       14     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.change_addr)
+   86a78    86a78       14     1                 change_addr
+   86a90    86a90       24     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.set_sreg)
+   86a90    86a90       24     1                 set_sreg
+   86ab8    86ab8       60     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.sceSifAddCmdHandler)
+   86ab8    86ab8       60     1                 sceSifAddCmdHandler
+   86b18    86b18       20     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.text.sceSifGetSreg)
+   86b18    86b18       20     1                 sceSifGetSreg
+   86b38    86b38      134     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.text.SifLoadFileInit)
+   86b38    86b38      134     1                 SifLoadFileInit
+   86c70    86c70       28     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.text.SifLoadFileExit)
+   86c70    86c70       28     1                 SifLoadFileExit
+   86c98    86c98      204     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.text._SifLoadElfPart)
+   86c98    86c98      204     1                 _SifLoadElfPart
+   86ea0    86ea0       34     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.text.SifLoadElf)
+   86ea0    86ea0       34     1                 SifLoadElf
+   86ed8    86ed8       34     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.text.SifLoadElfEncrypted)
+   86ed8    86ed8       34     1                 SifLoadElfEncrypted
+   86f10    86f10      13c     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o):(.text.SifIopReset)
+   86f10    86f10      13c     1                 SifIopReset
+   87050    87050       28     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o):(.text.SifIopSync)
+   87050    87050       28     1                 SifIopSync
+   87078    87078       38     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.text.DIntr)
+   87078    87078       38     1                 DIntr
+   870b0    870b0       1c     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.text.EIntr)
+   870b0    870b0       1c     1                 EIntr
+   870d0    870d0       78     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.text.EnableDmac)
+   870d0    870d0       78     1                 EnableDmac
+   87148    87148       78     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.text.DisableDmac)
+   87148    87148       78     1                 DisableDmac
+   871c0    871c0      1fc     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text.fileXioInit)
+   871c0    871c0      1fc     1                 fileXioInit
+   873c0    873c0       20     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text._fxio_intr)
+   873c0    873c0       20     1                 _fxio_intr
+   873e0    873e0       f4     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text.fileXioUmount)
+   873e0    873e0       f4     1                 fileXioUmount
+   874d8    874d8       fc     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text.fileXioSync)
+   874d8    874d8       fc     1                 fileXioSync
+   875d8    875d8      1c8     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text.fileXioDevctl)
+   875d8    875d8      1c8     1                 fileXioDevctl
+   877a0    877a0       3c     8         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.text.fxio_ctl_intr)
+   877a0    877a0       3c     1                 fxio_ctl_intr
+   877e0    877e0       8c     8         $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o):(.text.__start)
+   877e0    877e0       8c     1                 __start
+   87870    87870      2d8     8         $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o):(.text._main)
+   87870    87870      2d8     1                 _main
+   87b48    87b48       3c     8         $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o):(.text._InitSys)
+   87b48    87b48       3c     1                 _InitSys
+   87b84    87b84        8     1         QUAD(0)
+   87b90    87b90        0     1 .ctors
+   87b90    87b90        0     1         PROVIDE(__CTOR_LIST__ = .)
+   87b90    87b90        0     1         PROVIDE(__CTOR_END__ = .)
+   87b90    87b90        0     1 .init_array
+   87b90    87b90        0     1         PROVIDE_HIDDEN(__init_array_start = .)
+   87b90    87b90        0     1         PROVIDE_HIDDEN(__init_array_end = .)
+   87b90    87b90       18     4 .reginfo
+   87b90    87b90       18     4         <internal>:(.reginfo)
+   87ba8    87ba8       18     8 .MIPS.abiflags
+   87ba8    87ba8       18     8         <internal>:(.MIPS.abiflags)
+   87c00    87c00        4    16 .data
+   87c00    87c00        0     1         _fdata = . 
+   87c00    87c00        4    16         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o):(.data)
+   87c00    87c00        0     1                 errno
+   87c10    87c10        8    16 .got
+   87c10    87c10        8    16         <internal>:(.got)
+   87c80    87c80       49     4 .rodata
+   87c80    87c80       20     4         obj/loader/loader/loader.o:(.rodata.main)
+   87ca0    87ca0       29     1         <internal>:(.rodata.str1.1)
+   87cc9    87cc9        0     1 _gp = ALIGN(128) + 0x7ff0
+   87cc9    87cc9        0     1 _edata = .
+   87d00    87d00        0     1 .sbss
+   87d00    87d00        0     1         _fbss = . 
+   87d00    87d00     9aa8    64 .bss
+   87d00    87d00     1884    64         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.bss)
+   87d00    87d00       40     1                 _sif_rpc_data
+   87d40    87d40        1     1                 init
+   87d80    87d80      800     1                 pkt_table
+   88580    88580      800     1                 rdata_table
+   88d80    88d80      800     1                 client_table
+   89580    89580        4     1                 HasIopRebootedSinceLastCall._rb_count
+   895c0    895c0      344    64         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.bss)
+   895c0    895c0       40     1                 _sif_cmd_data
+   89600    89600       14     1                 sceSifInitCmd.packet
+   89614    89614        4     1                 sif0_id
+   89640    89640       80     1                 pktbuf
+   896c0    896c0       40     1                 sif_unused
+   89700    89700      180     1                 sys_cmd_handlers
+   89880    89880       80     1                 sregs
+   89900    89900        4     1                 HasIopRebootedSinceLastCall._rb_count
+   89910    89910       2c    16         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.bss)
+   89910    89910       28     1                 _lf_cd
+   89938    89938        4     1                 HasIopRebootedSinceLastCall._rb_count
+   89940    89940       a8    64         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o):(.bss)
+   89940    89940        4     1                 _iop_reboot_count
+   89980    89980       68     1                 SifIopReset.reset_pkt
+   89a00    89a00     7c44    64         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.bss)
+   89a00    89a00       28     1                 __cd0
+   89a28    89a28        4     1                 __lock_sema_id
+   89a2c    89a2c        4     1                 __fileXioCompletionSema
+   89a30    89a30        4     1                 __fileXioBlockMode
+   89a40    89a40     4c00     1                 __sbuff
+   8e640    8e640     3000     1                 __intr_data
+   91640    91640        4     1                 HasIopRebootedSinceLastCall._rb_count
+   91650    91650      148    16         $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o):(.bss)
+   91650    91650        4     1                 args_start
+   91654    91654      144     1                 args
+   91798    91798       10     4         obj/loader/loader/loader.o:(.bss.loadFilePayload.elfdata)
+   91798    91798       10     1                 loadFilePayload.elfdata
+   917a8    917a8        0     1 _end_bss = .
+   917a8    917a8        0     1 _end = . 
+   917a8    917a8        0     1 PROVIDE(_heap_size = -1)
+   917a8    917a8        0     1 PROVIDE(_stack = .)
+   917a8    917a8        0     1 PROVIDE(_stack_size = ORIGIN(bram) + LENGTH(bram) - _stack)
+       0        0        0     1 .mdebug.abiN32
+       0        0        0     1         obj/loader/loader/loader.o:(.mdebug.abiN32)
+       0        0        0     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o):(.mdebug.abiN32)
+       0        0        0     1         $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o):(.mdebug.abiN32)
+       0        0     2740     4 .pdr
+       0        0      440     4         obj/loader/loader/loader.o:(.pdr)
+     440      440       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.pdr)
+     460      460       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.pdr)
+     480      480       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.pdr)
+     4a0      4a0     13a0     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o):(.pdr)
+    1840     1840      260     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o):(.pdr)
+    1aa0     1aa0      1c0     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o):(.pdr)
+    1c60     1c60      2a0     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o):(.pdr)
+    1f00     1f00       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.pdr)
+    1f20     1f20       a0     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o):(.pdr)
+    1fc0     1fc0       80     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o):(.pdr)
+    2040     2040      1c0     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o):(.pdr)
+    2200     2200      4a0     4         $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o):(.pdr)
+    26a0     26a0       60     4         $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o):(.pdr)
+    2700     2700       40     4         $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o):(.pdr)
+       0        0       cc     1 .comment
+       0        0       cc     1         <internal>:(.comment)
+       0        0      218     1 .debug_loc
+       0        0       a5     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.debug_loc)
+      a5       a5       54     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.debug_loc)
+      f9       f9       91     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.debug_loc)
+     18a      18a       8e     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.debug_loc)
+       0        0      1fe     1 .debug_abbrev
+       0        0       85     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.debug_abbrev)
+      85       85       8f     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.debug_abbrev)
+     114      114       66     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.debug_abbrev)
+     17a      17a       84     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.debug_abbrev)
+       0        0      2db     1 .debug_info
+       0        0       c7     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.debug_info)
+      c7       c7       a8     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.debug_info)
+     16f      16f       af     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.debug_info)
+     21e      21e       bd     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.debug_info)
+       0        0      1f8     1 .debug_str
+       0        0      1f8     1         <internal>:(.debug_str)
+       0        0       80     4 .debug_frame
+       0        0       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.debug_frame)
+      20       20       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.debug_frame)
+      40       40       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.debug_frame)
+      60       60       20     4         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.debug_frame)
+       0        0      553     1 .debug_line
+       0        0      142     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o):(.debug_line)
+     142      142      136     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o):(.debug_line)
+     278      278      173     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o):(.debug_line)
+     3eb      3eb      168     1         $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o):(.debug_line)
+       0        0     12f0     4 .symtab
+       0        0     12f0     4         <internal>:(.symtab)
+       0        0       d0     1 .shstrtab
+       0        0       d0     1         <internal>:(.shstrtab)
+       0        0      f72     1 .strtab
+       0        0      f72     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_libcglue_init                                    obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_libcglue_deinit                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_libcglue_args_parse                              obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_ps2sdk_fileXio_init                              obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+_ps2sdk_fileXio_deinit                            obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+InitAlarm                                         obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+InitThread                                        obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+_iRotateThreadReadyQueue                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+iWakeupThread                                     obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+_iWakeupThread                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+_iSuspendThread                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+InitExecPS2                                       obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+_ExecPS2                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+InitTLBFunctions                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+Exit                                              obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+KExit                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+_LoadExecPS2                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+_ps2sdk_init_timer                                obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+main                                              obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+sceSifInitRpc                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+fileXioInit                                       $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+                                                  obj/loader/loader/loader.o
+strncmp                                           $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o)
+                                                  obj/loader/loader/loader.o
+GetMemorySize                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+FlushCache                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+SifLoadFileInit                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  obj/loader/loader/loader.o
+SifLoadElf                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  obj/loader/loader/loader.o
+SifLoadElfEncrypted                               $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  obj/loader/loader/loader.o
+SifLoadFileExit                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  obj/loader/loader/loader.o
+sceSifExitRpc                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+memset                                            $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o)
+                                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+memcpy                                            $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o)
+                                                  obj/loader/loader/loader.o
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+fileXioDevctl                                     $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+                                                  obj/loader/loader/loader.o
+fileXioSync                                       $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+                                                  obj/loader/loader/loader.o
+fileXioUmount                                     $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+                                                  obj/loader/loader/loader.o
+SifIopReset                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+                                                  obj/loader/loader/loader.o
+SifIopSync                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+                                                  obj/loader/loader/loader.o
+__syscall                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ResetEE                                           $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetGsCrt                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RFU009                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+AddSbusIntcHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RemoveSbusIntcHandler                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+Interrupt2Iop                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetVTLBRefillHandler                              $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetVCommonHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetVInterruptHandler                              $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+AddIntcHandler                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+AddIntcHandler2                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RemoveIntcHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+AddDmacHandler                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+AddDmacHandler2                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RemoveDmacHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+_EnableIntc                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_DisableIntc                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_EnableDmac                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_DisableDmac                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_SetAlarm                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetAlarm                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_ReleaseAlarm                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ReleaseAlarm                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_iEnableIntc                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_iDisableIntc                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_iEnableDmac                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_iDisableDmac                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_iSetAlarm                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iSetAlarm                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_iReleaseAlarm                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iReleaseAlarm                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+CreateThread                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DeleteThread                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+StartThread                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ExitThread                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+ExitDeleteThread                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+TerminateThread                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iTerminateThread                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DisableDispatchThread                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+EnableDispatchThread                              $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ChangeThreadPriority                              $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iChangeThreadPriority                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RotateThreadReadyQueue                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ReleaseWaitThread                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iReleaseWaitThread                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetThreadId                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_iGetThreadId                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ReferThreadStatus                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iReferThreadStatus                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SleepThread                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+WakeupThread                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+CancelWakeupThread                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iCancelWakeupThread                               $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SuspendThread                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ResumeThread                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iResumeThread                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RFU059                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RFU060                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetupThread                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RFU061                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetupHeap                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+EndOfHeap                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+CreateSema                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+DeleteSema                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+SignalSema                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+iSignalSema                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+WaitSema                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+PollSema                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+iPollSema                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ReferSemaStatus                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iReferSemaStatus                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iDeleteSema                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetOsdConfigParam                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetOsdConfigParam                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetGsHParam                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetGsVParam                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetGsHParam                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetGsVParam                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+CreateEventFlag                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DeleteEventFlag                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetEventFlag                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iSetEventFlag                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+PutTLBEntry                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iPutTLBEntry                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_SetTLBEntry                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iSetTLBEntry                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetTLBEntry                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iGetTLBEntry                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ProbeTLBEntry                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iProbeTLBEntry                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ExpandScratchPad                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+EnableIntcHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iEnableIntcHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DisableIntcHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iDisableIntcHandler                               $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+EnableDmacHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iEnableDmacHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DisableDmacHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iDisableDmacHandler                               $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+KSeg0                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+EnableCache                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DisableCache                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetCop0                                           $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+CpuConfig                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iGetCop0                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iFlushCache                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+RFU105                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iCpuConfig                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+sceSifStopDma                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+SetCPUTimerHandler                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetCPUTimer                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetOsdConfigParam2                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetOsdConfigParam2                                $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GsGetIMR                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iGsGetIMR                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GsPutIMR                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+iGsPutIMR                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetPgifHandler                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetVSyncFlag                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetSyscall                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_print                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+sceSifDmaStat                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+isceSifDmaStat                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+sceSifSetDma                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+isceSifSetDma                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+sceSifSetDChain                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+isceSifSetDChain                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+sceSifSetReg                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+sceSifGetReg                                      $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+_ExecOSD                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+Deci2Call                                         $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+PSMode                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+MachineType                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_GetGsDxDyOffset                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+_InitTLB                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetMemoryMode                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetMemoryMode                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+ChangeGP                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+SetGP                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+GetGP                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+sceSifWriteBackDCache                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+_SyncDCache                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+_InvalidDCache                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+__errno                                           $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+errno                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+strlen                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+strncpy                                           $SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)
+DIntr                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+EIntr                                             $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+sceSifBindRpc                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+_sif_rpc_data                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+sceSifSendCmd                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+sceSifCallRpc                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+_iop_reboot_count                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+sceSifExitCmd                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+sceSifInitCmd                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+sceSifAddCmdHandler                               $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+sceSifGetSreg                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+isceSifSendCmd                                    $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)
+_sif_cmd_data                                     $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+_SifCmdIntHandler                                 $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+DisableDmac                                       $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+EnableDmac                                        $SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)
+_lf_cd                                            $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+strlcpy                                           $SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+                                                  $SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)
+                                                  $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+_SifLoadElfPart                                   $SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)
+__cd0                                             $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__lock_sema_id                                    $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__fileXioCompletionSema                           $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__fileXioBlockMode                                $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__sbuff                                           $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__intr_data                                       $SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)
+__start                                           $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_fbss                                             loader/linkfile:118
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_end                                              loader/linkfile:133
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_stack                                            loader/linkfile:141
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_stack_size                                       loader/linkfile:142
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_heap_size                                        loader/linkfile:140
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+_InitSys                                          $SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+__CTOR_LIST__                                     loader/linkfile:47
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)
+__CTOR_END__                                      loader/linkfile:52
+                                                  $SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)

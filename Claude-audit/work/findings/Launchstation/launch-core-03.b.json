@@ -1,0 +1,112 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-03.b",
+  "coverage": [
+    {"path": "src/cloud_google.c", "status": "read_full", "note": ""},
+    {"path": "include/cloud_http.h", "status": "read_full", "note": ""},
+    {"path": "src/cloud_http.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "cloud_http.c is the native HTTPS client: Mbed TLS over the ps2ips RPC socket API, with a custom entropy hook (mbedtls_hardware_poll) and ms clock hook (mbedtls_ms_time) required by the Mbed TLS build flags in scripts/build_cloud_tls.sh. It offers a buffered request (cloudHttpRequest, 256 KiB body cap), a streamed upload from an fd, and a streamed download to an fd or RAM with redirects, SHA-256 and an optional Google bearer token restricted to Google hosts. Every request opens a new DNS+TCP+TLS session with Connection: close. cloud_google.c implements the Google OAuth device flow, token storage (WLE-CLOUD.TOK with a .NEW staging copy), Drive folder lookup/creation, resumable uploads keyed by an appProperties SHA-256, the UPLOADED.TXT ledger for per-save .psu versions, the recursive WLE-MMCE-Backups sync, history browsing and verified recovery of .mcd/.ps2/.psu items. All of it runs on the calling thread: the dashboard UI thread under a loading overlay (dash_tools.c) or the IGR boot path (main.c); the updater uses cloud_http.c from the dash worker.",
+  "reusable_helpers": [
+    {"name": "json_string", "path": "src/cloud_google.c", "line": 61, "what": "extracts one JSON string value by key with basic escape decoding (strstr based)"},
+    {"name": "append_url", "path": "src/cloud_google.c", "line": 123, "what": "percent-encodes a string into a bounded buffer (RFC 3986 unreserved set)"},
+    {"name": "json_escape", "path": "src/cloud_google.c", "line": 157, "what": "escapes quotes/backslashes and drops control characters for a JSON string"},
+    {"name": "hash_open_backup", "path": "src/cloud_google.c", "line": 1228, "what": "SHA-256 of an open fd in 16 KB blocks, returned as lowercase hex, rewinds the fd"},
+    {"name": "hash_local_file", "path": "src/cloud_google.c", "line": 1468, "what": "opens a path and returns its SHA-256 hex via hash_open_backup"},
+    {"name": "read_file", "path": "src/cloud_http.c", "line": 272, "what": "reads a whole file (max 256 KB) into a NUL-terminated malloc buffer"},
+    {"name": "split_https_url", "path": "src/cloud_http.c", "line": 753, "what": "splits an https:// URL into host and path"},
+    {"name": "header_value", "path": "src/cloud_http.c", "line": 501, "what": "case-insensitive HTTP header lookup in a CRLF header block"},
+    {"name": "cloud_htons", "path": "src/cloud_http.c", "line": 68, "what": "16-bit byte swap for the port number"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Card-image backups (.mcd/.ps2) bypass the UPLOADED.TXT ledger, so every Drive sync opens one TLS session per already-uploaded snapshot",
+      "category": 5,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 1543, "end": 1549},
+        {"path": "src/cloud_google.c", "start": 1302, "end": 1315},
+        {"path": "src/cloud_google.c", "start": 733, "end": 738},
+        {"path": "src/cloud_http.c", "start": 694, "end": 726},
+        {"path": "tests/test_cloud_upload_ledger.py", "start": 51, "end": 53}
+      ],
+      "problem": "sync_tree consults the ledger only when psu is true (1544). Every already-uploaded WLE-*.mcd/.ps2 is therefore hashed in full (1302) and looked up on Drive (1310 -> drive_find_child -> cloudHttpRequest), and each request does DNS, TCP connect, CA parse, DRBG seed and a full TLS handshake with Connection: close (cloud_http.c:701, 715). This runs on the UI thread under dashLoadingBegin (dash_tools.c:360-363, 676-679) and in the IGR boot path (main.c:198); the default history depth is 10 per card (dash_store.c:260).",
+      "fix": "Delete the psu && condition at line 1544 so card images use the same ledger as .psu files (hash, ledger hit skips; miss validates and uploads with the known digest, then records the line). Update the assertion in tests/test_cloud_upload_ledger.py:51-53 and the UPLOADED.TXT paragraph in docs/NATIVE_CLOUD.md. Retention pruning only looks at WLE- names (mmce_backup.c:132), so an UPLOADED.TXT in card folders is harmless.",
+      "justification": "",
+      "benefit": "One HTTPS session (DNS+TCP+TLS handshake+request) saved per old card snapshot per sync, e.g. 2 cards x 10 kept = 20 sessions per sync on the UI/IGR path (INFERRED; handshake time on the EE not measured). The 8 MB re-hash per image remains.",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read sync_tree 1485-1579 and drive_upload_file 1270-1367: non-psu files skip the ledger, are validated (header-only, mc_card_export.c:218-222 -> source_info 173-203), hashed at 1302 and looked up at 1310. cloud_http.c request_open 694-726 calls tls_open (377-477) per request. Grep UPLOADED|upload_ledger: only cloud_google.c, docs/NATIVE_CLOUD.md:147-152, tests/test_cloud_upload_ledger.py (line 6 says the ledger must never be consulted for card images; no reason given; commit de11ede message gives none either). Grep 'WLE-' in mmce_backup.c: is_history name filter at 132. dash_store.c:260 default keep 10. The comment at cloud_google.c:1387-1388 itself states every Drive lookup is its own TLS session."
+    },
+    {
+      "n": 2,
+      "title": "cloudGoogleSyncBackupRoot fetches the Drive access token once and never refreshes it; a sync longer than the token lifetime aborts with HTTP 401",
+      "category": 6,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 1626, "end": 1633},
+        {"path": "src/cloud_google.c", "start": 389, "end": 400},
+        {"path": "src/cloud_google.c", "start": 739, "end": 743},
+        {"path": "src/cloud_google.c", "start": 1561, "end": 1567}
+      ],
+      "problem": "The access token is obtained once (1626) and its expires_in is ignored (389-400); every later Drive call reuses it. Google access tokens last about one hour, and the first 401 makes drive_find_child fail (739-743), which aborts the whole recursive sync (1518-1524, 1563-1567). A first sync of a large history reads each 8 MB image twice (hash at 1302, upload at cloud_http.c:805-815) plus TLS work, so it can pass the one-hour mark.",
+      "fix": "Remember Timer() when refresh_access_token succeeds and, at the top of each sync_tree entry, call refresh_access_token again when the token is older than about 50 minutes.",
+      "justification": "Without it a big first sync cannot finish in one run and fails after an hour of work with an opaque 'Drive list returned HTTP 401'. A timestamp check is about 5 lines, needs no retry logic, and touches only the long-running sync.",
+      "benefit": "Large first syncs complete in one run (INFERRED: at ~1 MB/s USB reads, two reads per 8 MB image is ~16 s, so roughly 225 images per hour before the token expires).",
+      "benefit_rank": 2,
+      "lines_removed": -5,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Grep refresh_access_token over src/: called only at 858, 1026, 1134, 1626 (once per top-level operation). Grep '401' and 'expires_in' over src/: no 401 handling anywhere; expires_in is read only for the device code (611). sync_tree 1485-1579 has no token handling. Throughput figures are estimates, not measured."
+    },
+    {
+      "n": 3,
+      "title": "cloudGoogleRecoverSnapshot copies a .mcd download to a stage file (8 MB write, 24 MB read) yet never checks the written file against the digest",
+      "category": 5,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 1051, "end": 1076},
+        {"path": "src/cloud_http.c", "start": 863, "end": 866},
+        {"path": "src/mc_card_export.c", "start": 315, "end": 337},
+        {"path": "src/cloud_google.c", "start": 1158, "end": 1169}
+      ],
+      "problem": "The SHA-256 is computed on bytes as they arrive (cloud_http.c:863), not on the file written. For a .mcd, mcCardBackupNoEcc(download, stage) (1062) then writes an 8 MB copy and reads source and copy back (mc_card_export.c:315-337, each 64 KB chunk reopening the file), which only proves stage equals download; a bad write of the download is never caught. The .psu path (1166) already publishes its download by rename and has the same on-disk gap.",
+      "fix": "After the download, hash the written file with hash_local_file and compare it with snapshot->sha256 (and version->sha256 for .psu). For .mcd rename download to result directly, as cloudGoogleRecoverSaveVersion does; keep mcCardImportPcsx2 only for .ps2. Update tests/test_cloud_recovery.py:58-59.",
+      "justification": "The added hash read replaces the .mcd copy-and-compare, so it is less I/O, and it verifies the bytes that are actually published instead of only stage==download.",
+      "benefit": "Per .mcd recovery: 8 MB write and 16 MB read less and ~512 fewer open/close calls (INFERRED: 8 MB / 64 KB = 128 chunks x 2 files x 2 passes); published file checked against Drive's digest. About 0 net lines.",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read cloudGoogleRecoverSnapshot 982-1090, cloudGoogleRecoverSaveVersion 1092-1182, download_write cloud_http.c:840-869 (digest updated from the data pointer after genWrite), mcCardBackupNoEccImpl mc_card_export.c:298-351 and read_exact_at/write_exact_at 87-130 (open, seek, read/write, close per call; MC_EXPORT_IN = 64 KB at line 17). mcCardValidateNoEcc (218-222) only checks the 64-byte header and file size. tests/test_cloud_recovery.py:58-59 assert the current stage flow."
+    },
+    {
+      "n": 4,
+      "title": "Drive history paging rejects page tokens over 240 characters although next_page_token keeps 255, and longer tokens are truncated silently",
+      "category": 6,
+      "locations": [
+        {"path": "src/cloud_google.c", "start": 890, "end": 902},
+        {"path": "src/cloud_google.c", "start": 913, "end": 914},
+        {"path": "include/cloud_google.h", "start": 56, "end": 56},
+        {"path": "src/dash_tools.c", "start": 1273, "end": 1273}
+      ],
+      "problem": "json_string stores nextPageToken into a 256-byte field (913-914, cloud_google.h:56) and truncates longer values without telling the caller. dash_tools passes it back (1273), and the request then refuses any token longer than 240 characters (892-895). A token of 241 characters or more shows 'Next page', but that page always fails with 'Invalid cloud-history pagination token'. Folders with more than 12 entries are affected. Whether Google issues tokens this long was not verified.",
+      "fix": "Delete the 240-character check at 892-895: append_url already bounds the URL, and the 2304-byte path has room (base path at most ~352 bytes + 11 + 3 x 255 = 1128). If Google tokens can be longer than 255, enlarge next_page_token and dash_tools' token[256] together.",
+      "justification": "",
+      "benefit": "Paging works for every token that fits the buffer; 4 lines removed (INFERRED path arithmetic from the format string at 884-887 and drive_safe_id ids < 192 chars).",
+      "benefit_rank": 1,
+      "lines_removed": 4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Low",
+      "basis": "INFERRED",
+      "evidence": "Read cloudGoogleListBackupHistory 839-917, json_string 61-107 (copies at most out_size-1 and returns 1), include/cloud_google.h:54-59, dash_tools.c cloudBrowseHistory 1191-1355 (token[256] at 1194, copied from page->next_page_token at 1273). Path arithmetic: fixed format text 115 chars + encoded query <= 237 (id is alnum/-/_ only, 7 encoded fixed chars). Real Google token length is the unverified part."
+    }
+  ]
+}

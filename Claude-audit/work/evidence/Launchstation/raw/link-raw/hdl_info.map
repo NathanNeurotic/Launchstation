@@ -1,0 +1,221 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      5c8     4 .rel.text
+       0        0       28     4         obj/hdl_info/exports.o:(.rel.text)
+      28       28      120     4         obj/hdl_info/iop/hdl_info/main.o:(.rel.text)
+     148      148      260     4         obj/hdl_info/iop/hdl_info/hdd.o:(.rel.text)
+     3a8      3a8       98     4         obj/hdl_info/iop/hdl_info/apa.o:(.rel.text)
+     440      440      188     4         obj/hdl_info/iop/hdl_info/hdl.o:(.rel.text)
+       0        0     141c    16 .text
+       0        0       34    16         obj/hdl_info/exports.o:(.text)
+       0        0        0     1                 _exp_hdl_srv
+      2c       2c        8     1                 _retonly
+      40       40      1ec    16         obj/hdl_info/iop/hdl_info/main.o:(.text)
+      40       40        8     1                 shutdown
+      48       48       98     1                 _start
+      e0       e0       74     1                 rpcMainThread
+     154      154       54     1                 rpcCommandHandler
+     1a8      1a8       48     1                 malloc
+     1f0      1f0       3c     1                 free
+     230      230      550    16         obj/hdl_info/iop/hdl_info/hdd.o:(.text)
+     230      230       e4     1                 hio_iop_probe
+     314      314       8c     1                 iop_alloc
+     3a0      3a0      168     1                 HdlGetGameInfo
+     508      508      164     1                 HdlRenameGame
+     66c      66c       14     1                 iop_stat
+     680      680       54     1                 iop_read
+     6d4      6d4       58     1                 iop_write
+     72c      72c        c     1                 iop_flush
+     738      738       20     1                 iop_close
+     758      758       28     1                 iop_poweroff
+     780      780      434    16         obj/hdl_info/iop/hdl_info/apa.o:(.text)
+     780      780       28     1                 apa_partition_checksum
+     7a8      7a8       10     1                 get_u32
+     7b8      7b8       64     1                 apa_ptable_free
+     81c      81c      208     1                 apa_ptable_read_ex
+     a24      a24       18     1                 get_u16
+     a3c      a3c      15c     1                 apa_part_add
+     b98      b98        c     1                 set_u32
+     ba4      ba4       10     1                 set_u16
+     bc0      bc0      6b0    16         obj/hdl_info/iop/hdl_info/hdl.o:(.text)
+     bc0      bc0       40     1                 hdl_glist_free
+     c00      c00      240     1                 hdl_glist_read
+     e40      e40      158     1                 hdl_ginfo_read
+     f98      f98      2d8     1                 hdl_glist_write
+    1270     1270      1ac    16         obj/hdl_info/imports.o:(.text)
+    1284     1284        0     1                 sceAtaInit
+    128c     128c        0     1                 sceAtaDmaTransfer
+    1294     1294        0     1                 sceAtaFlushCache
+    12b8     12b8        0     1                 Dev9CardStop
+    12dc     12dc        0     1                 sceSifInitRpc
+    12e4     12e4        0     1                 sceSifSetRpcQueue
+    12ec     12ec        0     1                 sceSifRegisterRpc
+    12f4     12f4        0     1                 sceSifRpcLoop
+    1318     1318        0     1                 printf
+    133c     133c        0     1                 strcmp
+    1344     1344        0     1                 strcpy
+    134c     134c        0     1                 memset
+    1354     1354        0     1                 memcpy
+    135c     135c        0     1                 memcmp
+    1380     1380        0     1                 AllocSysMemory
+    1388     1388        0     1                 FreeSysMemory
+    13ac     13ac        0     1                 GetThreadId
+    13b4     13b4        0     1                 CreateThread
+    13bc     13bc        0     1                 StartThread
+    13e0     13e0        0     1                 CpuSuspendIntr
+    13e8     13e8        0     1                 CpuResumeIntr
+    140c     140c        0     1                 PoweroffShutdown
+       0        0       c3    16 .rodata
+       0        0       c3    16         <internal>:(.rodata.str1.1)
+  401503   401503    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0        0    16 .data
+       0        0        0    16         obj/hdl_info/exports.o:(.data)
+       0        0        0    16         obj/hdl_info/iop/hdl_info/main.o:(.data)
+       0        0        0    16         obj/hdl_info/iop/hdl_info/hdd.o:(.data)
+       0        0        0    16         obj/hdl_info/iop/hdl_info/apa.o:(.data)
+       0        0        0    16         obj/hdl_info/iop/hdl_info/hdl.o:(.data)
+       0        0        0    16         obj/hdl_info/imports.o:(.data)
+  441510   441510        0     1 __bss_start = .
+       0        0     1080    16 .bss
+       0        0        0    16         obj/hdl_info/exports.o:(.bss)
+       0        0     1070    16         obj/hdl_info/iop/hdl_info/main.o:(.bss)
+       0        0       18     1                 Rpc_Queue
+      20       20       44     1                 Rpc_Server
+      70       70     1000     1                 Rpc_Buffer
+    1070     1070        8    16         obj/hdl_info/iop/hdl_info/hdd.o:(.bss)
+    1070     1070        4     1                 games
+    1074     1074        4     1                 hio
+    1080     1080        0    16         obj/hdl_info/iop/hdl_info/apa.o:(.bss)
+    1080     1080        0    16         obj/hdl_info/iop/hdl_info/hdl.o:(.bss)
+    1080     1080        0    16         obj/hdl_info/imports.o:(.bss)
+  442590   442590        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/hdl_info/exports.o:(.mdebug.abi32)
+       0        0        0     1         obj/hdl_info/iop/hdl_info/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/hdl_info/iop/hdl_info/hdd.o:(.mdebug.abi32)
+       0        0        0     1         obj/hdl_info/iop/hdl_info/apa.o:(.mdebug.abi32)
+       0        0        0     1         obj/hdl_info/iop/hdl_info/hdl.o:(.mdebug.abi32)
+       0        0        0     1         obj/hdl_info/imports.o:(.mdebug.abi32)
+       0        0      3a0     4 .pdr
+       0        0       20     4         obj/hdl_info/exports.o:(.pdr)
+      20       20       c0     4         obj/hdl_info/iop/hdl_info/main.o:(.pdr)
+      e0       e0      140     4         obj/hdl_info/iop/hdl_info/hdd.o:(.pdr)
+     220      220      100     4         obj/hdl_info/iop/hdl_info/apa.o:(.pdr)
+     320      320       80     4         obj/hdl_info/iop/hdl_info/hdl.o:(.pdr)
+       0        0       e8     4 .rel.pdr
+       0        0        8     4         obj/hdl_info/exports.o:(.rel.pdr)
+       8        8       30     4         obj/hdl_info/iop/hdl_info/main.o:(.rel.pdr)
+      38       38       50     4         obj/hdl_info/iop/hdl_info/hdd.o:(.rel.pdr)
+      88       88       40     4         obj/hdl_info/iop/hdl_info/apa.o:(.rel.pdr)
+      c8       c8       20     4         obj/hdl_info/iop/hdl_info/hdl.o:(.rel.pdr)
+       0        0        d     1 .llvm_addrsig
+       0        0        0     1         obj/hdl_info/exports.o:(.llvm_addrsig)
+       0        0        5     1         obj/hdl_info/iop/hdl_info/main.o:(.llvm_addrsig)
+       5        5        8     1         obj/hdl_info/iop/hdl_info/hdd.o:(.llvm_addrsig)
+       d        d        0     1         obj/hdl_info/iop/hdl_info/apa.o:(.llvm_addrsig)
+       d        d        0     1         obj/hdl_info/iop/hdl_info/hdl.o:(.llvm_addrsig)
+       d        d        0     1         obj/hdl_info/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      510     4 .symtab
+       0        0      510     4         <internal>:(.symtab)
+       0        0       8a     1 .shstrtab
+       0        0       8a     1         <internal>:(.shstrtab)
+       0        0      33b     1 .strtab
+       0        0      33b     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_exp_hdl_srv                                      obj/hdl_info/exports.o
+_start                                            obj/hdl_info/iop/hdl_info/main.o
+                                                  obj/hdl_info/exports.o
+_retonly                                          obj/hdl_info/exports.o
+shutdown                                          obj/hdl_info/iop/hdl_info/main.o
+                                                  obj/hdl_info/exports.o
+HdlRenameGame                                     obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/exports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+printf                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+rpcMainThread                                     obj/hdl_info/iop/hdl_info/main.o
+CreateThread                                      obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+StartThread                                       obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+sceSifInitRpc                                     obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+GetThreadId                                       obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+sceSifSetRpcQueue                                 obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+rpcCommandHandler                                 obj/hdl_info/iop/hdl_info/main.o
+sceSifRegisterRpc                                 obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+sceSifRpcLoop                                     obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+HdlGetGameInfo                                    obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+malloc                                            obj/hdl_info/iop/hdl_info/main.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+CpuSuspendIntr                                    obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+AllocSysMemory                                    obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+CpuResumeIntr                                     obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+free                                              obj/hdl_info/iop/hdl_info/main.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+FreeSysMemory                                     obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/main.o
+hio_iop_probe                                     obj/hdl_info/iop/hdl_info/hdd.o
+sceAtaInit                                        obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+hdl_glist_free                                    obj/hdl_info/iop/hdl_info/hdl.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+hdl_glist_read                                    obj/hdl_info/iop/hdl_info/hdl.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+strcmp                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+strcpy                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+hdl_glist_write                                   obj/hdl_info/iop/hdl_info/hdl.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+sceAtaDmaTransfer                                 obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+sceAtaFlushCache                                  obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+Dev9CardStop                                      obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+PoweroffShutdown                                  obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/hdd.o
+apa_partition_checksum                            obj/hdl_info/iop/hdl_info/apa.o
+get_u32                                           obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+apa_ptable_free                                   obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+apa_ptable_read_ex                                obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+memset                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+memcmp                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/apa.o
+get_u16                                           obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+memcpy                                            obj/hdl_info/imports.o
+                                                  obj/hdl_info/iop/hdl_info/apa.o
+                                                  obj/hdl_info/iop/hdl_info/hdl.o
+set_u32                                           obj/hdl_info/iop/hdl_info/apa.o
+set_u16                                           obj/hdl_info/iop/hdl_info/apa.o

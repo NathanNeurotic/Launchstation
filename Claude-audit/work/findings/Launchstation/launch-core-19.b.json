@@ -1,0 +1,80 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-19.b",
+  "coverage": [
+    {"path": "src/filer_browser.c", "status": "read_full", "note": ""},
+    {"path": "include/filer_copy.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "src/filer_browser.c holds two things. The first is the classic uLE file browser: getFilePath/browseFilePath with the R1 operation menu, PathPad_menu and BrowserModePopup. docs/dashboard.md:96-97 says no dashboard entry point opens it any more; the only route found is main.c:240 (IGR after-path set to a MISC path). The second is a set of live helpers used by the dashboard File Browser (dash_browser.c): filerMenuEnables (which operations are allowed), the PSU paste classification and label, the shared paste engine subfunc_Paste/filerPasteModeInto/filerPsuPasteInto (clipboard globals, transfer-stack preparation, waiting for the source device after an IOP reset, copy loop, move finish, kept/skipped notes), filerMountVmc/filerUnmountVmc, filerCreateFolderIcon, filerFreeSpace and filerLaunchElfFolder. All the dashboard calls run on the UI thread with the worker idle (dash_browser.c:791-798), except filerFreeSpace, which a listing job calls (dash_browser.c:316). include/filer_copy.h declares the paste diagnostic, move-tracking and game-title helpers implemented in src/filer_copy.c.",
+  "reusable_helpers": [
+    {"name": "filerLaunchElfFolder", "path": "src/filer_browser.c", "line": 2517, "what": "turns LaunchElfDir into a browsable path (inserts the '/' after the device colon and adds a trailing '/')"},
+    {"name": "filerFreeSpace", "path": "src/filer_browser.c", "line": 2466, "what": "free bytes of the device holding a path (memory card, xfrom, HDD/DVRP PFS partition via PFSCTL devctl)"},
+    {"name": "filerMountVmc", "path": "src/filer_browser.c", "line": 2347, "what": "mounts a VMC image as vmc0:/vmc1: with length check, vmcman load and PFS index bookkeeping"},
+    {"name": "filerCreateFolderIcon", "path": "src/filer_browser.c", "line": 2420, "what": "writes icon.sys and icon.icn into a folder, asking before overwriting"},
+    {"name": "makeDeviceRootPath", "path": "src/filer_browser.c", "line": 150, "what": "static: extracts 'dev:' or 'dev:/' root from a full path"},
+    {"name": "formatBrowserTimestamp", "path": "src/filer_browser.c", "line": 1067, "what": "static: PS2TIME to local 'time date' text using the clock format settings"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "waitUntilTimer/hddHeaderDelay spin on Timer() with an empty loop body instead of sleeping",
+      "category": 5,
+      "locations": [
+        {"path": "src/filer_browser.c", "start": 120, "end": 124},
+        {"path": "src/filer_browser.c", "start": 256, "end": 260},
+        {"path": "src/hdd_header_injector.c", "start": 91, "end": 98}
+      ],
+      "problem": "waitForClipboardSourceDevice (filer_browser.c:240-264) runs after an IOP reset since the copy. Between probes it busy-waits up to 1 s per probe, 6 s in total, in an empty while loop. It runs on the UI thread: dash_browser.c opPaste -> filerPasteModeInto -> subfunc_Paste:2179. The EE runs at 100% and no lower-priority thread can run. hddHeaderDelay is the same empty spin, used between source polls at hdd_header_injector.c:315 and :419.",
+      "fix": "Delete both helpers. Between probes call DelayThread(SOURCE_DEVICE_WAIT_INTERVAL_MS * 1000), and DelayThread(HDD_HEADER_SOURCE_POLL_MS * 1000) in the injector. The loops already check the deadline, so the next_check clamp at 257-259 can go too.",
+      "justification": "",
+      "benefit": "About 12 lines removed (two 4-8 line helpers plus the clamp). The CPU is free during waits of up to 6 s. The UI looks the same, because the thread is blocked either way (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 12,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer_browser.c:120-124 and 240-264, and hdd_header_injector.c:91-98 and the grep hits at :315 and :419. grep for waitUntilTimer and hddHeaderDelay finds only those call sites. timer.c:8-11: Timer() reads GetTimerSystemTime, which does not block. dash_browser.c:791-798 (prepareOp: 'classic file operations run on the UI thread with the worker idle') and 877-895 (opPaste -> filerPasteModeInto). DelayThread is already used for waits, for example init.c:1601-1602."
+    },
+    {
+      "n": 2,
+      "title": "subfunc_Paste shows an 'incompatible drivers' error twice, the first time as a Yes/Cancel confirmation",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer_browser.c", "start": 2165, "end": 2171}
+      ],
+      "problem": "When prepareTransferDeviceStacks returns TRANSFER_STACK_INCOMPATIBLE, subfunc_Paste first calls ynDialog with the error text and then puts the same text in mess. Examples: mx4sio<->mc1, udpfs<->smb, udpfs<->host, PC-card CF with DEV9 (filer_device.c:184-199). In the dashboard, ynDialog is classicYesNo, a 'Please confirm' modal with Yes/Cancel (dash_widgets.c:626-632, installed at :672 and dash_main.c:1358). After that, opPaste sees fb.msg set and shows a second 'Paste failed' modal (dash_browser.c:898-899, showPasteFailure).",
+      "fix": "Delete the ynDialog call at 2167. The message in mess is already shown: by showPasteFailure in the dashboard, and in the header in the classic browser.",
+      "justification": "",
+      "benefit": "1 line removed. One modal per failed paste instead of a misleading Yes/Cancel prompt followed by the real error (READ).",
+      "benefit_rank": 1,
+      "lines_removed": 1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer_browser.c:2147-2277. filer_device.c:182-199 lists the INCOMPATIBLE returns. gui.c:18-19: ynDialog defers to ynDialogOverride. dash_widgets.c:626-632 (classicYesNo -> dashModalConfirm 'Please confirm' ... 'Yes') and 670-674 (install). dash_main.c:1358 calls dashClassicUiInstall(1) at DashRun. dash_browser.c:877-903: opPaste calls filerPasteModeInto, then showPasteFailure when fb.msg is non-empty. tests/test_psu_extract_to_mc.py:53-55 only asserts the snprintf(mess, MAX_PATH, ...) line inside this block, so deleting the ynDialog keeps it passing."
+    },
+    {
+      "n": 3,
+      "title": "Classic browser R1 handlers: GetSize prints an unterminated sizeC buffer, and NEWICON's DoneIcon copies a possibly uninitialised tmp1",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer_browser.c", "start": 2124, "end": 2131},
+        {"path": "src/filer_browser.c", "start": 1462, "end": 1464},
+        {"path": "src/filer_browser.c", "start": 1498, "end": 1499}
+      ],
+      "problem": "GetSize: sizeC[21] is filled backwards from sizeC[20] (sizeP starts at &sizeC[21]), so no NUL follows the last digit inside the array. sprintf('%s', sizeP) reads stack bytes past the array, so garbage digits can be appended to the message. NEWICON: if the first keyboard() is cancelled (1463-1464), DoneIcon runs strcpy(tmp, tmp1). On the first R1 action of a browser session, tmp1 has not been written, so this reads uninitialised stack memory. Both paths are reachable only from the classic browse mode (cnfmode 0), which docs/dashboard.md:96-97 says no dashboard entry opens.",
+      "fix": "If the classic browser is kept, replace the sizeC block (2124-2131) with a single ' mcTsz=%llu' sprintf, as lines 1841 and 2068 already do, and replace the dummy strcpy at 1499 with an empty statement after the DoneIcon label. If the classic browser is deleted as dead code, both go with it.",
+      "justification": "",
+      "benefit": "About 6 lines removed. Fixes an out-of-bounds read and an uninitialised read, both latent because the code is practically unreachable (READ; reachability INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 6,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer_browser.c:2022-2136 and 1457-1500. In browseFilePath, tmp1 is first written at 1356/1369/1386/1465/1513/1553/1567, all after their own menu choice. grep sizeC: only 2126-2127. getFilePath(.., FALSE) callers: main_actions.c:221, 234, 738, 774, 886. Misc_FileBrowser and Misc_TextEditor are intercepted by dashRunMisc (dash_main.c:466-473). ExecuteBrowserFrom has no caller. main.c:240 Execute(igr_after_path) is the only other route; its path is picked with ext ELF (dash_settings.c:2074)."
+    }
+  ]
+}

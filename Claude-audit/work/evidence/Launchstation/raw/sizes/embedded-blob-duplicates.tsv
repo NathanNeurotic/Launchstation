@@ -1,0 +1,129 @@
+# Embedded payloads with identical content (same SHA-256), within one ELF or across ELFs.
+# wle_igr is itself embedded whole in wLaunchELF (symbol wle_igr_elf_irx), so a payload present in both
+# is stored twice in the shipped main ELF.
+sha256_prefix	payload_bytes	copies	where
+4760a621b1eb37f6	43616	2	wLaunchELF:ps2fs_irx, wle_igr:ps2fs_irx
+c9e8fe850ddf41f5	39089	2	wLaunchELF:bdmfs_fatfs_irx, wle_igr:bdmfs_fatfs_irx
+f8cf5233594b266a	27549	2	wLaunchELF:ps2hdd_irx, wle_igr:ps2hdd_irx
+17d15887467ca0af	23775	2	wLaunchELF:usbd_irx, wle_igr:usbd_irx
+5972075e21fdb7a5	20658	2	wLaunchELF:mmceman_irx, wle_igr:mmceman_irx
+5b3f9dd4bb329d4b	13231	2	wLaunchELF:iLinkman_irx, wle_igr:iLinkman_irx
+707537ed01658b84	12853	2	wLaunchELF:mx4sio_bd_irx, wle_igr:mx4sio_bd_irx
+d12e264b9ecd19ab	12433	2	wLaunchELF:usbmass_bd_irx, wle_igr:usbmass_bd_irx
+37a821776f25574a	12274	2	wLaunchELF:ata_bd_irx, wle_igr:ata_bd_irx
+eccc6560efa24a79	11398	2	wLaunchELF:ps2dev9_irx, wle_igr:ps2dev9_irx
+46ff9677a7a497bf	11066	2	wLaunchELF:iomanx_irx, wle_igr:iomanx_irx
+473cb1e220e34877	11064	2	wLaunchELF:bdm_irx, wle_igr:bdm_irx
+e02dcebb5d7afeaf	8949	2	wLaunchELF:mcserv_irx, wle_igr:mcserv_irx
+1a4774e5e91d7cb2	6926	2	wLaunchELF:IEEE1394_bd_irx, wle_igr:IEEE1394_bd_irx
+f13dc6163f66a9ed	5691	2	wLaunchELF:filexio_irx, wle_igr:filexio_irx
+ebd161e49987cc3c	5200	2	wLaunchELF:sio2man_irx, wle_igr:sio2man_irx
+5f75a7517d742c94	1936	2	wLaunchELF:srcfile, wle_igr:srcfile
+7e1bc46009a22f71	1192	2	wLaunchELF:osdsrc, wle_igr:osdsrc
+a08d3a5e8c2f9bb7	1028	2	wLaunchELF:tlbsrc, wle_igr:tlbsrc
+1c2f1fe1f282c987	40	2	wLaunchELF:eenull, wle_igr:eenull
+# redundant bytes (size x (copies-1)): 269968
+#
+# all payloads
+elf	symbol	payload_bytes	sha256_prefix
+wLaunchELF	wle_igr_elf_irx	518432	14b34648afcb90f7
+wLaunchELF	smbd_irx	164567	e17a19980ce4671f
+wLaunchELF	ps2ip_v10_irx	118513	9489a007711bf2f9
+wLaunchELF	ps2ip_irx	105895	6f2d091a52d9dd07
+wLaunchELF	sfx2_boot_adp	74144	4fe12b065cc02fbb
+wLaunchELF	mcman_physical_irx	71532	ec26ddb66701d580
+wLaunchELF	vmcman_irx	67952	05093dcb7779d6fe
+wLaunchELF	xfromman_irx	61127	34361aa8c6c87245
+wLaunchELF	ps2fs_irx	43616	4760a621b1eb37f6
+wLaunchELF	bdmfs_fatfs_irx	39089	c9e8fe850ddf41f5
+wLaunchELF	exploit_list_icn	37882	01426be014321c9c
+wLaunchELF	padman_irx	37778	2f0fc6453855c3e3
+wLaunchELF	smbman_irx	37160	52f4bfc148c5f656
+wLaunchELF	ps2ftpd_irx	31182	3059750e42ac2948
+wLaunchELF	smb2man_irx	30273	3462b1f3ddff38b9
+wLaunchELF	ps2hdd_irx	27549	f8cf5233594b266a
+wLaunchELF	usbd_irx	23775	17d15887467ca0af
+wLaunchELF	pccf_irx	23476	7c7324833169b149
+wLaunchELF	nfsman_irx	21346	017369bc522a3214
+wLaunchELF	mmceman_irx	20658	5972075e21fdb7a5
+wLaunchELF	exploit_ioprp_img	18652	f762474f2e5d533c
+wLaunchELF	libsd_irx	16446	0e04f34bf0f32de6
+wLaunchELF	loader_elf_irx	16444	d44c522ea0a86146
+wLaunchELF	smap_netman_irx	16097	b0cc7807a3216a16
+wLaunchELF	sfx2_message_adp	15936	dbf0599b00c299a4
+wLaunchELF	sfx2_bd_disconnect_adp	15680	4ae09b438ac05f2f
+wLaunchELF	sfx2_bd_connect_adp	15680	de6bd6eff58479e4
+wLaunchELF	ps2smap_irx	15297	4c25fef3ab1e60dd
+wLaunchELF	audsrv_irx	15115	f8998339b99b6815
+wLaunchELF	dvrfile_irx	15028	78734a5298982e34
+wLaunchELF	mc_list_icn	14990	49042cec59291610
+wLaunchELF	ps2kbd_irx	14586	a8487e6a843b3a42
+wLaunchELF	exploit_xlf_body	13768	fb17871a3dbadbcc
+wLaunchELF	iLinkman_irx	13231	5b3f9dd4bb329d4b
+wLaunchELF	ps2dev9_v10_irx	13193	962bedf3ab211424
+wLaunchELF	netman_irx	13039	15179a840dcb0b7f
+wLaunchELF	mx4sio_bd_irx	12853	707537ed01658b84
+wLaunchELF	usbmass_bd_irx	12433	d12e264b9ecd19ab
+wLaunchELF	ata_bd_irx	12274	37a821776f25574a
+wLaunchELF	dvrdrv_irx	11937	17b6814342a4fa3f
+wLaunchELF	udpfs_ioman_irx	11633	85faad5631fa7b2e
+wLaunchELF	ps2dev9_irx	11398	eccc6560efa24a79
+wLaunchELF	iomanx_irx	11066	46ff9677a7a497bf
+wLaunchELF	bdm_irx	11064	473cb1e220e34877
+wLaunchELF	cdvd_irx	11018	fcab56d4d40857d7
+wLaunchELF	ps2host_irx	10720	efc074eddbf1177a
+wLaunchELF	ps2netfs_irx	10342	ac0cf573f461effb
+wLaunchELF	mcserv_irx	8949	e02dcebb5d7afeaf
+wLaunchELF	xfromserv_irx	8949	62552ed8026354c4
+wLaunchELF	udpfs_smap_irx	8185	326771d6f36244cd
+wLaunchELF	sfx2_confirm_adp	7744	4a2d9a1d00617851
+wLaunchELF	exploit_osdsys_kernel	7056	a2bca22b96734fee
+wLaunchELF	exploit_osd110_kernel	6992	08525dfa0f4d6250
+wLaunchELF	IEEE1394_bd_irx	6926	1a4774e5e91d7cb2
+wLaunchELF	xparam_irx	6866	b30dec866cdc93cd
+wLaunchELF	hdl_info_irx	6682	1eb669e4cb2c97fb
+wLaunchELF	filexio_irx	5691	f13dc6163f66a9ed
+wLaunchELF	sfx2_transition_adp	5600	edfc3e3c15ca836c
+wLaunchELF	ps2ips_irx	5398	f9f561eeb10de5a6
+wLaunchELF	sio2man_irx	5200	ebd161e49987cc3c
+wLaunchELF	sfx2_cancel_adp	5088	edc1527f52739046
+wLaunchELF	udpfs_ministack_irx	5025	854060627190264d
+wLaunchELF	extflash_irx	4184	366383b286bc67fe
+wLaunchELF	poweroff_irx	3676	7f452dc5b8c88d24
+wLaunchELF	secrsif_irx	3583	5b1c07995a79c09f
+wLaunchELF	sfx2_cursor_adp	2064	ea822208857aaa22
+wLaunchELF	srcfile	1936	5f75a7517d742c94
+wLaunchELF	allowdvdv_irx	1890	86c4116992b2a858
+wLaunchELF	osdsrc	1192	7e1bc46009a22f71
+wLaunchELF	tlbsrc	1028	a08d3a5e8c2f9bb7
+wLaunchELF	exploit_jpn_sys	964	4f0d23415a9679ae
+wLaunchELF	exploit_usa_sys	964	f8ee1c4edee59b49
+wLaunchELF	exploit_eur_sys	964	dfc164420643718b
+wLaunchELF	exploit_chn_sys	964	935e5ed103bd1619
+wLaunchELF	mc_icon_sys	964	7b04da0f4378047c
+wLaunchELF	dev9_poweroff_irx	945	2f926c6d1c028260
+wLaunchELF	exploit_system_xlf_header	128	075f87d538f91851
+wLaunchELF	exploit_dtl_system_xlf_header	128	a94b70b48646419a
+wLaunchELF	exploit_xsystem_xlf_header	128	a49d1b29903c5380
+wLaunchELF	eenull	40	1c2f1fe1f282c987
+wle_igr	mcman_irx	71356	99e2ab95c533f2ca
+wle_igr	ps2fs_irx	43616	4760a621b1eb37f6
+wle_igr	bdmfs_fatfs_irx	39089	c9e8fe850ddf41f5
+wle_igr	ps2hdd_irx	27549	f8cf5233594b266a
+wle_igr	usbd_irx	23775	17d15887467ca0af
+wle_igr	mmceman_irx	20658	5972075e21fdb7a5
+wle_igr	iLinkman_irx	13231	5b3f9dd4bb329d4b
+wle_igr	mx4sio_bd_irx	12853	707537ed01658b84
+wle_igr	usbmass_bd_irx	12433	d12e264b9ecd19ab
+wle_igr	ata_bd_irx	12274	37a821776f25574a
+wle_igr	ps2dev9_irx	11398	eccc6560efa24a79
+wle_igr	iomanx_irx	11066	46ff9677a7a497bf
+wle_igr	bdm_irx	11064	473cb1e220e34877
+wle_igr	mcserv_irx	8949	e02dcebb5d7afeaf
+wle_igr	IEEE1394_bd_irx	6926	1a4774e5e91d7cb2
+wle_igr	filexio_irx	5691	f13dc6163f66a9ed
+wle_igr	sio2man_irx	5200	ebd161e49987cc3c
+wle_igr	srcfile	1936	5f75a7517d742c94
+wle_igr	osdsrc	1192	7e1bc46009a22f71
+wle_igr	tlbsrc	1028	a08d3a5e8c2f9bb7
+wle_igr	eenull	40	1c2f1fe1f282c987

@@ -1,0 +1,9 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/mmceman/iop/mmceman/src/mmce_fs.o		8664	48	132	0	384	0	3289	12517
+first-party	build/obj/mmceman/iop/mmceman/src/mmce_sio2.o		3092	0	8	0	60	0	1476	4636
+first-party	build/obj/mmceman/iop/mmceman/src/sio2man_hook.o		1364	0	0	0	48	0	950	2362
+first-party	build/obj/mmceman/iop/mmceman/src/mmce_cmds.o		1628	0	0	0	0	0	578	2206
+first-party	build/obj/mmceman/iop/mmceman/src/ioplib.o		576	0	0	0	0	0	72	648
+first-party	build/obj/mmceman/iop/mmceman/src/mmceman.o		364	0	28	0	0	0	232	624
+first-party	build/obj/mmceman/imports.o		476	0	0	0	0	0	0	476
+linker-internal	<internal>		0	296	0	0	0	0	0	296

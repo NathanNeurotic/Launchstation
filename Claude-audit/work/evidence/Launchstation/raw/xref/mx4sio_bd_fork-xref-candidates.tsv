@@ -1,0 +1,25 @@
+# CANDIDATE LIST ONLY (mx4sio_bd_fork link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/mx4sio_bd_fork/imports.o	CreateSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/imports.o	DeleteSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/imports.o	SignalSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/imports.o	WaitSema	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o	crc16	FUNC	144	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o	ioplib_getTableSize	FUNC	52	GLOBAL	.text	1	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	_start	FUNC	612	GLOBAL	.text	0	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	mx_sio2_dma_isr_tx	FUNC	320	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	reverse_byte_LUT8	OBJECT	256	GLOBAL	.rodata	16	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	mx_sio2_dma_isr_rx	FUNC	248	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	mx_sio2_wait_equal_masked	FUNC	152	GLOBAL	.text	1	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	mx_sio2_init_td	FUNC	68	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	mx_sio2_init_ports	FUNC	56	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o	_irx_id	OBJECT	8	GLOBAL	.data	0	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o	crc7_table	OBJECT	256	GLOBAL	.rodata	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o	spisd_read	FUNC	780	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o	spisd_write	FUNC	752	GLOBAL	.text	2	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o	spisd_flush	FUNC	8	GLOBAL	.text	1	yes
+build/obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o	spisd_stop	FUNC	8	GLOBAL	.text	1	yes

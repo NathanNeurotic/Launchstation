@@ -1,0 +1,38 @@
+# build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf (6460460 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+.text	1	AX	100000	2191264
+.ctors	1	A	316fa0	0
+.init_array	14	AW	316fa0	16
+.reginfo	1879048198	A	316fb0	24
+.MIPS.abiflags	1879048234	A	316fc8	24
+.data	1	AW	317000	1695056
+.rodata	1	A	4b4d80	1440608
+.eh_frame_hdr	1	A	6148e0	0
+.sdata	1	AW	614900	4
+.got	1	AW	614910	152
+.sbss	1	AW	614a00	0
+.bss	8	AW	614a00	1618004
+.mdebug.abiN32	1		0	0
+.pdr	1		0	180096
+.comment	1		0	204
+.debug_loc	1879048222		0	120154
+.debug_abbrev	1879048222		0	57127
+.debug_info	1879048222		0	282259
+.debug_str	1879048222		0	22877
+.debug_frame	1879048222		0	13500
+.debug_line	1879048222		0	141430
+.debug_ranges	1879048222		0	7456
+.debug_aranges	1879048222		0	48
+.symtab	2		0	116800
+.shstrtab	3		0	258
+.strtab	3		0	124270
+# totals
+# bss (NOBITS)	1618004
+# data (AW)	1695228
+# non-alloc	1066479
+# rodata (A)	1440656
+# text (AX)	2191264
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x10000	0x100000	5327360	6945364	7
+# PHDR	1879048192	0x226fb0	0x316fb0	24	24	4
+# PHDR	1879048195	0x226fc8	0x316fc8	24	24	4

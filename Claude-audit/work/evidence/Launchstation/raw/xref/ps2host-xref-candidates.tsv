@@ -1,0 +1,20 @@
+# CANDIDATE LIST ONLY (ps2host link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/ps2host/imports.o	memset	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2host/imports.o	puts	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2host/iop/ps2host/net_fio.o	pko_accept_pkt	FUNC	200	GLOBAL	.text	12	yes
+build/obj/ps2host/iop/ps2host/net_fio.o	pko_recv_bytes	FUNC	128	GLOBAL	.text	3	yes
+build/obj/ps2host/iop/ps2host/net_fio.o	pko_close_socket	FUNC	72	GLOBAL	.text	11	yes
+build/obj/ps2host/iop/ps2host/net_fio.o	remote_pc_addr	OBJECT	4	GLOBAL	.data	2	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	fsys_functarray	OBJECT	68	GLOBAL	.data	1	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	fsysUnmount	FUNC	36	GLOBAL	.text	0	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	fsys_driver	OBJECT	20	GLOBAL	.data	2	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	lastopen_fd	OBJECT	4	GLOBAL	.bss	6	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	remove_flag	OBJECT	4	GLOBAL	.bss	36	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	remove_result	OBJECT	4	GLOBAL	.bss	4	yes
+build/obj/ps2host/iop/ps2host/net_fsys.o	renamed_fd	OBJECT	4	GLOBAL	.bss	14	yes
+build/obj/ps2host/iop/ps2host/ps2host.o	_start	FUNC	56	GLOBAL	.text	0	yes

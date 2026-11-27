@@ -1,0 +1,98 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-01.b",
+  "coverage": [
+    {"path": "ee_libs/hdd/include/libhdd.h", "status": "read_full", "note": ""},
+    {"path": "ee_libs/hdd/libhdd.c", "status": "read_full", "note": ""},
+    {"path": "ee_libs/iopreboot/SifIopRebootBuffer.c", "status": "read_full", "note": ""},
+    {"path": "ee_libs/iopreboot/patch_romdrv_set_rom1_info.c", "status": "read_full", "note": ""},
+    {"path": "ee_libs/tcpips/ps2ipc.c", "status": "read_full", "note": ""},
+    {"path": "igr/wle_igr.c", "status": "read_full", "note": ""},
+    {"path": "include/cdvd_macro.h", "status": "read_full", "note": ""},
+    {"path": "include/cloud_google_roots.h", "status": "read_full", "note": ""},
+    {"path": "include/config_private.h", "status": "read_full", "note": ""},
+    {"path": "include/dash.h", "status": "read_full", "note": ""},
+    {"path": "include/dash_autotest.h", "status": "read_full", "note": ""},
+    {"path": "include/dash_font_data.h", "status": "read_full", "note": ""},
+    {"path": "include/dash_internal.h", "status": "read_full", "note": ""},
+    {"path": "include/draw_private.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "ee_libs/hdd is the vendored ps2sdk libhdd (APA partition create/format helpers over fileXio), used only by the HDD Manager (src/dash_hdd.c) through hddCheckPresent, hddCheckFormatted, hddMakeFilesystem and hddFormat. ee_libs/iopreboot vendors SifIopRebootBuffer and the romdrv rom1 patch, used once by init.c to reboot the IOP with the embedded IOPRP_LTS.IMG for the MagicGate signer. ee_libs/tcpips/ps2ipc.c is the vendored ps2sdk EE socket RPC client for the in-tree ps2ips_rpc server, with local fixes for select/recvfrom/setsockopt marshalling. igr/wle_igr.c is the first-party OPL IGR trampoline ELF that loads one storage driver family and relaunches the configured Launchstation path. The include/ headers carry dashboard declarations (dash_internal.h: theme, renderer, store, library, worker, widgets), config defaults, the Google TLS roots (included only by src/cloud_http.c) and small private headers.",
+  "reusable_helpers": [
+    {"name": "start_module", "path": "igr/wle_igr.c", "line": 77, "what": "SifExecModuleBuffer wrapper that treats a negative id or negative module result as failure"},
+    {"name": "path_exists", "path": "igr/wle_igr.c", "line": 87, "what": "file existence check by fileXioOpen/fileXioClose"},
+    {"name": "dashColorA", "path": "include/dash_internal.h", "line": 63, "what": "scales a colour's alpha by a float and clamps to 0..255"},
+    {"name": "dashClampf", "path": "include/dash_internal.h", "line": 312, "what": "float clamp"},
+    {"name": "dashLerpf", "path": "include/dash_internal.h", "line": 316, "what": "float linear interpolation"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "wle_igr hdd_target_path reloads dev9/bdm/bdmfs/ata_bd/ps2hdd/ps2fs on every one of its 24 retries",
+      "category": 6,
+      "locations": [
+        {"path": "igr/wle_igr.c", "start": 122, "end": 134},
+        {"path": "igr/wle_igr.c", "start": 151, "end": 154},
+        {"path": "iop/ps2hdd_osd/hdd.c", "start": 359, "end": 378},
+        {"path": "iop/ata_bd/src/ps2atad.c", "start": 331, "end": 342},
+        {"path": "iop/ata_bd/src/ps2atad.c", "start": 374, "end": 383}
+      ],
+      "problem": "For an hdd0:/hdd1: target, resolve_app_path calls hdd_target_path on each of up to 24 attempts and every call SifExecModuleBuffer's the whole HDD driver set again. ps2hdd_osd re-runs DelDrv/AddDrv and returns RESIDENT_END each time (hdd.c:359-378), so every retry leaves another resident ps2hdd. A second ata_bd registers DEV9 interrupt, DMA and power-off callbacks and calls sceAtaInit (bdm_connect_bd) before RegisterLibraryEntries fails and it exits NO_RESIDENT_END, so its freed image stays wired into dev9 and bdm. Trigger: a configured HDD path whose partition or ELF is missing, or a mount that fails once.",
+      "fix": "Load the HDD driver set once: move the six module loads out of hdd_target_path into main's prefix chain (extend the existing ata branch to hdd0:/hdd1: and start ps2hdd/ps2fs there), so the retry loop only splits the path and mounts pfs0:. bdmfs_fatfs is not needed for a PFS target and can be left out of that branch.",
+      "justification": "",
+      "benefit": "Fixes repeated driver loads in the IGR path: up to 23 extra resident ps2hdd copies (27,549-byte IRX each, BUILD-EVIDENCE.md:174, plus cache) and dangling DEV9/bdm callbacks from freed ata_bd images, likely an IOP hang instead of the ExecOSD fallback (INFERRED). Net 0 lines.",
+      "benefit_rank": 4,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read wle_igr.c:98-171: module loads at 122-134 sit inside hdd_target_path, which resolve_app_path calls in its retry loop (151-154, WLE_IGR_TRIES=24 at :63, usleep at :167). main's prefix chain (228-255) has no hdd branch. Read iop/ps2hdd_osd/hdd.c:303-378 (DelDrv/AddDrv, MODULE_RESIDENT_END) and iop/ata_bd/src/ps2atad.c:263-387 (SpdRegisterIntrHandler, dev9RegisterPre/PostDmaCb, Dev9RegisterPowerOffHandler and sceAtaInit before RegisterLibraryEntries at 378) plus sceAtaInit caching init in the first instance (1388-1396), so a reload cannot rediscover a late drive. ps2.yaml:466-483 embeds these modules in wle_igr. INFERRED: loadcore frees a NO_RESIDENT_END module image, dev9 keeps the last registered callback pointer, SDK dev9/bdm/fs reload behaviour."
+    },
+    {
+      "n": 2,
+      "title": "DashApp is 828 bytes and dashApps reserves DASH_MAX_APPS (512) of them for the whole run, plus a second full array per scan",
+      "category": 4,
+      "locations": [
+        {"path": "include/dash_internal.h", "start": 39, "end": 39},
+        {"path": "include/dash_internal.h", "start": 690, "end": 702},
+        {"path": "src/dash_lib.c", "start": 492, "end": 499},
+        {"path": "src/dash_lib.c", "start": 889, "end": 891},
+        {"path": "src/dash_lib.c", "start": 928, "end": 929}
+      ],
+      "problem": "dashLibInit mallocs sizeof(DashApp) * DASH_MAX_APPS once and keeps it, whatever the library size; every scan mallocs a second full-size fresh array and then memcpy's it into the first. A library of 50 apps uses about 41 KB of the 414 KB that stays reserved.",
+      "fix": "Size the array to the library: allocate for the loaded count plus a small headroom, and let dashLibApplyScan adopt the scan's fresh array shrunk with realloc instead of copying it into a second permanent buffer. dash_main.c:718-719 rebuilds the Apps and Home views right after the apply; check first which dialogs hold DashApp pointers across a scan (dash_lib.c:764-765).",
+      "justification": "Adds a realloc and a capacity check in the cache loader. The concrete problem is about 0.4 MB of EE RAM held for the whole session for empty slots; the change is a few lines and no new layer.",
+      "benefit": "sizeof(DashApp) = 256+64+160+40+24+24+256+1+1+2 = 828 B; 828 x 512 = 423,936 B reserved permanently. With 50 apps about 380 KB of EE RAM is returned (INFERRED; depends on library size). Scan peak also drops by the same amount.",
+      "benefit_rank": 4,
+      "lines_removed": -8,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_internal.h:34-39 (DASH_PATH_MAX 256, DASH_TITLE_MAX 64, DASH_DESC_MAX 160, DASH_SHORT_MAX 40, DASH_MAX_APPS 512) and 690-702 (DashApp fields). grep DASH_MAX_APPS|sizeof(DashApp) over src: dash_lib.c:496 permanent malloc, :555 cache loader appends up to the cap, :889 scan fresh array, :928 memcpy into dashApps, dash_main.c:715-719 apply then rebuild views. The stated pointer-stability rule is at dash_lib.c:764-765. Saving depends on the user's app count (INFERRED)."
+    },
+    {
+      "n": 3,
+      "title": "libhdd hddUpdateInfo walks every APA partition entry only to compute hddFree, which nothing reads",
+      "category": 5,
+      "locations": [
+        {"path": "ee_libs/hdd/libhdd.c", "start": 262, "end": 293},
+        {"path": "ee_libs/hdd/libhdd.c", "start": 75, "end": 102},
+        {"path": "ee_libs/hdd/libhdd.c", "start": 253, "end": 260},
+        {"path": "src/dash_hdd.c", "start": 151, "end": 155}
+      ],
+      "problem": "hddUpdateInfo issues one fileXioDread per partition entry (main and sub) to compute hddFree, read only by hddGetInfo, which has no caller. hddCheckPresent triggers it on the HDD Manager's first scan, so that scan walks the directory twice (scanRun walks it again at dash_hdd.c:167-209) and sends HDIOC_STATUS three times. hddMakeFilesystem and hddFormat repeat the walk after each create/format, and dash_hdd rescans anyway.",
+      "fix": "Delete the directory walk and hddSize/hddFree from hddUpdateInfo (keep the HDIOC_MAXSECTOR devctl that hddMakeFilesystem needs) together with the uncalled hddGetInfo. In scanRun, derive present/formatted from the HDIOC_STATUS value it already holds (present: 0..2, formatted: 0), not from the two libhdd calls.",
+      "justification": "",
+      "benefit": "Removes one full APA directory walk (one Dread RPC plus header read per partition entry, hundreds on a game HDD) from the first HDD Manager scan and from every create/format, and 2 HDIOC_STATUS RPCs per scan. Worker thread, behind the loading overlay (INFERRED timing). ~25 lines.",
+      "benefit_rank": 2,
+      "lines_removed": 25,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read libhdd.c:75-102 (both checks call hddUpdateInfo when !hddStatusCurrent, then HDIOC_STATUS), 253-293 (walk at 275-288 feeds only hddFree; hddSize only at 257, 269, 288), 130 and 454 (walk repeated after format/make). grep hddGetInfo|hddCheckPresent|hddCheckFormatted|hddMakeFilesystem|hddFormat over the repo: hddGetInfo only at libhdd.c:253 and libhdd.h:75; callers are dash_hdd.c:152, 155, 267, 285. dash_hdd.c:151 already stores HDIOC_STATUS in j->status, and scanRun walks hdd0: itself at 167-209; scan() is run after every change (afterChange)."
+    }
+  ]
+}

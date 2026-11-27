@@ -1,0 +1,2 @@
+# Objects on the allowdvdv link line with zero bytes in any allocated output section (from the map)
+# count: 0 of 2 objects on the link line

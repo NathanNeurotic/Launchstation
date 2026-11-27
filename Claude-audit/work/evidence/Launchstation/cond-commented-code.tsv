@@ -1,0 +1,10 @@
+path	start	end	code_like_lines	tier	sample
+src/draw.c	345	397	36	core	block comment containing code-like lines
+iop/hdl_info/apa.c	91	135	27	module	block comment containing code-like lines
+src/main_info_screens.c	312	338	22	core	block comment containing code-like lines
+src/filer_browser.c	2081	2103	14	core	block comment containing code-like lines
+iop/vmcman/src/mcdev.c	232	251	13	module	block comment containing code-like lines
+iop/oldlibs/ps2ftpd/src/FtpServer.c	84	90	5	module	block comment containing code-like lines
+src/dash_card_tool.c	9	12	4	core	(mmce_card_switch.c: GET_CARD/GET_CHANNEL, then content; unknown refuses);
+iop/hdl_info/apa.c	184	186	3	module	result = apa_setup_statistics (*table);
+src/dash_ps1_card.c	13	15	3	core	1. reads the card again and stops if it changed since it was listed;

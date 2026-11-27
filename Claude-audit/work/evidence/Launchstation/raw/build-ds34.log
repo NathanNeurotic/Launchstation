@@ -1,0 +1,658 @@
+ninja: Entering directory `build-ds34'
+[1/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/usbd_ra_exports.c
+[2/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/usbd_ra_imports.c
+[3/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2hdd_osd_imports.c
+[4/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/mmceman_imports.c
+[5/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/mx4sio_bd_fork_imports.c
+[6/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/usbmass_bd_fork_imports.c
+[7/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ata_bd_exports.c
+[8/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ata_bd_imports.c
+[9/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/driver.o
+[10/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/hcd.o
+[11/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/hub.o
+[12/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/interface.o
+[13/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/mem.o
+[14/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/usbd.o
+[15/521] CC(iop) obj/usbd_ra/iop/usbd-ra/src/usbio.o
+[16/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/hdd_fio.o
+[17/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/hdd_blkio.o
+[18/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/hdd.o
+[19/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/password.o
+[20/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/misc.o
+[21/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/cache.o
+[22/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/apa.o
+[23/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/journal.o
+[24/521] CC(iop) obj/ps2hdd_osd/iop/ps2hdd_osd/free.o
+[25/521] CC(iop) obj/mmceman/iop/mmceman/src/ioplib.o
+[26/521] CC(iop) obj/mmceman/iop/mmceman/src/sio2man_hook.o
+[27/521] CC(iop) obj/usbd_ra/exports.o
+[28/521] CC(iop) obj/usbd_ra/imports.o
+[29/521] CC(iop) obj/ps2hdd_osd/imports.o
+[30/521] CC(iop) obj/mmceman/iop/mmceman/src/mmce_sio2.o
+[31/521] CC(iop) obj/mmceman/iop/mmceman/src/mmceman.o
+[32/521] CC(iop) obj/mmceman/imports.o
+[33/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o
+[34/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+[35/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o
+[36/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+[37/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+[38/521] CC(iop) obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+[39/521] CC(iop) obj/mx4sio_bd_fork/imports.o
+[40/521] CC(iop) obj/usbmass_bd_fork/iop/usbmass_bd/src/main.o
+[41/521] CC(iop) obj/usbmass_bd_fork/iop/usbmass_bd/src/usb_mass.o
+[42/521] CC(iop) obj/usbmass_bd_fork/iop/usbmass_bd/src/scsi.o
+[43/521] CC(iop) obj/usbmass_bd_fork/imports.o
+[44/521] CC(iop) obj/ata_bd/exports.o
+[45/521] CC(iop) obj/ata_bd/iop/ata_bd/src/ps2atad.o
+[46/521] CC(iop) obj/ata_bd/imports.o
+[47/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ds34usb_imports.c
+[48/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ds34bt_imports.c
+[49/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/udpfs_smap_exports.c
+[50/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/udpfs_smap_imports.c
+[51/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/pccf_imports.c
+[52/521] LINK(iop) obj/usbd_ra/usbd_ra.notiopmod.elf
+[53/521] LINK(iop) obj/ps2hdd_osd/ps2hdd_osd.notiopmod.elf
+[54/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/dev9_poweroff_imports.c
+[55/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/allowdvdv_imports.c
+[56/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/hdl_info_exports.c
+[57/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/hdl_info_imports.c
+[58/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/mcman_physical_exports.c
+[59/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/mcman_physical_imports.c
+[60/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/vmcman_exports.c
+[61/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/vmcman_imports.c
+[62/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2ips_rpc_imports.c
+[63/521] LINK(iop) obj/mx4sio_bd_fork/mx4sio_bd_fork.notiopmod.elf
+[64/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2ftpd_imports.c
+[65/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2host_imports.c
+[66/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/smb2man_imports.c
+[67/521] LINK(iop) obj/usbmass_bd_fork/usbmass_bd_fork.notiopmod.elf
+[68/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/nfsman_imports.c
+[69/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/smbd_imports.c
+[70/521] LINK(iop) obj/ata_bd/ata_bd.notiopmod.elf
+[71/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/smbman_imports.c
+[72/521] GENIRX <WORK_ROOT>/build/Launchstation/build-ds34/generated/xparam_imports.c
+[73/521] CC(iop) obj/ds34usb/iop/ds34usb/iop/ds34usb.o
+[74/521] CC(iop) obj/ds34usb/iop/ds34usb/iop/smsutils.o
+[75/521] CC(iop) obj/ds34usb/imports.o
+[76/521] STRIP obj/usbd_ra/usbd_ra.notiopmod.stripped.elf
+[77/521] STRIP obj/ps2hdd_osd/ps2hdd_osd.notiopmod.stripped.elf
+[78/521] CC(iop) obj/ds34bt/iop/ds34bt/iop/ds34bt.o
+[79/521] CC(iop) obj/ds34bt/iop/ds34bt/iop/smsutils.o
+[80/521] CC(iop) obj/ds34bt/imports.o
+[81/521] CC(iop) obj/udpfs_smap/exports.o
+[82/521] CC(iop) obj/udpfs_smap/iop/udpfs_smap/src/main.o
+[83/521] CC(iop) obj/udpfs_smap/iop/udpfs_smap/src/smap.o
+[84/521] CC(iop) obj/udpfs_smap/iop/udpfs_smap/src/xfer.o
+[85/521] CC(iop) obj/udpfs_smap/imports.o
+[86/521] CC(iop) obj/pccf/iop/pccf/main.o
+[87/521] STRIP obj/mx4sio_bd_fork/mx4sio_bd_fork.notiopmod.stripped.elf
+[88/521] CC(iop) obj/pccf/iop/pccf/pccf_hw.o
+[89/521] CC(iop) obj/pccf/iop/pccf/pccf_ata.o
+[90/521] CC(iop) obj/pccf/iop/pccf/pcdiag_cis.o
+[91/521] STRIP obj/usbmass_bd_fork/usbmass_bd_fork.notiopmod.stripped.elf
+[92/521] CC(iop) obj/pccf/iop/pccf/pcdiag_cf.o
+[93/521] CC(iop) obj/pccf/imports.o
+[94/521] STRIP obj/ata_bd/ata_bd.notiopmod.stripped.elf
+[95/521] CC(iop) obj/dev9_poweroff/iop/dev9_poweroff/main.o
+[96/521] CC(iop) obj/dev9_poweroff/imports.o
+[97/521] CC(iop) obj/allowdvdv/iop/AllowDVDV/AllowDVDV.o
+[98/521] CC(iop) obj/allowdvdv/imports.o
+[99/521] CC(iop) obj/hdl_info/exports.o
+[100/521] IOPFIXUP bin/usbd_ra.irx
+[101/521] IOPFIXUP bin/ps2hdd_osd.irx
+[102/521] CC(iop) obj/hdl_info/iop/hdl_info/main.o
+[103/521] CC(iop) obj/hdl_info/iop/hdl_info/apa.o
+[104/521] CC(iop) obj/hdl_info/iop/hdl_info/hdl.o
+[105/521] CC(iop) obj/hdl_info/imports.o
+[106/521] CC(iop) obj/mcman_physical/exports.o
+[107/521] CC(iop) obj/mcman_physical/iop/vmcman/src/main.o
+[108/521] CC(iop) obj/mcman_physical/iop/vmcman/src/mcdev.o
+[109/521] CC(iop) obj/mcman_physical/iop/vmcman/src/mcsio2.o
+[110/521] IOPFIXUP bin/mx4sio_bd_fork.irx
+[111/521] CC(iop) obj/mcman_physical/iop/vmcman/src/ps2mc_fio.o
+[112/521] CC(iop) obj/mcman_physical/iop/vmcman/src/ps1mc_fio.o
+[113/521] CC(iop) obj/mcman_physical/imports.o
+[114/521] IOPFIXUP bin/usbmass_bd_fork.irx
+[115/521] CC(iop) obj/vmcman/exports.o
+[116/521] CC(iop) obj/vmcman/iop/vmcman/src/main.o
+[117/521] IOPFIXUP bin/ata_bd.irx
+[118/521] CC(iop) obj/vmcman/iop/vmcman/src/mcdev.o
+[119/521] CC(iop) obj/vmcman/iop/vmcman/src/mciomanx_backing.o
+[120/521] CC(iop) obj/vmcman/iop/vmcman/src/mcsio2.o
+[121/521] CC(iop) obj/vmcman/iop/vmcman/src/ps2mc_fio.o
+[122/521] CC(iop) obj/vmcman/iop/vmcman/src/ps1mc_fio.o
+[123/521] CC(iop) obj/vmcman/imports.o
+[124/521] CC(iop) obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o
+[125/521] CC(iop) obj/ps2ips_rpc/imports.o
+[126/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o
+[127/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o
+[128/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o
+[129/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o
+[130/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o
+[131/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpCommands.o
+[132/521] CC(iop) obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpMessages.o
+[133/521] CC(iop) obj/ps2ftpd/imports.o
+[134/521] CC(iop) obj/ps2host/iop/ps2host/net_fio.o
+[135/521] CC(iop) obj/ps2host/iop/ps2host/ps2host.o
+[136/521] CC(iop) obj/ps2host/imports.o
+[137/521] CC(iop) obj/smb2man/iop/smb2man/smb2man.o
+[138/521] CC(iop) obj/smb2man/iop/smb2man/usmb2/ntlm.o
+[139/521] CC(iop) obj/smb2man/iop/smb2man/usmb2/md4c.o
+[140/521] CC(iop) obj/smb2man/iop/smb2man/usmb2/hmac-md5.o
+[141/521] CC(iop) obj/smb2man/iop/smb2man/usmb2/md5.o
+[142/521] CC(iop) obj/smb2man/iop/smb2man/usmb2/unicode.o
+[143/521] CC(iop) obj/smb2man/iop/smb2man/smb2auth.o
+[144/521] CC(iop) obj/smb2man/imports.o
+[145/521] CC(iop) obj/nfsman/iop/nfsman/nfsman.o
+[146/521] CC(iop) obj/nfsman/imports.o
+[147/521] CC(iop) obj/smbd/iop/smbd/smbd.o
+[148/521] CC(iop) obj/smbd/iop/smbd/smbd_fs.o
+[149/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/aes.o
+[150/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/aes_reference.o
+[151/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/aes128ccm.o
+[152/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/alloc.o
+[153/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/asn1-ber.o
+[154/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/compat.o
+[155/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/errors.o
+[156/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/hmac.o
+[157/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/hmac-md5.o
+[158/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/init.o
+[159/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/libsmb2.o
+[160/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/md4c.o
+[161/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/md5.o
+[162/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/ntlmssp.o
+[163/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/pdu.o
+[164/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/quic.o
+[165/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smbdirect.o
+[166/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/sha1.o
+[167/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/sha224-256.o
+[168/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/sha384-512.o
+[169/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-cancel.o
+[170/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-close.o
+[171/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-create.o
+[172/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-echo.o
+[173/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-error.o
+[174/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-flush.o
+[175/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-ioctl.o
+[176/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-lock.o
+[177/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-logoff.o
+[178/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-negotiate.o
+[179/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-notify-change.o
+[180/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.o
+[181/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-query-directory.o
+[182/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-query-info.o
+[183/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-read.o
+[184/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-session-setup.o
+[185/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-set-info.o
+[186/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-tree-connect.o
+[187/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.o
+[188/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-cmd-write.o
+[189/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-data-file-info.o
+[190/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-data-filesystem-info.o
+[191/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-data-security-descriptor.o
+[192/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-data-reparse-point.o
+[193/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-share-enum.o
+[194/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb3-seal.o
+[195/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/smb2-signing.o
+[196/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/socket.o
+[197/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/spnego-wrapper.o
+[198/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/sync.o
+[199/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/timestamps.o
+[200/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/unicode.o
+[201/521] CC(iop) obj/smbd/.smbd-deps/libsmb2/lib/usha.o
+[202/521] CC(iop) obj/smbd/imports.o
+[203/521] CC(iop) obj/smbman/iop/smbman/smbman.o
+[204/521] CC(iop) obj/smbman/iop/smbman/smb.o
+[205/521] CC(iop) obj/smbman/iop/smbman/poll.o
+[206/521] CC(iop) obj/smbman/iop/smbman/auth.o
+[207/521] CC(iop) obj/smbman/iop/smbman/des.o
+[208/521] CC(iop) obj/smbman/iop/smbman/md4.o
+[209/521] CC(iop) obj/smbman/imports.o
+[210/521] CC(iop) obj/xparam/iop/xparam/src/xparam.o
+[211/521] CC(iop) obj/xparam/iop/xparam/src/database_merged.o
+[212/521] CC(iop) obj/xparam/imports.o
+[213/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/iomanx_irx.c
+[214/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/filexio_irx.c
+[215/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/sio2man_irx.c
+[216/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/mcman_irx.c
+[217/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/mcserv_irx.c
+[218/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/usbd_irx.c
+[219/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/bdm_irx.c
+[220/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/bdmfs_fatfs_irx.c
+[221/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/usbmass_bd_irx.c
+[222/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/mx4sio_bd_irx.c
+[223/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/iLinkman_irx.c
+[224/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/IEEE1394_bd_irx.c
+[225/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2dev9_irx.c
+[226/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ata_bd_irx.c
+[227/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2hdd_irx.c
+[228/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2fs_irx.c
+[229/521] CC(ee) obj/loader/loader/loader.o
+[230/521] CC(ee) obj/wle_igr/igr/wle_igr.o
+[231/521] LINK(iop) obj/ds34usb/ds34usb.notiopmod.elf
+[232/521] LINK(iop) obj/ds34bt/ds34bt.notiopmod.elf
+[233/521] LINK(iop) obj/udpfs_smap/udpfs_smap.notiopmod.elf
+[234/521] CC(ee) obj/_embed/iomanx_irx.o
+[235/521] CC(ee) obj/_embed/filexio_irx.o
+[236/521] CC(ee) obj/_embed/sio2man_irx.o
+[237/521] CC(ee) obj/_embed/mcman_irx.o
+[238/521] CC(ee) obj/_embed/mcserv_irx.o
+[239/521] CC(ee) obj/_embed/usbd_irx.o
+[240/521] CC(ee) obj/_embed/bdm_irx.o
+[241/521] CC(ee) obj/_embed/bdmfs_fatfs_irx.o
+[242/521] CC(ee) obj/_embed/usbmass_bd_irx.o
+[243/521] CC(ee) obj/_embed/mx4sio_bd_irx.o
+[244/521] CC(ee) obj/_embed/iLinkman_irx.o
+[245/521] CC(ee) obj/_embed/IEEE1394_bd_irx.o
+[246/521] CC(ee) obj/_embed/ps2dev9_irx.o
+[247/521] CC(ee) obj/_embed/ata_bd_irx.o
+[248/521] CC(ee) obj/_embed/ps2hdd_irx.o
+[249/521] CC(ee) obj/_embed/ps2fs_irx.o
+[250/521] LINK(iop) obj/pccf/pccf.notiopmod.elf
+[251/521] LINK(iop) obj/dev9_poweroff/dev9_poweroff.notiopmod.elf
+[252/521] LINK(iop) obj/allowdvdv/allowdvdv.notiopmod.elf
+[253/521] LINK(iop) obj/mcman_physical/mcman_physical.notiopmod.elf
+[254/521] LINK(iop) obj/vmcman/vmcman.notiopmod.elf
+[255/521] LINK(iop) obj/ps2ips_rpc/ps2ips_rpc.notiopmod.elf
+[256/521] LINK(iop) obj/ps2ftpd/ps2ftpd.notiopmod.elf
+[257/521] LINK(iop) obj/smb2man/smb2man.notiopmod.elf
+[258/521] LINK(iop) obj/nfsman/nfsman.notiopmod.elf
+[259/521] LINK(iop) obj/smbd/smbd.notiopmod.elf
+[260/521] LINK(iop) obj/xparam/xparam.notiopmod.elf
+[261/521] LINK(ee) obj/loader/loader.unstripped.elf
+[262/521] STRIP obj/ds34usb/ds34usb.notiopmod.stripped.elf
+[263/521] STRIP obj/ds34bt/ds34bt.notiopmod.stripped.elf
+[264/521] STRIP obj/udpfs_smap/udpfs_smap.notiopmod.stripped.elf
+[265/521] CC(ee) obj/ds34usb_ee/iop/ds34usb/ee/libds34usb.o
+[266/521] CC(ee) obj/ds34bt_ee/iop/ds34bt/ee/libds34bt.o
+[267/521] CC(ee) obj/iopreboot/ee_libs/iopreboot/SifIopRebootBuffer.o
+[268/521] CC(ee) obj/iopreboot/ee_libs/iopreboot/patch_romdrv_set_rom1_info.o
+[269/521] CC(ee) obj/hdd_ee/ee_libs/hdd/libhdd.o
+[270/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/poweroff_irx.c
+[271/521] STRIP obj/pccf/pccf.notiopmod.stripped.elf
+[272/521] STRIP obj/dev9_poweroff/dev9_poweroff.notiopmod.stripped.elf
+[273/521] STRIP obj/allowdvdv/allowdvdv.notiopmod.stripped.elf
+[274/521] STRIP obj/mcman_physical/mcman_physical.notiopmod.stripped.elf
+[275/521] STRIP obj/vmcman/vmcman.notiopmod.stripped.elf
+[276/521] STRIP obj/ps2ips_rpc/ps2ips_rpc.notiopmod.stripped.elf
+[277/521] STRIP obj/ps2ftpd/ps2ftpd.notiopmod.stripped.elf
+[278/521] STRIP obj/smb2man/smb2man.notiopmod.stripped.elf
+[279/521] STRIP obj/nfsman/nfsman.notiopmod.stripped.elf
+[280/521] STRIP obj/smbd/smbd.notiopmod.stripped.elf
+[281/521] STRIP obj/xparam/xparam.notiopmod.stripped.elf
+[282/521] STRIP bin/loader.elf
+[283/521] IOPFIXUP bin/ds34usb.irx
+[284/521] IOPFIXUP bin/ds34bt.irx
+[285/521] IOPFIXUP bin/udpfs_smap.irx
+[286/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/netman_irx.c
+[287/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/smap_netman_irx.c
+[288/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2ip_irx.c
+[289/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2smap_irx.c
+[290/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2netfs_irx.c
+[291/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/cdvd_irx.c
+[292/521] IOPFIXUP bin/pccf.irx
+[293/521] IOPFIXUP bin/dev9_poweroff.irx
+[294/521] IOPFIXUP bin/allowdvdv.irx
+[295/521] IOPFIXUP bin/mcman_physical.irx
+[296/521] IOPFIXUP bin/vmcman.irx
+[297/521] IOPFIXUP bin/ps2ips_rpc.irx
+[298/521] IOPFIXUP bin/ps2ftpd.irx
+[299/521] IOPFIXUP bin/smb2man.irx
+[300/521] IOPFIXUP bin/nfsman.irx
+[301/521] IOPFIXUP bin/smbd.irx
+[302/521] IOPFIXUP bin/xparam.irx
+[303/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/loader_elf_irx.c
+[304/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ds34usb_irx.c
+[305/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ds34bt_irx.c
+[306/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/udpfs_smap_irx.c
+[307/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2kbd_irx.c
+[308/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/secrsif_irx.c
+[309/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/xfromman_irx.c
+[310/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/xfromserv_irx.c
+[311/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/extflash_irx.c
+[312/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2atad_irx.c
+[313/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/pccf_irx.c
+[314/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/dev9_poweroff_irx.c
+[315/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/allowdvdv_irx.c
+[316/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/mcman_physical_irx.c
+[317/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/vmcman_irx.c
+[318/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2ips_irx.c
+[319/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2ftpd_irx.c
+[320/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/smb2man_irx.c
+[321/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/nfsman_irx.c
+[322/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/smbd_irx.c
+[323/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/xparam_irx.c
+[324/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/dvrdrv_irx.c
+[325/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/dvrfile_irx.c
+[326/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/padman_irx.c
+[327/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/libsd_irx.c
+[328/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/audsrv_irx.c
+[329/521] CC(ee) obj/wLaunchELF/src/main.o
+[330/521] CC(ee) obj/wLaunchELF/src/main_boot.o
+[331/521] CC(ee) obj/wLaunchELF/src/main_modules.o
+[332/521] CC(ee) obj/wLaunchELF/src/main_title.o
+[333/521] CC(ee) obj/wLaunchELF/src/main_info_screens.o
+[334/521] CC(ee) obj/wLaunchELF/src/main_console_info.o
+[335/521] CC(ee) obj/wLaunchELF/src/main_gameid.o
+[336/521] CC(ee) obj/wLaunchELF/src/main_gameid_table.o
+[337/521] CC(ee) obj/wLaunchELF/src/neutrino_gameid.o
+[338/521] CC(ee) obj/wLaunchELF/src/main_history.o
+[339/521] CC(ee) obj/wLaunchELF/src/remote_control.o
+[340/521] CC(ee) obj/wLaunchELF/src/pc_game_receiver.o
+[341/521] CC(ee) obj/wLaunchELF/src/cloud_http.o
+[342/521] CC(ee) obj/wLaunchELF/ee_libs/tcpips/ps2ipc.o
+[343/521] CC(ee) obj/wLaunchELF/src/self_update.o
+[344/521] CC(ee) obj/wLaunchELF/src/update_psu.o
+[345/521] CC(ee) obj/wLaunchELF/src/cloud_google.o
+[346/521] CC(ee) obj/wLaunchELF/src/qrcodegen.o
+[347/521] CC(ee) obj/wLaunchELF/src/main_fileops.o
+[348/521] CC(ee) obj/wLaunchELF/src/main_exploit_installer.o
+[349/521] CC(ee) obj/wLaunchELF/src/kelf_signer.o
+[350/521] CC(ee) obj/wLaunchELF/src/config_screen.o
+[351/521] CC(ee) obj/wLaunchELF/src/config_startup.o
+[352/521] CC(ee) obj/wLaunchELF/src/config_network.o
+[353/521] CC(ee) obj/wLaunchELF/src/config_advanced.o
+[354/521] CC(ee) obj/wLaunchELF/src/gui.o
+[355/521] CC(ee) obj/wLaunchELF/src/gui_colors.o
+[356/521] CC(ee) obj/wLaunchELF/src/virtual_keyboard.o
+[357/521] CC(ee) obj/wLaunchELF/src/elf.o
+[358/521] CC(ee) obj/wLaunchELF/src/draw.o
+[359/521] CC(ee) obj/wLaunchELF/src/draw_gs.o
+[360/521] CC(ee) obj/wLaunchELF/src/draw_text.o
+[361/521] CC(ee) obj/wLaunchELF/src/filer.o
+[362/521] CC(ee) obj/wLaunchELF/src/smb_cnf.o
+[363/521] CC(ee) obj/wLaunchELF/src/smb_shares.o
+[364/521] CC(ee) obj/wLaunchELF/src/filer_device.o
+[365/521] CC(ee) obj/wLaunchELF/src/filer_mount.o
+[366/521] CC(ee) obj/wLaunchELF/src/filer_fileops.o
+[367/521] CC(ee) obj/wLaunchELF/src/filer_copy.o
+[368/521] CC(ee) obj/wLaunchELF/src/gui_sort.o
+[369/521] CC(ee) obj/wLaunchELF/src/gui_texteditor.o
+[370/521] CC(ee) obj/wLaunchELF/src/gui_hdd0_format.o
+[371/521] CC(ee) obj/wLaunchELF/src/psu_functions.o
+[372/521] CC(ee) obj/wLaunchELF/src/mc_card_export.o
+[373/521] CC(ee) obj/wLaunchELF/src/mc_card_view.o
+[374/521] CC(ee) obj/wLaunchELF/src/mc_sha256.o
+[375/521] CC(ee) obj/wLaunchELF/src/mc_card_write.o
+[376/521] CC(ee) obj/wLaunchELF/src/mc_save_formats.o
+[377/521] CC(ee) obj/wLaunchELF/src/dash_card_tool.o
+[378/521] CC(ee) obj/wLaunchELF/src/mc_ps1_card.o
+[379/521] CC(ee) obj/wLaunchELF/src/mc_save_export.o
+[380/521] CC(ee) obj/wLaunchELF/src/dash_ps1_card.o
+[381/521] CC(ee) obj/wLaunchELF/src/mmce_card_switch.o
+[382/521] CC(ee) obj/wLaunchELF/src/mmce_backup.o
+[383/521] CC(ee) obj/wLaunchELF/src/mmce_save_versions.o
+[384/521] CC(ee) obj/wLaunchELF/src/mmce_igr.o
+[385/521] CC(ee) obj/wLaunchELF/src/hdd_header_injector.o
+[386/521] CC(ee) obj/wLaunchELF/src/hdl_rpc.o
+[387/521] CC(ee) obj/wLaunchELF/src/editor.o
+[388/521] CC(ee) obj/wLaunchELF/src/editor_menu.o
+[389/521] CC(ee) obj/wLaunchELF/src/editor_input.o
+[390/521] CC(ee) obj/wLaunchELF/src/editor_rules.o
+[391/521] CC(ee) obj/wLaunchELF/src/editor_file.o
+[392/521] CC(ee) obj/wLaunchELF/src/timer.o
+[393/521] CC(ee) obj/wLaunchELF/src/icon.o
+[394/521] CC(ee) obj/wLaunchELF/src/lang.o
+[395/521] CC(ee) obj/wLaunchELF/src/popstarter.o
+[396/521] CC(ee) obj/wLaunchELF/src/popstarter_path.o
+[397/521] CC(ee) obj/wLaunchELF/src/popstarter_vcd.o
+[398/521] CC(ee) obj/wLaunchELF/src/popstarter_gameid.o
+[399/521] CC(ee) obj/wLaunchELF/src/popstarter_elf.o
+[400/521] CC(ee) obj/wLaunchELF/src/ember_gameid.o
+[401/521] CC(ee) obj/wLaunchELF/src/neutrino_iso.o
+[402/521] CC(ee) obj/wLaunchELF/src/neutrino_smb.o
+[403/521] CC(ee) obj/wLaunchELF/src/gui_neutrino.o
+[404/521] CC(ee) obj/wLaunchELF/src/font_uLE.o
+[405/521] CC(ee) obj/wLaunchELF/src/makeicon.o
+[406/521] CC(ee) obj/wLaunchELF/src/chkesr.o
+[407/521] CC(ee) obj/wLaunchELF/src/pad_ds34.o
+[408/521] CC(ee) obj/wLaunchELF/src/dash_ftp.o
+[409/521] CC(ee) obj/wLaunchELF/src/dash_smbd.o
+[410/521] CC(ee) obj/wLaunchELF/src/ftp_session.o
+[411/521] CC(ee) obj/wLaunchELF/src/dash_clock_sync.o
+[412/521] CC(ee) obj/wLaunchELF/src/dash_gfx.o
+[413/521] CC(ee) obj/wLaunchELF/src/dash_font.o
+[414/521] CC(ee) obj/wLaunchELF/src/dash_font_data.o
+[415/521] CC(ee) obj/wLaunchELF/src/dash_font_emotion_engine.o
+[416/521] CC(ee) obj/wLaunchELF/src/dash_font_emotion_engine_bold.o
+[417/521] CC(ee) obj/wLaunchELF/src/dash_icons.o
+[418/521] CC(ee) obj/wLaunchELF/src/dash_png.o
+[419/521] CC(ee) obj/wLaunchELF/src/dash_art.o
+[420/521] CC(ee) obj/wLaunchELF/src/dash_bg.o
+[421/521] CC(ee) obj/wLaunchELF/src/dash_bg_ps2.o
+[422/521] CC(ee) obj/wLaunchELF/src/dash_bg_geo.o
+[423/521] CC(ee) obj/wLaunchELF/src/dash_store.o
+[424/521] CC(ee) obj/wLaunchELF/src/dash_lib.o
+[425/521] CC(ee) obj/wLaunchELF/src/dash_devices.o
+[426/521] CC(ee) obj/wLaunchELF/src/dash_ui.o
+[427/521] CC(ee) obj/wLaunchELF/src/dash_home.o
+[428/521] CC(ee) obj/wLaunchELF/src/dash_apps.o
+[429/521] CC(ee) obj/wLaunchELF/src/dash_files.o
+[430/521] CC(ee) obj/wLaunchELF/src/dash_tools.o
+[431/521] CC(ee) obj/wLaunchELF/src/dash_settings.o
+[432/521] CC(ee) obj/wLaunchELF/src/dash_theme.o
+[433/521] CC(ee) obj/wLaunchELF/src/dash_sound.o
+[434/521] CC(ee) obj/wLaunchELF/src/dash_worker.o
+[435/521] CC(ee) obj/wLaunchELF/src/dash_widgets.o
+[436/521] CC(ee) obj/wLaunchELF/src/dash_info.o
+[437/521] CC(ee) obj/wLaunchELF/src/dash_image.o
+[438/521] CC(ee) obj/wLaunchELF/src/dash_jpeg.o
+[439/521] CC(ee) obj/wLaunchELF/src/dash_editor.o
+[440/521] CC(ee) obj/wLaunchELF/src/dash_hdd.o
+[441/521] CC(ee) obj/wLaunchELF/src/dash_browser.o
+[442/521] CC(ee) obj/wLaunchELF/src/dash_exploit.o
+[443/521] CC(ee) obj/wLaunchELF/src/embed_blobs.o
+[444/521] CC(ee) obj/_embed/udpfs_smap_irx.o
+[445/521] CC(ee) obj/_embed/ds34usb_irx.o
+[446/521] CC(ee) obj/_embed/ds34bt_irx.o
+[447/521] CC(ee) obj/_embed/loader_elf_irx.o
+[448/521] CC(ee) obj/_embed/poweroff_irx.o
+[449/521] CC(ee) obj/_embed/netman_irx.o
+[450/521] CC(ee) obj/_embed/smap_netman_irx.o
+[451/521] CC(ee) obj/_embed/ps2ip_irx.o
+[452/521] CC(ee) obj/_embed/ps2smap_irx.o
+[453/521] CC(ee) obj/_embed/ps2ips_irx.o
+[454/521] CC(ee) obj/_embed/smb2man_irx.o
+[455/521] CC(ee) obj/_embed/nfsman_irx.o
+[456/521] CC(ee) obj/_embed/ps2netfs_irx.o
+[457/521] CC(ee) obj/_embed/ps2ftpd_irx.o
+[458/521] CC(ee) obj/_embed/smbd_irx.o
+[459/521] CC(ee) obj/_embed/dev9_poweroff_irx.o
+[460/521] CC(ee) obj/_embed/pccf_irx.o
+[461/521] CC(ee) obj/_embed/mcman_physical_irx.o
+[462/521] CC(ee) obj/_embed/cdvd_irx.o
+[463/521] CC(ee) obj/_embed/xparam_irx.o
+[464/521] CC(ee) obj/_embed/vmcman_irx.o
+[465/521] CC(ee) obj/_embed/ps2kbd_irx.o
+[466/521] CC(ee) obj/_embed/allowdvdv_irx.o
+[467/521] CC(ee) obj/_embed/secrsif_irx.o
+[468/521] CC(ee) obj/_embed/xfromman_irx.o
+[469/521] CC(ee) obj/_embed/xfromserv_irx.o
+[470/521] CC(ee) obj/_embed/extflash_irx.o
+[471/521] CC(ee) obj/_embed/ps2atad_irx.o
+[472/521] CC(ee) obj/_embed/dvrdrv_irx.o
+[473/521] CC(ee) obj/_embed/dvrfile_irx.o
+[474/521] CC(ee) obj/_embed/padman_irx.o
+[475/521] CC(ee) obj/_embed/libsd_irx.o
+[476/521] CC(ee) obj/_embed/audsrv_irx.o
+[477/521] AR(ee) lib/libds34usb_ee.a
+[478/521] AR(ee) lib/libds34bt_ee.a
+[479/521] CC(iop) obj/ps2host/iop/ps2host/net_fsys.o
+<WORK_ROOT>/build/Launchstation/iop/ps2host/net_fsys.c:56:12: warning: variable 'fsys_pid' set but not used [-Wunused-but-set-global]
+   56 | static int fsys_pid = 0;
+      |            ^
+1 warning generated.
+[480/521] CC(iop) obj/hdl_info/iop/hdl_info/hdd.o
+<WORK_ROOT>/build/Launchstation/iop/hdl_info/hdd.c:127:9: warning: variable 'count' set but not used [-Wunused-but-set-variable]
+  127 |         int i, count = 0, err;
+      |                ^
+<WORK_ROOT>/build/Launchstation/iop/hdl_info/hdd.c:162:9: warning: variable 'count' set but not used [-Wunused-but-set-variable]
+  162 |         int i, count = 0, err;
+      |                ^
+2 warnings generated.
+[481/521] AR(ee) lib/libiopreboot.a
+[482/521] LINK(iop) obj/ps2host/ps2host.notiopmod.elf
+[483/521] AR(ee) lib/libhdd_ee.a
+[484/521] LINK(iop) obj/hdl_info/hdl_info.notiopmod.elf
+[485/521] CC(iop) obj/mmceman/iop/mmceman/src/mmce_cmds.o
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_cmds.c:215:15: warning: initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  215 |         char* str = &rdbuf[0x4];
+      |               ^     ~~~~~~~~~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_cmds.c:240:11: warning: initializing 'char *' with an expression of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  240 |     char *str = &wrbuf[0x4];
+      |           ^     ~~~~~~~~~~~
+2 warnings generated.
+[486/521] CC(ee) obj/wLaunchELF/src/ember.o
+<WORK_ROOT>/build/Launchstation/src/ember.c:244:13: warning: passing 'const char *' to parameter of type 'char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  244 |                 genRemove(dest);
+      |                           ^~~~
+<WORK_ROOT>/build/Launchstation/include/launchelf.h:627:21: note: passing argument to parameter 'path' here
+  627 | int genRemove(char *path);
+      |                     ^
+1 warning generated.
+[487/521] CC(ee) obj/wLaunchELF/src/config.o
+<WORK_ROOT>/build/Launchstation/src/config.c:885:31: warning: variable 'var_cnt' set but not used [-Wunused-but-set-variable]
+  885 |         int i, fd, tst, len, mcport, var_cnt, CNF_version;
+      |                                      ^
+1 warning generated.
+[488/521] CC(iop) obj/smbman/iop/smbman/smb_fio.o
+<WORK_ROOT>/build/Launchstation/iop/smbman/smb_fio.c:27:1: warning: unused function 'my_iomanx_retval_EIO_s64' [-Wunused-function]
+   27 | IOMANX_RETURN_VALUE_IMPL(EIO);
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<HOME>/AppData/Local/ps2build/packages-llvm/core/iomanx/include/iomanX.h:92:33: note: expanded from macro 'IOMANX_RETURN_VALUE_IMPL'
+   92 |         static inline signed long long my_iomanx_retval_##val##_s64(void) {return -val;}
+      |                                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<scratch space>:137:1: note: expanded from here
+  137 | my_iomanx_retval_EIO_s64
+      | ^~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[489/521] CC(ee) obj/wLaunchELF/src/dash_main.o
+<WORK_ROOT>/build/Launchstation/src/dash_main.c:25:12: warning: variable 'prev_section' set but not used [-Wunused-but-set-global]
+   25 | static int prev_section = DASH_SEC_HOME;
+      |            ^
+1 warning generated.
+[490/521] CC(ee) obj/wLaunchELF/src/filer_browser.o
+<WORK_ROOT>/build/Launchstation/src/filer_browser.c:812:3: warning: misleading indentation; statement is not part of the previous 'if' [-Wmisleading-indentation]
+  812 |                 if (menu_len < (i = strlen(LNG(Filename)) + strlen(" A -> Z")))
+      |                 ^
+<WORK_ROOT>/build/Launchstation/src/filer_browser.c:810:2: note: previous statement is here
+  810 |         if (menu_len < (i = strlen(LNG(Game_Title)) + strlen(LNG(_plus_Details))))
+      |         ^
+1 warning generated.
+[491/521] CC(iop) obj/mmceman/iop/mmceman/src/mmce_fs.o
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:314:50: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  314 |     res = mmce_sio2_tx_rx_pio(filename_len, 0x0, name, NULL, &timeout_1s);
+      |                                                  ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:665:50: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  665 |     res = mmce_sio2_tx_rx_pio(filename_len, 0x0, name, NULL, &timeout_1s);
+      |                                                  ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:729:45: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  729 |     res = mmce_sio2_tx_rx_pio(dir_len, 0x0, name, NULL, &timeout_1s);
+      |                                             ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:793:45: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  793 |     res = mmce_sio2_tx_rx_pio(dir_len, 0x0, name, NULL, &timeout_1s);
+      |                                             ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:863:45: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  863 |     res = mmce_sio2_tx_rx_pio(dir_len, 0x0, name, NULL, &timeout_1s);
+      |                                             ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:1043:56: warning: passing 'char[256]' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 1043 |     res = mmce_sio2_tx_rx_pio(0x0, filename_len, NULL, dirent->name, &timeout_1s);
+      |                                                        ^~~~~~~~~~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:65: note: passing argument to parameter 'rx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                                 ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:1107:41: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 1107 |     res = mmce_sio2_tx_rx_pio(len, 0x0, name, NULL, &timeout_1s);
+      |                                         ^~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:1226:54: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 1226 |     res = mmce_sio2_tx_rx_pio(old_filename_len, 0x0, old_name, NULL, &timeout_1s);
+      |                                                      ^~~~~~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+<WORK_ROOT>/build/Launchstation/iop/mmceman/src/mmce_fs.c:1234:54: warning: passing 'const char *' to parameter of type 'u8 *' (aka 'unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 1234 |     res = mmce_sio2_tx_rx_pio(new_filename_len, 0x0, new_name, NULL, &timeout_1s);
+      |                                                      ^~~~~~~~
+<WORK_ROOT>/build/Launchstation/iop/mmceman/include/mmce_sio2.h:37:53: note: passing argument to parameter 'tx_buf' here
+   37 | int mmce_sio2_tx_rx_pio(u8 tx_size, u8 rx_size, u8 *tx_buf, u8 *rx_buf, iop_sys_clock_t *timeout);
+      |                                                     ^
+9 warnings generated.
+[492/521] CC(ee) obj/wLaunchELF/src/filer_actions.o
+<WORK_ROOT>/build/Launchstation/src/filer_actions.c:1803:18: warning: unused variable 'timestamp' [-Wunused-variable]
+ 1803 |         sceMcStDateTime timestamp;
+      |                         ^~~~~~~~~
+1 warning generated.
+[493/521] CC(ee) obj/wLaunchELF/src/main_actions.o
+<WORK_ROOT>/build/Launchstation/src/main_actions.c:728:5: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+  728 |                 x = x;
+      |                 ~ ^ ~
+1 warning generated.
+[494/521] CC(ee) obj/wLaunchELF/src/main_startup.o
+<WORK_ROOT>/build/Launchstation/src/main_startup.c:168:6: warning: variable 'var_cnt' set but not used [-Wunused-but-set-variable]
+  168 |         int var_cnt;
+      |             ^
+1 warning generated.
+[495/521] CC(ee) obj/wLaunchELF/src/dash_themes.o
+<WORK_ROOT>/build/Launchstation/src/dash_themes.c:44:12: warning: variable 'store_seen' set but not used [-Wunused-but-set-global]
+   44 | static int store_seen;
+      |            ^
+1 warning generated.
+[496/521] CC(ee) obj/wLaunchELF/src/init.o
+<WORK_ROOT>/build/Launchstation/src/init.c:514:28: warning: passing 'const void *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  514 |                 ID = SifExecModuleBuffer(module, module_size, 0, NULL, &rcode);
+      |                                          ^~~~~~
+<HOME>/AppData/Local/ps2build/packages-llvm/core/kernel/include/loadfile.h:264:38: note: passing argument to parameter 'ptr' here
+  264 | extern int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res);
+      |                                      ^
+<WORK_ROOT>/build/Launchstation/src/init.c:1900:27: warning: passing 'const void *' to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 1900 |         id = SifExecModuleBuffer(module, size, 0, NULL, &ret);
+      |                                  ^~~~~~
+<HOME>/AppData/Local/ps2build/packages-llvm/core/kernel/include/loadfile.h:264:38: note: passing argument to parameter 'ptr' here
+  264 | extern int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res);
+      |                                      ^
+2 warnings generated.
+[497/521] LINK(iop) obj/smbman/smbman.notiopmod.elf
+[498/521] STRIP obj/ps2host/ps2host.notiopmod.stripped.elf
+[499/521] STRIP obj/hdl_info/hdl_info.notiopmod.stripped.elf
+[500/521] LINK(iop) obj/mmceman/mmceman.notiopmod.elf
+[501/521] STRIP obj/smbman/smbman.notiopmod.stripped.elf
+[502/521] IOPFIXUP bin/ps2host.irx
+[503/521] IOPFIXUP bin/hdl_info.irx
+[504/521] STRIP obj/mmceman/mmceman.notiopmod.stripped.elf
+[505/521] IOPFIXUP bin/smbman.irx
+[506/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/ps2host_irx.c
+[507/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/hdl_info_irx.c
+[508/521] IOPFIXUP bin/mmceman.irx
+[509/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/smbman_irx.c
+[510/521] CC(ee) obj/_embed/ps2host_irx.o
+[511/521] CC(ee) obj/_embed/hdl_info_irx.o
+[512/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/mmceman_irx.c
+[513/521] CC(ee) obj/_embed/smbman_irx.o
+[514/521] CC(ee) obj/_embed/mmceman_irx.o
+[515/521] LINK(ee) obj/wle_igr/wle_igr.unstripped.elf
+[516/521] STRIP bin/wle_igr.elf
+[517/521] BIN2C <WORK_ROOT>/build/Launchstation/build-ds34/generated/wle_igr_elf_irx.c
+[518/521] CC(ee) obj/_embed/wle_igr_elf_irx.o
+[519/521] LINK(ee) obj/wLaunchELF/wLaunchELF.unstripped.elf
+[520/521] STRIP bin/wLaunchELF.elf
+[521/521] PS2PACK bin/wLaunchELF-packed.elf
+File compressed, from 5393568 to 1846848 bytes, ratio = 65.76%
+exit=0

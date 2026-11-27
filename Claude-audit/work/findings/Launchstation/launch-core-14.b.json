@@ -1,0 +1,153 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-14.b",
+  "coverage": [
+    {"path": "src/dash_tools.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_ui.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_tools.c is the dashboard Tools tab: a static table of tools that dispatch classic MISC commands or open native dashboard screens, plus the OPL IGR helper setup, the MMCE backup status check (a worker job), 'sync all MMCE cards', the Google Drive link/sync/browse/recover menus and the GitHub self-update check (release lookup and commit-order compare run on the worker via updateRun). dash_ui.c holds the shared dashboard widgets: pad-to-DashInput mapping with repeat rules and the START global menu hook, footer hint ordering and layout, header tabs and clock/temperature, panel/selection/scrollbar drawing, toasts, the modal menu/choice/confirm/message loops, and the loading overlay with the file-progress hooks (DashFileProgress, DashFileTransferChunk, DashPause) that classic filer code calls.",
+  "reusable_helpers": [
+    {"name": "releaseJsonString", "path": "src/dash_tools.c", "line": 715, "what": "extracts a JSON string value by key from a response body (no escape handling)"},
+    {"name": "updateIsCommitId", "path": "src/dash_tools.c", "line": 818, "what": "checks a 7-40 character hex commit id"},
+    {"name": "updateRun", "path": "src/dash_tools.c", "line": 910, "what": "runs a job on the dashboard worker and waits modally (inline fallback when the worker is unavailable)"},
+    {"name": "dashDrawHints", "path": "src/dash_ui.c", "line": 330, "what": "lays out and draws the footer button-hint bar in a fixed button order"},
+    {"name": "clockText", "path": "src/dash_ui.c", "line": 428, "what": "formats time/date per theme (12/24 h, date order) plus temperature"},
+    {"name": "dashDrawScrollbar", "path": "src/dash_ui.c", "line": 597, "what": "draws a list scrollbar from first/visible/total"},
+    {"name": "dashToast", "path": "src/dash_ui.c", "line": 759, "what": "queues a short notification (3 slots)"},
+    {"name": "dashModalMenu", "path": "src/dash_ui.c", "line": 928, "what": "generic modal list menu with disabled rows, marks, inline edit and preview hooks"},
+    {"name": "dashModalChoice", "path": "src/dash_ui.c", "line": 1126, "what": "modal single-choice list from a string array"},
+    {"name": "dashModalConfirm", "path": "src/dash_ui.c", "line": 1262, "what": "modal OK/Cancel confirmation"},
+    {"name": "dashLoadingStatus", "path": "src/dash_ui.c", "line": 1406, "what": "updates the loading overlay; forwards to dashWorkerStatus when called on the worker"},
+    {"name": "DashFileProgress", "path": "src/dash_ui.c", "line": 1428, "what": "file-copy progress overlay used by classic filer code"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dashToolsPrepareMmceStatus can reboot the IOP on the UI thread while another worker job is running",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 495, "end": 503},
+        {"path": "src/dash_tools.c", "start": 624, "end": 631},
+        {"path": "src/init.c", "start": 2369, "end": 2378},
+        {"path": "src/init.c", "start": 2266, "end": 2279},
+        {"path": "src/init.c", "start": 2163, "end": 2171},
+        {"path": "src/dash_worker.c", "start": 15, "end": 17},
+        {"path": "src/dash_settings.c", "start": 934, "end": 935}
+      ],
+      "problem": "Opening the MMCE backups page with a backup path set and MMCE not loaded waits only for its own status job (dash_tools.c:496), then calls loadMmceModules (502). If MX4SIO owns the SIO2 stack, loadMmceModules -> switchStorageDriverStack -> resetRuntimeDeviceState reboots the IOP (init.c:2272-2274); resets are refused only on the worker thread (init.c:2168) and the park hook ignores UI-thread resets (dash_worker.c:155-156). A queued or running save/art/listing job then loses the IOP mid-RPC. dash_worker.c:15-17 requires waiting for the whole queue first, and dashToolsSyncAllMmceCards does exactly that (624) before the same load (631).",
+      "fix": "Drop the mmce_status_job condition so line 496 always calls dashWorkerAwaitAll; it returns immediately when nothing is queued (dash_worker.c:342-343).",
+      "justification": "",
+      "benefit": "Closes an IOP reboot under a running worker job (hung or failed RPC, possibly a DASHBOARD.CNF write left truncated after its O_TRUNC open, dash_store.c:157-160; INFERRED). No lines added.",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "grep dashToolsPrepareMmceStatus: only caller dash_settings.c:935 (openPage P_MMCE_BACKUP). Read init.c:2369-2387 (loadMmceModules -> switchStorageDriverStack), 2266-2284 (reset when stack mode != DEFAULT), 2161-2187 (resetRuntimeDeviceState: refused only if iopResetBlocked, set to dashWorkerOnThread at dash_worker.c:135; iopResetHook returns for non-worker threads, dash_worker.c:153-156). Jobs that can be in flight on the settings screen: dash_store.c:651 saves, dash_settings.c:2680 card check, dash_art.c:461. Whether a job overlaps in practice depends on timing (INFERRED); the MX4SIO-active precondition is required for the reset path."
+    },
+    {
+      "n": 2,
+      "title": "Cloud menu re-reads config/token files on the UI thread right after queuing MMCE status jobs (redundant in-function refreshes)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 1363, "end": 1378},
+        {"path": "src/dash_tools.c", "start": 1435, "end": 1445},
+        {"path": "src/dash_tools.c", "start": 628, "end": 628},
+        {"path": "src/dash_tools.c", "start": 634, "end": 634},
+        {"path": "src/dash_tools.c", "start": 662, "end": 662},
+        {"path": "src/dash_tools.c", "start": 687, "end": 687},
+        {"path": "src/dash_tools.c", "start": 698, "end": 698},
+        {"path": "src/dash_tools.c", "start": 711, "end": 711},
+        {"path": "src/dash_tools.c", "start": 403, "end": 426},
+        {"path": "src/dash_tools.c", "start": 610, "end": 612},
+        {"path": "src/dash_worker.c", "start": 6, "end": 10},
+        {"path": "src/dash_settings.c", "start": 3303, "end": 3305},
+        {"path": "src/dash_settings.c", "start": 3343, "end": 3345}
+      ],
+      "problem": "dashToolsSyncAllMmceCards calls dashToolsRefreshMmceStatus on every exit (628, 634, 662, 687, 698, 711) and cloud-menu case 5 calls it at 1440; each queues mmceStatusRun (MMCE scans plus cloudGoogleIsLinked token-file reads on the worker, 403-426). Control returns to the dashToolsCloudBackup loop top, which at once reads WLE-CLOUD.CNF, the CA and token files on the UI thread (1368-1378) while that job, and any settings save queued at 612 or 1464, is still running, against the rule in dash_worker.c:7-10. Both callers already refresh after these functions return (dash_settings.c:3305, 3345).",
+      "fix": "Delete the seven in-function dashToolsRefreshMmceStatus calls (628, 634, 662, 687, 698, 711, 1440) and start each dashToolsCloudBackup loop pass with dashWorkerAwaitAll, returning if the user backs out.",
+      "justification": "The added await (2 lines) closes the remaining overlap with the settings save that chooseMmceBackupRoot and the disconnect path queue just before the loop reads files; it returns immediately when nothing is queued. The change is still -5 lines net.",
+      "benefit": "-5 lines net; one MMCE status scan fewer per in-menu action; the UI no longer does file IO while a job it queued runs. Practical damage of the overlap INFERRED (fileXio RPCs are serialised by the SDK).",
+      "benefit_rank": 2,
+      "lines_removed": 5,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "grep dashToolsRefreshMmceStatus: dash_tools.c 483, 515, 628, 634, 662, 687, 698, 711, 1440; dash_settings.c 1817, 2117, 3305, 3337, 3345. Callers of dashToolsSyncAllMmceCards: dash_tools.c:1444, dash_settings.c:3304 (+3305 refresh). dashToolsCloudBackup called from dash_tools.c:1642 and dash_settings.c:3344 (+3345 refresh). Read cloud_google.c:214-241, 258-308, 403-455, 558-574: GetClientConfig, Configured, IsLinked and HasLocalToken all open/stat files via dashLoadTextFile/wleExists (genOpen -> fileXioOpen, filer_fileops.c:531-556). Other UI code honours the rule, e.g. dash_widgets.c:1129 skips polling while dashWorkerIoBusy. tests/test_cloud_menu.py:64 already stubs dashWorkerAwaitAll."
+    },
+    {
+      "n": 3,
+      "title": "Google Drive link/sync/browse/recover and 'back up all MMCE cards' block the UI thread; frame redrawn only once per file",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 228, "end": 230},
+        {"path": "src/dash_tools.c", "start": 302, "end": 304},
+        {"path": "src/dash_tools.c", "start": 360, "end": 363},
+        {"path": "src/dash_tools.c", "start": 638, "end": 651},
+        {"path": "src/dash_tools.c", "start": 676, "end": 679},
+        {"path": "src/dash_tools.c", "start": 1218, "end": 1221},
+        {"path": "src/dash_tools.c", "start": 1305, "end": 1308},
+        {"path": "src/dash_tools.c", "start": 1328, "end": 1331},
+        {"path": "src/dash_tools.c", "start": 883, "end": 921},
+        {"path": "src/cloud_google.c", "start": 1525, "end": 1567},
+        {"path": "src/cloud_http.c", "start": 805, "end": 815},
+        {"path": "src/mmce_backup.c", "start": 773, "end": 781}
+      ],
+      "problem": "These paths call blocking card and HTTPS work directly on the UI thread behind dashLoadingBegin. The overlay is redrawn only when a progress callback fires: once per file before hashing, validating and uploading it (cloud_google.c:1529-1561) and once per card before a full-verify backup (mmce_backup.c:774-781); uploads (cloud_http.c:805-815) and Drive recovery downloads report nothing, and each cloudLink poll is a full TLS round trip (304). The screen shows a frozen frame with a stopped spinner and ignores input for the whole of each step. dashToolsCheckUpdates already runs the same kind of HTTPS on the worker through updateRun (883-921) so frames keep presenting.",
+      "fix": "Route these calls through the existing worker path used by updateRun (dashWorkerSubmit plus dashWorkerAwait(id, title, 0)). Prepare the network and device stacks on the UI thread first (ensureDashboardIpNetworkReady, ensurePathDeviceStackReady, loadMmceModules), as dashToolsCheckUpdates does at 947, because IOP resets are refused on the worker (init.c:2168). dashLoadingStatus already forwards worker-side progress to dashWorkerStatus (dash_ui.c:1408-1411), so the existing callbacks keep working.",
+      "justification": "Each call site needs a small argument struct and run function (about 20 lines in total, INFERRED), but it removes multi-second frozen frames from user-started backups, uploads and downloads, and it reuses the worker and await code that already exists instead of adding a new mechanism.",
+      "benefit": "Frames and the spinner keep running during uploads, downloads and card backups. Frozen time per 8 MB card INFERRED at several seconds (SHA-256 plus validation read plus TLS upload on the EE). About -20 lines net (INFERRED).",
+      "benefit_rank": 3,
+      "lines_removed": -20,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_tools.c:213-378, 616-712, 883-921, 1191-1355. grep 'progress(' in cloud_google.c: only 1532 (per file, total 0). grep cloudHttpProgress: set only in self_update.c:202 (updater), called at cloud_http.c:1189 and 1256 (downloads); cloudHttpUploadFd (cloud_http.c:776-823) has no callback. mmce_backup.c:774-776 and 952-954 call progress once per .mcd. dash_ui.c:1406-1426: overlay draws only when dashLoadingStatus is called. dash_worker.c:298-338: dashWorkerAwait keeps presenting frames. Durations are not measured."
+    },
+    {
+      "n": 4,
+      "title": "dashToolsCloudBackup reads WLE-CLOUD.CNF three times per menu pass; cloudGoogleConfigured result is already known",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 1361, "end": 1378},
+        {"path": "src/cloud_google.c", "start": 258, "end": 283},
+        {"path": "src/cloud_google.c", "start": 403, "end": 407}
+      ],
+      "problem": "Each pass of the menu loop calls cloudGoogleGetClientConfig (reads WLE-CLOUD.CNF and stats the CA), cloudGoogleConfigured (load_session: reads the CNF again and stats the CA again) and cloudGoogleIsLinked (reads the CNF a third time plus the token files). cloudGoogleConfigured fails only when the resolved client id is empty (cloud_google.c:274-279), which is exactly client_id[0] || builtin from values the loop already holds (1361, 1368-1370).",
+      "fix": "Replace lines 1375-1376 with configured = client_id[0] || builtin, dropping the cloudGoogleConfigured call.",
+      "justification": "",
+      "benefit": "One file read and one stat fewer on the config device (usually mc0) every time the menu is redrawn after an action; -1 line (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read cloud_google.c:205-241 (builtin_client_available, read_custom_client, load_client), 258-283 (load_session need_token=0: path builds, load_client, CA wleExists, fails only on empty client id or path build), 403-407, 421-455, 558-563. The path builds that could still differ are the token paths, which are at most one character longer than the CA path already built by GetClientConfig."
+    },
+    {
+      "n": 5,
+      "title": "Backing out of the settings-save wait in dashToolsSyncAllMmceCards hides the finished local backup result",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_tools.c", "start": 672, "end": 673},
+        {"path": "src/dash_tools.c", "start": 703, "end": 710},
+        {"path": "src/dash_store.c", "start": 670, "end": 674}
+      ],
+      "problem": "The local card backup has already run (638-651) when the cloud branch calls dashStoreFlushWait (672) and returns on failure (673). It fails only when the user presses Back on the cancelable wait overlay (dash_store.c:670-674, dash_worker.c:313-316), and the function then exits without the local summary (703-710) that every other path shows, so the user never sees how many cards were backed up or failed.",
+      "fix": "On a 0 return skip only the Drive upload and fall through to the local-only summary, for example by entering the cloud block only when cloudGoogleIsLinked() and dashStoreFlushWait(...) both succeed.",
+      "justification": "",
+      "benefit": "The local backup result is always reported; no size change.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_tools.c:616-712; dash_store.c:670-681 (returns 0 only when dashWorkerAwaitAll returns 0); dash_worker.c:298-345 (await returns 0 only on Back when cancelable; AwaitAll passes cancelable=1)."
+    }
+  ]
+}

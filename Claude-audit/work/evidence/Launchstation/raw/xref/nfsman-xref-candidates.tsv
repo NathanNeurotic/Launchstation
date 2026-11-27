@@ -1,0 +1,28 @@
+# CANDIDATE LIST ONLY (nfsman link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/nfsman/imports.o	_toupper	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/nfsman/imports.o	memcmp	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/nfsman/imports.o	memmove	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/nfsman/imports.o	sprintf	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/nfsman/imports.o	strcat	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_open	FUNC	1380	GLOBAL	.text.unfs4_open	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_readdir	FUNC	596	GLOBAL	.text.unfs4_readdir	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_prw	FUNC	476	GLOBAL	.text.unfs4_prw	2	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_rename	FUNC	276	GLOBAL	.text.unfs4_rename	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_truncate	FUNC	240	GLOBAL	.text.unfs4_truncate	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_mkdir	FUNC	232	GLOBAL	.text.unfs4_mkdir	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_init_context	FUNC	220	GLOBAL	.text.unfs4_init_context	0	no
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_remove	FUNC	184	GLOBAL	.text.unfs4_remove	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_stat	FUNC	136	GLOBAL	.text.unfs4_stat	4	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_opendir	FUNC	132	GLOBAL	.text.unfs4_opendir	1	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	calloc	FUNC	116	GLOBAL	.text.calloc	4	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_size	FUNC	112	GLOBAL	.text.unfs4_size	2	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	free	FUNC	72	GLOBAL	.text.free	12	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	malloc	FUNC	72	GLOBAL	.text.malloc	2	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	_start	FUNC	60	GLOBAL	.text._start	0	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	_irx_id	OBJECT	8	GLOBAL	.data._irx_id	0	yes
+build/obj/nfsman/iop/nfsman/nfsman.o	unfs4_mount	FUNC	8	GLOBAL	.text.unfs4_mount	0	no

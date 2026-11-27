@@ -1,0 +1,308 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0      c00     4 .rel.text
+       0        0       18     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.rel.text)
+      18       18      468     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.rel.text)
+     480      480       28     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.rel.text)
+     4a8      4a8      248     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.rel.text)
+     6f0      6f0      510     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.rel.text)
+       0        0       38     4 .rel.data
+       0        0       30     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.rel.data)
+      30       30        8     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.rel.data)
+       0        0     24ac    16 .text
+       0        0       4c    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.text)
+       0        0       4c     1                 crc7
+      50       50      db0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.text)
+      50       50      30c     1                 spisd_read
+     35c      35c      2f0     1                 spisd_write
+     64c      64c        8     1                 spisd_flush
+     654      654        8     1                 spisd_stop
+     65c      65c       3c     1                 spisd_read_status_register
+     698      698      104     1                 spisd_send_cmd
+     79c      79c      200     1                 spisd_init_card
+     99c      99c       b0     1                 spisd_send_cmd_recv_data
+     a4c      a4c      304     1                 spisd_get_card_info
+     d50      d50       4c     1                 spisd_read_register
+     d9c      d9c       64     1                 spisd_recover
+     e00      e00       90    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.text)
+     e00      e00       90     1                 crc16
+     e90      e90      240    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.text)
+     e90      e90       c8     1                 ioplib_iterateByName
+     f58      f58       34     1                 ioplib_getTableSize
+     f8c      f8c       ac     1                 ioplib_hookSameExportEntries
+    1038     1038       98     1                 ioplib_relinkExports
+    10d0     10d0      45c    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.text)
+    10d0     10d0       a8     1                 sio2man_hook_init
+    1178     1178       58     1                 sio2man_hook_iterate_cb
+    11d0     11d0       24     1                 generic_hook_iterate_cb
+    11f4     11f4       64     1                 hookRegisterLibraryEntries
+    1258     1258       90     1                 sio2man_hook_deinit
+    12e8     12e8       64     1                 unhook_loadcore
+    134c     134c       34     1                 sio2man_hook_sio2_lock
+    1380     1380       34     1                 sio2man_hook_sio2_unlock
+    13b4     13b4       ec     1                 _sio2man_hook
+    14a0     14a0       14     1                 _1_25_sio2_transfer
+    14b4     14b4       14     1                 _2_25_sio2_transfer
+    14c8     14c8       64     1                 _sio2_transfer
+    1530     1530      d98    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.text)
+    1530     1530       f8     1                 mx_sio2_dma_isr_rx
+    1628     1628       84     1                 mx_sio2_wait_equal
+    16ac     16ac       78     1                 mx_sio2_start_rx_dma
+    1724     1724      140     1                 mx_sio2_dma_isr_tx
+    1864     1864       68     1                 mx_sio2_write_dummy
+    18cc     18cc       98     1                 mx_sio2_wait_equal_masked
+    1964     1964       78     1                 mx_sio2_write_byte
+    19dc     19dc       74     1                 mx_sio2_start_tx_dma
+    1a50     1a50       38     1                 mx_sio2_init_ports
+    1a88     1a88       44     1                 mx_sio2_init_td
+    1acc     1acc       b8     1                 mx_sio2_lock
+    1b84     1b84       78     1                 mx_sio2_unlock
+    1bfc     1bfc       38     1                 mx_sio2_set_baud
+    1c34     1c34       84     1                 mx_sio2_wait_not_equal
+    1cb8     1cb8       98     1                 mx_sio2_rx_pio
+    1d50     1d50       94     1                 mx_sio2_tx_pio
+    1de4     1de4      17c     1                 reverse_buffer
+    1f60     1f60      264     1                 _start
+    21c4     21c4      104     1                 sd_detect_thread
+    22d0     22d0      1dc    16         obj/mx4sio_bd_fork/imports.o:(.text)
+    22e4     22e4        0     1                 bdm_connect_bd
+    22ec     22ec        0     1                 bdm_disconnect_bd
+    2310     2310        0     1                 sceSetSliceDMA
+    2318     2318        0     1                 sceStartDMA
+    2320     2320        0     1                 sceSetDMAPriority
+    2328     2328        0     1                 sceEnableDMAChannel
+    234c     234c        0     1                 DisableIntr
+    2354     2354        0     1                 EnableIntr
+    235c     235c        0     1                 RegisterIntrHandler
+    2364     2364        0     1                 CpuSuspendIntr
+    236c     236c        0     1                 CpuResumeIntr
+    2390     2390        0     1                 GetLoadcoreInternalData
+    23b4     23b4        0     1                 printf
+    23d8     23d8        0     1                 memcpy
+    23e0     23e0        0     1                 strcmp
+    2404     2404        0     1                 CreateThread
+    240c     240c        0     1                 StartThread
+    2414     2414        0     1                 DeleteThread
+    241c     241c        0     1                 DelayThread
+    2440     2440        0     1                 CreateEventFlag
+    2448     2448        0     1                 DeleteEventFlag
+    2450     2450        0     1                 iSetEventFlag
+    2458     2458        0     1                 ClearEventFlag
+    2460     2460        0     1                 WaitEventFlag
+    2484     2484        0     1                 CreateSema
+    248c     248c        0     1                 WaitSema
+    2494     2494        0     1                 SignalSema
+    249c     249c        0     1                 DeleteSema
+       0        0      409    16 .rodata
+       0        0      100    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.rodata)
+       0        0      100     1                 crc7_table
+     100      100      100    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.rodata)
+     100      100      100     1                 reverse_byte_LUT8
+     200      200      209    16         <internal>:(.rodata.str1.1)
+  4028d9   4028d9    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       50    16 .data
+       0        0        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.data)
+       0        0       40    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.data)
+       0        0       40     1                 bd
+      40       40        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.data)
+      40       40        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.data)
+      40       40        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.data)
+      40       40       10    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.data)
+      40       40        8     1                 _irx_id
+      48       48        1     1                 sio2_current_baud
+      4c       4c        4     1                 sd_detect_thread_id
+      50       50        0    16         obj/mx4sio_bd_fork/imports.o:(.data)
+  442930   442930        0     1 __bss_start = .
+       0        0      3a0    16 .bss
+       0        0        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.bss)
+       0        0      230    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.bss)
+       0        0       30     1                 sdcard
+      30       30      200     1                 bounce
+     230      230        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.bss)
+     230      230        0    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.bss)
+     230      230       bc    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.bss)
+     230      230        4     1                 g_loadcore_lib
+     234      234        4     1                 pRegisterLibraryEntries
+     238      238       20     1                 g_hook_data
+     258      258       94     1                 g_null_td
+     2f0      2f0       a8    16         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.bss)
+     2f0      2f0        c     1                 cmd
+     2fc      2fc        4     1                 sio2_save_crtl
+     300      300       94     1                 global_td
+     394      394        4     1                 sio2_event_flag
+     3a0      3a0        0    16         obj/mx4sio_bd_fork/imports.o:(.bss)
+  442cd0   442cd0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.mdebug.abi32)
+       0        0        0     1         obj/mx4sio_bd_fork/imports.o:(.mdebug.abi32)
+       0        0      600     4 .pdr
+       0        0       20     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.pdr)
+      20       20      160     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.pdr)
+     180      180       20     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.pdr)
+     1a0      1a0       80     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.pdr)
+     220      220      180     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.pdr)
+     3a0      3a0      260     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.pdr)
+       0        0      180     4 .rel.pdr
+       0        0        8     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.rel.pdr)
+       8        8       58     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.rel.pdr)
+      60       60        8     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.rel.pdr)
+      68       68       20     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.rel.pdr)
+      88       88       60     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.rel.pdr)
+      e8       e8       98     4         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.rel.pdr)
+       0        0       14     1 .llvm_addrsig
+       0        0        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o:(.llvm_addrsig)
+       0        0        6     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o:(.llvm_addrsig)
+       6        6        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o:(.llvm_addrsig)
+       6        6        0     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o:(.llvm_addrsig)
+       6        6        7     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o:(.llvm_addrsig)
+       d        d        7     1         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o:(.llvm_addrsig)
+      14       14        0     1         obj/mx4sio_bd_fork/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      7e0     4 .symtab
+       0        0      7e0     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0      6a6     1 .strtab
+       0        0      6a6     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+crc7                                              obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+crc7_table                                        obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_crc7.o
+spisd_read                                        obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+memcpy                                            obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_lock                                      obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+cmd                                               obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+sio2_event_flag                                   obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_wait_equal                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+sdcard                                            obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_start_rx_dma                              obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+WaitEventFlag                                     obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+ClearEventFlag                                    obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+reverse_buffer                                    obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_recover                                     obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_unlock                                    obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_write                                       obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_write_dummy                               obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_write_byte                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_start_tx_dma                              obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_flush                                       obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_stop                                        obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_read_status_register                        obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_tx_pio                                    obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_wait_not_equal                            obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_init_card                                   obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_set_baud                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+mx_sio2_rx_pio                                    obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+spisd_get_card_info                               obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+bd                                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+printf                                            obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/spi_sdcard_driver.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+crc16                                             obj/mx4sio_bd_fork/iop/mx4sio_bd/src/crc16.o
+ioplib_iterateByName                              obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+GetLoadcoreInternalData                           obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+ioplib_getTableSize                               obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+ioplib_hookSameExportEntries                      obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+CpuSuspendIntr                                    obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+CpuResumeIntr                                     obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+ioplib_relinkExports                              obj/mx4sio_bd_fork/iop/mx4sio_bd/src/ioplib.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+sio2man_hook_init                                 obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+strcmp                                            obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+sio2man_hook_deinit                               obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sio2man_hook_sio2_lock                            obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sio2man_hook_sio2_unlock                          obj/mx4sio_bd_fork/iop/mx4sio_bd/src/sio2man_hook.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_dma_isr_rx                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+iSetEventFlag                                     obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+reverse_byte_LUT8                                 obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sceSetSliceDMA                                    obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sceStartDMA                                       obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_dma_isr_tx                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_wait_equal_masked                         obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_init_ports                                obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+mx_sio2_init_td                                   obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+RegisterIntrHandler                               obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+EnableIntr                                        obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+DisableIntr                                       obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+_start                                            obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+CreateEventFlag                                   obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sceSetDMAPriority                                 obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+sceEnableDMAChannel                               obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+CreateThread                                      obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+StartThread                                       obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+DeleteThread                                      obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+DeleteEventFlag                                   obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+DelayThread                                       obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+bdm_disconnect_bd                                 obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+bdm_connect_bd                                    obj/mx4sio_bd_fork/imports.o
+                                                  obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+_irx_id                                           obj/mx4sio_bd_fork/iop/mx4sio_bd/src/mx4sio.o
+CreateSema                                        obj/mx4sio_bd_fork/imports.o
+WaitSema                                          obj/mx4sio_bd_fork/imports.o
+SignalSema                                        obj/mx4sio_bd_fork/imports.o
+DeleteSema                                        obj/mx4sio_bd_fork/imports.o
