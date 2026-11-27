@@ -620,6 +620,8 @@ targets:
       - src/ember.c
       - src/ember_gameid.c
       - src/neutrino_iso.c
+      - src/riptopl_iso.c
+      - src/riptopl_settings.c
       - src/neutrino_smb.c
       - src/gui_neutrino.c
       - src/font_uLE.c
@@ -658,6 +660,7 @@ targets:
       - src/dash_worker.c
       - src/dash_widgets.c
       - src/dash_info.c
+      - src/dash_tester.c
       - src/dash_image.c
       - src/dash_jpeg.c
       - src/dash_editor.c

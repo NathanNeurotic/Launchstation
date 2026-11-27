@@ -1,0 +1,11 @@
+DECLARE_EXPORT_TABLE(gipusb, 1, 0)
+	DECLARE_EXPORT(_start)
+	DECLARE_EXPORT(_retonly)
+	DECLARE_EXPORT(_retonly)
+	DECLARE_EXPORT(_retonly)
+	DECLARE_EXPORT(gip_get_pad)
+	DECLARE_EXPORT(gip_status)
+
+END_EXPORT_TABLE
+
+void _retonly() {}

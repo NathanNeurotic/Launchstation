@@ -35,7 +35,7 @@ Memory cards (`mc0:`/`mc1:`), USB (`usb:`/`usbN:`), MMCE (`mmce0:`/`mmce1:`), MX
 ## External game cores
 
 - **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars), with the R3Z per-launch compatibility modes 0/2/3/5/7, GSM/field-flipping, debug colors and PS2 logo. Options default to launch-only unless the user explicitly saves a per-Game-ID Neutrino profile in the dashboard; separate checksum-verified A/B settings files preserve the last valid copy and never modify the ISO, global CNF, or active VMC. ISO `SYSTEM.CNF` game IDs also drive RetroGem display and best-effort active-MMCE card switching, without initializing or replacing live storage drivers.
-- **Loader availability** → Three independent Disable Ember/POPStarter/Neutrino controls in Settings → Launching → Disc & image loaders, Off by default.
+- **Loader availability** → Four independent Disable Ember/POPStarter/Neutrino/RiptOPL controls in Settings → Launching → Disc & image loaders, Off by default. RiptOPL is an optional second loader for PS2 ISOs and for a disc in the drive, with its own per-game pad-emulator settings.
 - **PS1 VCD** → POPStarter (external launcher, own VCD and HDD argument conventions).
 - **PS1 CUE/BIN/EXE** → Ember (external ELF), only under a save-safe `<umbrella>/games/<Game>/` folder. The umbrella can be anywhere and can be named arbitrarily. Ember disc images show the same RetroGem Game ID as an equivalent VCD when the disc Game ID preference is on.
 - For Ember on USB, the launcher rebuilds the storage IOP without resident PADMAN and confirms game identity after USB mount-number reassignment before final keep-IOP launch.

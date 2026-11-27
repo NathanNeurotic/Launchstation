@@ -39,13 +39,13 @@ code = r'''
 #define NEUTRINO_ISO_PVD_OFFSET (16 * 2048)
 #define POPSTARTER_OK 0
 #define SEEK_SET 0
-typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX]; int flags; } DashApp;
+typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX], category[24]; int flags; } DashApp;
 enum { MAIN_ELF_IOP_DEFAULT, MAIN_ELF_IOP_KEEP, MAIN_ELF_IOP_REBOOT };
 typedef struct { char main_msg[MAX_PATH]; int elf_iop_mode; } MainExecuteContext;
 typedef struct { int count; } POPSTARTER_CANDIDATE_LIST;
 typedef struct { int dummy; char vmc[2][64]; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { char argv[4][32]; } NEUTRINO_OPTION_ARGS;
-typedef struct { int disable_neutrino, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
+typedef struct { int disable_neutrino, disable_riptopl, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
 static Setting *setting;
 static struct { int recent_count; } dashCfg = {8};
 static void *elisaFnt, *External_Lang_Buffer;
@@ -72,6 +72,9 @@ static void dashModalMessage(int i, const char *t, const char *b, const char *d)
 static int dashTextEditorEx(const char *p, int n) { (void)p; (void)n; return 0; }
 static int settleBackgroundWork(const char *t) { (void)t; return 1; }
 static int argSidecarExists(const char *p) { (void)p; return 0; }
+static int riptoplGameUsesRiptopl(const char *p) { (void)p; return 0; }
+static void dashLaunchIsoWithRiptopl(const char *p, const char *t) { (void)p; (void)t; }
+static void dashLaunchDisc(const char *t, const char *id) { (void)t; (void)id; }
 static int dashLibLoadArgs(DashApp *a, char *b, int n) { (void)a; (void)b; (void)n; return 0; }
 static int dashArtTakeDirty(void) { return 0; }
 static void dashLibSaveCache(void) {}
@@ -186,7 +189,7 @@ static void dashLoadingEnd(void) {}
 static void friendlyLaunchError(const DashApp *a, const char *m) { (void)a; (void)m; }
 ''' + extract_func(dash_src, "void dashLaunchApp(") + r'''
 int main(void) {
-    DashApp app = {"usb0:/game.iso", "Game", 0};
+    DashApp app = {"usb0:/game.iso", "Game", "", 0};
     setting = calloc(1, sizeof(*setting));
     dashLaunchApp(NULL, 0); assert(!calls);
     for (int failure = 0; failure <= 1; failure++) {

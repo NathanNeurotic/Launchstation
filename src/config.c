@@ -626,9 +626,12 @@ char *configBuildSaveText(int *out_size)
 	        "POPSTARTER_ELF = %s\r\n"
 	        "EMBER_DIR = %s\r\n"
 	        "NEUTRINO_ELF = %s\r\n"
+	        "RIPTOPL_ELF = %s\r\n"
+	        "RIPTOPL_DISC_ELF = %s\r\n"
 	        "Disable_EMBER = %d\r\n"
 	        "Disable_POPSTARTER = %d\r\n"
 	        "Disable_NEUTRINO = %d\r\n"
+	        "Disable_RIPTOPL = %d\r\n"
 	        "PSU_HugeNames = %d\r\n"
 	        "PSU_DateNames = %d\r\n"
 	        "PSU_NoOverwrite = %d\r\n"
@@ -658,9 +661,12 @@ char *configBuildSaveText(int *out_size)
 	        setting->popstarter_file,  //POPSTARTER_ELF
 	        setting->ember_dir,        //EMBER_DIR
 	        setting->neutrino_file,    //NEUTRINO_ELF
+	        setting->riptopl_file,     //RIPTOPL_ELF
+	        setting->riptopl_disc_file, //RIPTOPL_DISC_ELF
 	        setting->disable_ember,
 	        setting->disable_popstarter,
 	        setting->disable_neutrino,
+	        setting->disable_riptopl,
 	        setting->PSU_HugeNames,    //PSU_HugeNames
 	        setting->PSU_DateNames,    //PSU_DateNames
 	        setting->PSU_NoOverwrite,  //PSU_NoOverwrite
@@ -837,9 +843,12 @@ void initConfig(void)
 	setting->popstarter_file[0] = '\0';
 	setting->ember_dir[0] = '\0';
 	setting->neutrino_file[0] = '\0';
+	setting->riptopl_file[0] = '\0';
+	setting->riptopl_disc_file[0] = '\0';
 	setting->disable_ember = 0;
 	setting->disable_popstarter = 0;
 	setting->disable_neutrino = 0;
+	setting->disable_riptopl = 0;
 	setting->timeout = DEF_TIMEOUT;
 	setting->Hide_Paths = DEF_HIDE_PATHS;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
@@ -1077,12 +1086,18 @@ int loadConfig(char *mainMsg, char *CNF)
 			strcpy(setting->ember_dir, value);
 		else if (!strcmp(name, "NEUTRINO_ELF"))
 			strcpy(setting->neutrino_file, value);
+		else if (!strcmp(name, "RIPTOPL_ELF"))
+			strcpy(setting->riptopl_file, value);
+		else if (!strcmp(name, "RIPTOPL_DISC_ELF"))
+			strcpy(setting->riptopl_disc_file, value);
 		else if (!strcmp(name, "Disable_EMBER"))
 			setting->disable_ember = (atoi(value) != 0);
 		else if (!strcmp(name, "Disable_POPSTARTER"))
 			setting->disable_popstarter = (atoi(value) != 0);
 		else if (!strcmp(name, "Disable_NEUTRINO"))
 			setting->disable_neutrino = (atoi(value) != 0);
+		else if (!strcmp(name, "Disable_RIPTOPL"))
+			setting->disable_riptopl = (atoi(value) != 0);
 		//----------
 		else if (!strcmp(name, "PSU_HugeNames"))
 			setting->PSU_HugeNames = atoi(value);

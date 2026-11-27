@@ -95,6 +95,7 @@ IMPORT_BIN2C(usb_mass_irx);
 #ifdef DS34
 IMPORT_BIN2C(ds34usb_irx);
 IMPORT_BIN2C(ds34bt_irx);
+IMPORT_BIN2C(gipusb_irx);
 #endif
 
 #ifdef DVRP
@@ -155,6 +156,9 @@ static u8 have_cdvd = 0;
 static u8 have_usbd = 0;
 #ifdef DS34
 static u8 have_ds34 = 0;
+#ifdef DS34
+static u8 have_gipusb = 0;
+#endif
 #endif
 static u8 have_usb_mass = 0;
 
@@ -1596,6 +1600,8 @@ static void loadUsbDModule(void)
 //------------------------------
 //endfunc loadUsbDModule
 //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 /* fileXioGetStat with a real deadline. The library call waits inside the
  * RPC forever when a wedged slot never answers, freezing the console; this
  * issues the same GETSTAT through a private RPC client with
@@ -1745,6 +1751,10 @@ static void loadDs34Modules(void)
 	    loadExternalModule("DS34USB.IRX", &ds34usb_irx, size_ds34usb_irx) &&
 	    loadExternalModule("DS34BT.IRX", &ds34bt_irx, size_ds34bt_irx))
 		have_ds34 = 1;
+
+	// Xbox One / Series (GIP) pads: loaded separately so a failure does not block DS3/DS4.
+	if (!have_gipusb && loadExternalModule("GIPUSB.IRX", &gipusb_irx, size_gipusb_irx))
+		have_gipusb = 1;
 }
 //------------------------------
 //endfunc loadDs34Modules
@@ -3138,6 +3148,7 @@ static void clearIopModuleState(void)
 	have_usb_mass = 0;
 #ifdef DS34
 	have_ds34 = 0;
+	have_gipusb = 0;
 #endif
 	have_netman = 0;
 	have_ps2smap = 0;

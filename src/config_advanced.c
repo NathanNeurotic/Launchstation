@@ -17,6 +17,7 @@ enum CONFIG_ADVANCED {
 	CONFIG_ADVANCED_DISABLE_EMBER,
 	CONFIG_ADVANCED_DISABLE_POPSTARTER,
 	CONFIG_ADVANCED_DISABLE_NEUTRINO,
+	CONFIG_ADVANCED_DISABLE_RIPTOPL,
 
 	CONFIG_ADVANCED_AFT_OPTIONS,
 	CONFIG_ADVANCED_RETURN = CONFIG_ADVANCED_AFT_OPTIONS,
@@ -59,7 +60,7 @@ static int getConfigAdvancedItemY(int s)
 	for (i = CONFIG_ADVANCED_APP_GAMEID; i < s; i++) {
 		y += FONT_HEIGHT;
 		if (i != CONFIG_ADVANCED_APP_GAMEID && i != CONFIG_ADVANCED_PSU_HUGENAMES && i != CONFIG_ADVANCED_PSU_DATENAMES &&
-		    i != CONFIG_ADVANCED_DISABLE_EMBER && i != CONFIG_ADVANCED_DISABLE_POPSTARTER)
+		    i != CONFIG_ADVANCED_DISABLE_EMBER && i != CONFIG_ADVANCED_DISABLE_POPSTARTER && i != CONFIG_ADVANCED_DISABLE_NEUTRINO)
 			y += FONT_HEIGHT / 2;
 	}
 
@@ -86,6 +87,7 @@ void Config_Advanced(void)
 	const char *disable_ember_label = "Disable EMBER support";
 	const char *disable_popstarter_label = "Disable POPSTARTER support";
 	const char *disable_neutrino_label = "Disable NEUTRINO support";
+	const char *disable_riptopl_label = "Disable RIPTOPL support";
 
 	event = 1;
 	s = CONFIG_ADVANCED_FIRST;
@@ -146,6 +148,8 @@ void Config_Advanced(void)
 						setting->disable_popstarter = !setting->disable_popstarter;
 					else if (s == CONFIG_ADVANCED_DISABLE_NEUTRINO)
 						setting->disable_neutrino = !setting->disable_neutrino;
+					else if (s == CONFIG_ADVANCED_DISABLE_RIPTOPL)
+						setting->disable_riptopl = !setting->disable_riptopl;
 					else if (s == CONFIG_ADVANCED_RETURN)
 						return;
 				} else if ((swapKeys && new_pad & PAD_CROSS) || (!swapKeys && new_pad & PAD_CIRCLE)) {
@@ -178,6 +182,8 @@ void Config_Advanced(void)
 						setting->disable_popstarter = !setting->disable_popstarter;
 					else if (s == CONFIG_ADVANCED_DISABLE_NEUTRINO)
 						setting->disable_neutrino = !setting->disable_neutrino;
+					else if (s == CONFIG_ADVANCED_DISABLE_RIPTOPL)
+						setting->disable_riptopl = !setting->disable_riptopl;
 					else if (s == CONFIG_ADVANCED_RETURN)
 						return;
 				} else if (new_pad & PAD_TRIANGLE)
@@ -217,6 +223,8 @@ void Config_Advanced(void)
 				bool_label_width = (int)strlen(disable_popstarter_label);
 			if ((int)strlen(disable_neutrino_label) > bool_label_width)
 				bool_label_width = (int)strlen(disable_neutrino_label);
+			if ((int)strlen(disable_riptopl_label) > bool_label_width)
+				bool_label_width = (int)strlen(disable_riptopl_label);
 
 			printXY(LNG(Advanced_Settings), x, y, setting->color[COLOR_TEXT], TRUE, 0);
 			y += FONT_HEIGHT;
@@ -273,6 +281,10 @@ void Config_Advanced(void)
 				y += FONT_HEIGHT;
 
 				configFormatLabelValueAligned(c, sizeof(c), disable_neutrino_label, setting->disable_neutrino ? LNG(YES) : LNG(NO), bool_label_width);
+				printXY(c, x, y, setting->color[COLOR_TEXT], TRUE, 0);
+				y += FONT_HEIGHT;
+
+				configFormatLabelValueAligned(c, sizeof(c), disable_riptopl_label, setting->disable_riptopl ? LNG(YES) : LNG(NO), bool_label_width);
 				printXY(c, x, y, setting->color[COLOR_TEXT], TRUE, 0);
 				y += FONT_HEIGHT;
 				y += FONT_HEIGHT / 2;

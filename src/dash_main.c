@@ -11,6 +11,7 @@
 #include "dash_sound.h"
 #include "filer_shared.h"
 #include "init.h"
+#include "riptopl_iso.h"
 #ifdef SMB
 #include "smb_shares.h"
 #endif
@@ -599,7 +600,38 @@ static void friendlyLaunchError(const DashApp *app, const char *tech)
 	}
 }
 
-void dashLaunchApp(DashApp *app, int with_args_prompt)
+/* A disc in the drive: RiptOPL (the pad-emulating loader) is started with the "disc" argument and boots
+ * it through its own core, which keeps PADEMU alive across the game's IOP resets. The app, from the
+ * menu, only sees Start. */
+void dashLaunchDisc(const char *title, const char *game_id)
+{
+	char elf[MAX_PATH], msg[MAX_PATH], arg_line[64];
+	DashApp tmp, launch;
+	DashApp *resolved;
+
+	msg[0] = '\0';
+	LaunchArgsClear();
+	if (!settleBackgroundWork("Finishing up"))
+		return;
+	arg_line[0] = '\0';
+	if (!riptoplDiscArgLine(game_id, arg_line, sizeof(arg_line)))
+		snprintf(arg_line, sizeof(arg_line), "disc");
+	if (!RiptoplPrepareDiscLaunch(elf, sizeof(elf), arg_line, msg, sizeof(msg))) {
+		LaunchArgsClear();
+		dashModalMessage(DI_WARNING, "RiptOPL", "The disc could not be started with RiptOPL.", msg[0] ? msg : NULL);
+		return;
+	}
+	resolved = dashLibResolve(elf, &tmp);
+	if (resolved == NULL) {
+		LaunchArgsClear();
+		dashModalMessage(DI_WARNING, "RiptOPL", "RIPTOPL.ELF could not be opened.", elf);
+		return;
+	}
+	memcpy(&launch, resolved, sizeof(launch));
+	if (title != NULL && title[0] != '\0')
+		dashStrCopy(launch.title, title, sizeof(launch.title));
+	dashLaunchApp(&launch, DASH_LAUNCH_PENDING_ARGS);
+}void dashLaunchApp(DashApp *app, int with_args_prompt)
 {
 	char path[MAX_PATH];
 	char title[DASH_TITLE_MAX + 16];
@@ -610,6 +642,16 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 		return;
 	memcpy(&copy, app, sizeof(copy));
 	dashStrCopy(path, copy.path, sizeof(path));
+	/* A GAMES entry for a disc: starting it is the next step (RiptOPL), so say so instead of launching. */
+	if (!strcmp(path, "cdrom0:/DISC") && !(setting != NULL && setting->disable_riptopl)) {
+		dashLaunchDisc(copy.title, copy.category);
+		return;
+	}
+	/* A game whose RiptOPL settings choose RiptOPL starts there; everything else stays on Neutrino. */
+	if (with_args_prompt == 0 && IsNeutrinoIsoPath(path) && riptoplGameUsesRiptopl(path)) {
+		dashLaunchIsoWithRiptopl(path, copy.title);
+		return;
+	}
 	if (with_args_prompt != DASH_LAUNCH_PENDING_ARGS)
 		LaunchArgsClear();
 
@@ -690,6 +732,39 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	dashLoadingEnd();
 	friendlyLaunchError(&copy, exec_ctx.main_msg);
 	exec_ctx.main_msg[0] = '\0';
+}
+
+/* Start a PS2 ISO through RiptOPL instead of Neutrino: a separate choice, not a replacement.
+ * RiptOPL boots the game from four launch arguments (see riptopl_iso.c), so this loads them and starts
+ * RIPTOPL.ELF the same way "Start with arguments" starts any application. */
+void dashLaunchIsoWithRiptopl(const char *iso_path, const char *title)
+{
+	char elf[MAX_PATH], msg[MAX_PATH];
+	DashApp tmp, launch;
+	DashApp *resolved;
+
+	if (iso_path == NULL)
+		return;
+	msg[0] = '\0';
+	LaunchArgsClear();
+	if (!settleBackgroundWork("Finishing up"))
+		return; /* the user backed out while saves/driver work finished */
+	if (!RiptoplPrepareIsoLaunch(iso_path, elf, sizeof(elf), msg, sizeof(msg))) {
+		LaunchArgsClear();
+		dashModalMessage(DI_WARNING, "RiptOPL", "This game could not be started with RiptOPL.", msg[0] ? msg : NULL);
+		return;
+	}
+	resolved = dashLibResolve(elf, &tmp);
+	if (resolved == NULL) {
+		LaunchArgsClear();
+		dashModalMessage(DI_WARNING, "RiptOPL", "RIPTOPL.ELF could not be opened.", elf);
+		return;
+	}
+	/* Work on a copy: the library entry for RIPTOPL.ELF must keep its own title. */
+	memcpy(&launch, resolved, sizeof(launch));
+	if (title != NULL && title[0] != '\0')
+		dashStrCopy(launch.title, title, sizeof(launch.title));
+	dashLaunchApp(&launch, DASH_LAUNCH_PENDING_ARGS);
 }
 
 //--------------------------------------------------------------

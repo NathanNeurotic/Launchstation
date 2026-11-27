@@ -33,6 +33,8 @@ typedef struct
 	DashApp *games;
 	int n, cap;
 	FILEINFO *files;
+	int disc_present;
+	char disc_id[NEUTRINO_GAME_ID_SIZE];
 } GameScan;
 
 static DashApp *games;
@@ -48,6 +50,60 @@ static GameScan *scan_job, *scan_result;
 static int titleCmp(const void *pa, const void *pb)
 {
 	return stricmp(((const DashApp *)pa)->title, ((const DashApp *)pb)->title);
+}
+
+/* The GAMES entry for the disc in the drive is the one whose path is cdrom0:. */
+static int isDisc(const DashApp *g)
+{
+	return !strncmp(g->path, "cdrom0:", 7);
+}
+
+/* A PS2 disc is in the drive. Checked before any read: a read with no disc can hang (issue #346). */
+static int discPresent(void)
+{
+	int t = sceCdGetDiskType();
+
+	return t == SCECdPS2DVD || t == SCECdPS2CD;
+}
+
+/* The disc's game ID from its SYSTEM.CNF. Returns 0 when the disc has none. */
+static int discReadId(char *id, size_t cap)
+{
+	char *cnf;
+	int ok;
+
+	if (!discPresent())
+		return 0;
+	cnf = preloadCNF("cdrom0:\\SYSTEM.CNF;1");
+	if (cnf == NULL)
+		return 0;
+	ok = gameIdFromSystemCnf(cnf, id) && cap > 0;
+	free(cnf);
+	return ok;
+}
+
+/* The one entry for the disc. Start on it goes through RiptOPL (see dashLaunchApp). */
+static void addDiscEntry(GameScan *s)
+{
+	DashApp *g;
+
+	if (s->n >= GAMES_MAX)
+		return;
+	if (s->n == s->cap) {
+		DashApp *grown = (DashApp *)realloc(s->games, sizeof(DashApp) * (s->cap + 32));
+		if (grown == NULL)
+			return;
+		s->games = grown;
+		s->cap += 32;
+	}
+	g = &s->games[s->n];
+	memset(g, 0, sizeof(*g));
+	dashStrCopy(g->path, "cdrom0:/DISC", sizeof(g->path));
+	g->flags = DASH_APP_GAME;
+	dashStrCopy(g->category, s->disc_id, sizeof(g->category));
+	snprintf(g->title, sizeof(g->title), "Disc %s", s->disc_id);
+	g->hue = 200;
+	s->n++;
 }
 
 /* OPL's older file naming, "SLUS_123.45.Title.iso", carries the game ID. */
@@ -225,6 +281,8 @@ static void scanRun(void *arg)
 	for (i = 0; i < s->nroots; i++)
 		if (isPathDeviceStackLoaded(s->roots[i]))
 			scanRoot(s, s->roots[i], !strncmp(s->roots[i], "smb", 3));
+	if (s->disc_present)
+		addDiscEntry(s);
 	if (s->n > 1)
 		qsort(s->games, s->n, sizeof(DashApp), titleCmp);
 }
@@ -243,8 +301,10 @@ static void scanDone(void *arg)
 	scan_result = s;
 }
 
-/* Lists the devices on the UI thread; the worker only reads running ones. */
-static void scanStart(void)
+/* Lists the devices on the UI thread; the worker only reads running ones. The drive is read only when
+ * with_disc is set, which is a scan the user asked for: reading it on the automatic scan made entering
+ * Games stall. */
+static void scanStart(int with_disc)
 {
 	DashDevice devs[DASH_MAX_DEVICES];
 	GameScan *s;
@@ -264,6 +324,8 @@ static void scanStart(void)
 	for (i = 0; i < nd && s->nroots < GAME_ROOTS; i++)
 		if (devs[i].state == DASH_DEV_READY && IsNeutrinoGameDevice(devs[i].browse))
 			dashStrCopy(s->roots[s->nroots++], devs[i].browse, sizeof(s->roots[0]));
+	/* The disc is read here, on the UI thread, as the Start disc tool does; the worker only lists it. */
+	s->disc_present = (with_disc && !(setting != NULL && setting->disable_riptopl)) ? discReadId(s->disc_id, sizeof(s->disc_id)) : 0;
 	scan_job = s;
 	if (dashWorkerSubmit("Looking for games", DASH_JOB_SCAN | DASH_JOB_VISIBLE, scanRun, scanDone, s) < 0) {
 		scan_job = NULL;
@@ -281,9 +343,11 @@ static void rebuild(const char *keep)
 
 	list_top_anim = -1.0f;
 	norder = 0;
-	for (i = 0; i < ngames; i++)
-		if (dashDevicePathReady(games[i].path))
+	for (i = 0; i < ngames; i++) {
+		int ready = isDisc(&games[i]) ? 1 : dashDevicePathReady(games[i].path);
+		if (ready)
 			order[norder++] = i;
+	}
 	sel = 0;
 	for (i = 0; i < norder && keep != NULL && keep[0]; i++)
 		if (!stricmp(games[order[i]].path, keep))
@@ -374,10 +438,10 @@ static void gameSettings(DashApp *g)
 
 static void gamesMenu(void)
 {
-	enum { M_START, M_SETTINGS, M_DETAILS, M_SHOW, M_REFRESH };
+	enum { M_START, M_SETTINGS, M_RIPTOPL_SET, M_DETAILS, M_SHOW, M_REFRESH };
 	DashApp *g = selGame();
-	DashMenuItem items[5];
-	int act[5], n = 0, r;
+	DashMenuItem items[6];
+	int act[6], n = 0, r;
 	char dir[DASH_PATH_MAX];
 
 	memset(items, 0, sizeof(items));
@@ -386,6 +450,9 @@ static void gamesMenu(void)
 		if (IsNeutrinoIsoPath(g->path))
 			items[n].icon = DI_SETTINGS, items[n].label = "Game settings", items[n].detail = "Neutrino options",
 			act[n++] = M_SETTINGS;
+		if ((IsNeutrinoIsoPath(g->path) || isDisc(g)) && !(setting != NULL && setting->disable_riptopl))
+			items[n].icon = DI_SETTINGS, items[n].label = "RiptOPL settings", items[n].detail = "loader and pad options",
+			act[n++] = M_RIPTOPL_SET;
 		items[n].icon = DI_INFO, items[n].label = "Details", act[n++] = M_DETAILS;
 		items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", act[n++] = M_SHOW;
 	}
@@ -398,6 +465,11 @@ static void gamesMenu(void)
 		dashLaunchApp(g, 0);
 	else if (r == M_SETTINGS)
 		gameSettings(g);
+	else if (r == M_RIPTOPL_SET)
+		if (isDisc(g))
+			dashRiptoplDiscSettings(g->category, g->title);
+		else
+			dashRiptoplSettings(g->path, g->title);
 	else if (r == M_DETAILS)
 		showDetails(g);
 	else if (r == M_SHOW) {
@@ -406,13 +478,13 @@ static void gamesMenu(void)
 		if (dir[0])
 			dashNavigateFilesTab(dir);
 	} else
-		scanStart();
+		scanStart(1);
 }
 
 static void gamesEnter(void)
 {
 	if (!scanned && scan_job == NULL && scan_result == NULL)
-		scanStart();
+		scanStart(0);
 	rebuild(sel < norder ? games[order[sel]].path : NULL);
 	sel_anim = (float)sel;
 }
@@ -448,7 +520,7 @@ static void gamesInput(const DashInput *in)
 		if (norder > 0)
 			dashLaunchApp(selGame(), 0);
 		else
-			scanStart();
+			scanStart(1);
 	} else if (in->pressed & DASH_IN_MENU)
 		gamesMenu();
 }

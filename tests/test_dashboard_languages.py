@@ -41,7 +41,7 @@ keys = [ast.literal_eval(m[1]) for m in re.finditer(r'\{("(?:[^"\\]|\\.)*"), LAN
 assert keys == sorted(set(keys))
 settings = (root / 'src/dash_settings.c').read_text()
 labels = set(re.findall(r'\{ST_\w+,\s*\w+,\s*"([^"]+)"', settings))
-assert labels <= set(keys) | {'Neutrino', 'POPStarter'}, labels - set(keys)
+assert labels <= set(keys) | {'Neutrino', 'POPStarter', 'RiptOPL'}, labels - set(keys)
 assert 'localizeDashboardText' not in (root / 'src/dash_font.c').read_text()
 
 source = (root / 'src/lang.c').read_text()

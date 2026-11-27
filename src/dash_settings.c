@@ -94,9 +94,12 @@ enum SetId {
 	S_POPS_PATH,
 	S_EMBER_DIR,
 	S_NEUTRINO_PATH,
+	S_RIPTOPL_PATH,
+	S_RIPTOPL_DISC_PATH,
 	S_DISABLE_EMBER,
 	S_DISABLE_POPSTARTER,
 	S_DISABLE_NEUTRINO,
+	S_DISABLE_RIPTOPL,
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
@@ -343,9 +346,12 @@ static const SetItem loader_items[] = {
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
     {ST_PATH, S_EMBER_DIR, "Ember directory", "Folder containing ember.elf, bios.bin and games/. CUE/BIN/EXE routes to Ember automatically; VCD still uses POPStarter."},
     {ST_PATH, S_NEUTRINO_PATH, "Neutrino", "Neutrino ELF used to start PS2 ISO images. Empty: game device, then mc0:/mc1:/neutrino/."},
+    {ST_PATH, S_RIPTOPL_PATH, "RiptOPL", "RIPTOPL.ELF used by Start with RiptOPL. Empty: APPS/RIPTOPL-GIP on the game's device, then the memory cards."},
+    {ST_PATH, S_RIPTOPL_DISC_PATH, "RiptOPL for discs", "RIPTOPL.ELF of the RetroAchievements edition, the one that can start a disc with the pad emulator. Empty: the RiptOPL above, then the memory cards."},
     {ST_CHOICE, S_DISABLE_EMBER, "Disable Ember support", "Off (default): CUE/BIN/EXE game routes use Ember. On: refuse Ember image launches without loading devices."},
     {ST_CHOICE, S_DISABLE_POPSTARTER, "Disable POPStarter support", "Off (default): VCD launches use POPStarter. On: refuse automatic VCD launches."},
     {ST_CHOICE, S_DISABLE_NEUTRINO, "Disable Neutrino support", "Off (default): ISO launches use Neutrino. On: refuse automatic PS2 ISO launches."},
+    {ST_CHOICE, S_DISABLE_RIPTOPL, "Disable RiptOPL support", "Off (default): a game can be set to start with RiptOPL, and a disc in the drive is listed in Games. On: no RiptOPL entries, and the drive is never read for Games."},
 };
 
 static const SetItem device_items[] = {
@@ -1252,6 +1258,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_DISABLE_NEUTRINO:
 			*cur = setting->disable_neutrino ? 1 : 0;
 			return 2;
+		case S_DISABLE_RIPTOPL:
+			*cur = setting->disable_riptopl ? 1 : 0;
+			return 2;
 		case S_GAMEID:
 			*cur = setting->app_gameid ? 1 : 0;
 			return 2;
@@ -1979,6 +1988,9 @@ static void setChoice(int id, int v)
 				case S_DISABLE_NEUTRINO:
 					setting->disable_neutrino = v;
 					break;
+				case S_DISABLE_RIPTOPL:
+					setting->disable_riptopl = v;
+					break;
 				case S_GAMEID:
 					setting->app_gameid = v;
 					break;
@@ -2112,6 +2124,12 @@ static int pathInfo(int id, PathSpec *p)
 			return 1;
 		case S_NEUTRINO_PATH:
 			p->field = setting->neutrino_file, p->size = sizeof(setting->neutrino_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_RIPTOPL_PATH:
+			p->field = setting->riptopl_file, p->size = sizeof(setting->riptopl_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_RIPTOPL_DISC_PATH:
+			p->field = setting->riptopl_disc_file, p->size = sizeof(setting->riptopl_disc_file), p->ext = "ELF", p->mc_alias = 1;
 			return 1;
 		case S_MMCE_BACKUP_PATH:
 			p->field = dashCfg.igr_backup_path, p->size = sizeof(dashCfg.igr_backup_path), p->mode = DASH_PICK_FOLDER;

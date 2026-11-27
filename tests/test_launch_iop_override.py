@@ -37,8 +37,8 @@ typedef struct { int unused; } DashInput;
 #define TEXTEDITOR_RESULT_LAUNCH_ARGS 1
 #define DI_EDIT 1
 #define DI_WARNING 2
-typedef struct { char path[MAX_PATH],title[DASH_TITLE_MAX];int flags; } DashApp;
-static struct { int reboot_iop_elf_load; } config,*setting=&config;
+typedef struct { char path[MAX_PATH],title[DASH_TITLE_MAX],category[24];int flags; } DashApp;
+static struct { int reboot_iop_elf_load,disable_riptopl; } config,*setting=&config;
 static MainExecuteContext exec_ctx;
 static struct { int recent_count; } dashCfg={8};
 static char message[MAX_PATH];
@@ -94,6 +94,9 @@ static int settleBackgroundWork(const char *title) {
     return settle_calls!=fail_settle;
 }
 static int argSidecarExists(const char *path) { (void)path;return 0; }
+static int riptoplGameUsesRiptopl(const char *p) { (void)p;return 0; }
+static void dashLaunchIsoWithRiptopl(const char *p,const char *t) { (void)p;(void)t; }
+static void dashLaunchDisc(const char *t,const char *id) { (void)t;(void)id; }
 static int dashLibLoadArgs(const DashApp *app,char *args,int cap) {
     (void)app;snprintf(args,cap,"arg");return 3;
 }
