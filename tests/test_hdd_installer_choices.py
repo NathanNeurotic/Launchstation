@@ -86,18 +86,24 @@ typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
 static int expected_check=-1,expected_focus;
 static int answers[4],asked,messages,cancel=-1;
 static int dashModalMenu(const char *title,const char *subtitle,const DashMenuItem *items,int count,int initial){
-    assert(title&&!subtitle&&count>0&&count<=6&&initial==expected_focus&&items[0].label);
-    for(int j=0;j<count;j++)assert(items[j].icon==(j==expected_check?DI_CHECK:-1)&&!items[j].detail&&!items[j].disabled);
-    if(!strcmp(title,"Software after formatting")&&count==2)assert(strstr(items[1].label,"Experimental"));
+    assert(title&&count>0&&count<=7&&initial==expected_focus&&items[0].label);
+    int software=!strcmp(title,"Software after formatting")&&count==2;
+    for(int j=0;j<count;j++)assert(items[j].icon==(j==expected_check?DI_CHECK:-1)&&(!items[j].detail||(software&&j==1))&&!items[j].disabled);
+    if(software){assert(!strcmp(items[0].label,"No software, format only"));assert(!strcmp(items[1].label,"PSBBN DP, HOSDMenu")&&!strcmp(items[1].detail,"EXPERIMENTAL"));}
+    if(strstr(title,"Default game launcher")){assert(!strcmp(title,"Choice 2 of 9: Default game launcher")&&messages==1);assert(!strcmp(items[0].label,"Neutrino (NHDDL)")&&!strcmp(items[1].label,"Open PS2 Loader (OPL)"));}
+    if(strstr(title,"Music partition"))assert(!strcmp(title,"Choice 3 of 9: Music partition size"));
+    if(strstr(title,"Contents partition"))assert(!strcmp(title,"Choice 4 of 9: Contents partition size"));
+    if(strstr(title,"Standalone PS2 Linux"))assert(!strcmp(title,"Choice 5 of 9: Standalone PS2 Linux")&&subtitle&&strstr(subtitle,"2 GiB system")&&!strcmp(items[0].label,"Off"));
+    else assert(!subtitle);
     int i=asked++;if(i==cancel)return -1;
     assert(answers[i]<count);return answers[i];
 }
-static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);if(strstr(title,"PSBBN DP installation"))assert(strstr(title,"Experimental"));messages++;}
+static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);assert(!strcmp(title,"Choice 1 of 9: PSBBN DP installation")&&asked==1&&strstr(body,"Sony Network Adapter")&&strstr(body,"GameStar")&&strstr(body,"HOSDMenu, is installed as well"));messages++;}
 '''
     choice_source=(root/'src/dash_ui.c').read_text()
     for signature in ('static int modalChoice(', 'int dashModalChoice(', 'int dashModalSelect('):
         code+=function(choice_source,signature)
-    code+=function(source,'int dashHddInstallChoose(')+function(source,'static int installSize(')+function(source,'int dashHddInstallConfigure(')
+    code+=function(source,'const char *dashHddInstallChoiceTitle(')+function(source,'int dashHddInstallChoose(')+function(source,'static int installSize(')+function(source,'int dashHddInstallConfigure(')
     code+=r'''
 int main(void){HddInstall in={.flags=7,.jail=1};
  const char *options[]={"First","Second"};
@@ -107,18 +113,19 @@ int main(void){HddInstall in={.flags=7,.jail=1};
  asked=0;
  for(int launcher=0;launcher<2;launcher++){
   answers[0]=1;answers[1]=launcher;asked=messages=0;
-  assert(dashHddInstallChoose(&in,1)&&in.flags==7&&in.game_launcher==(unsigned)launcher&&asked==2&&messages==1);
+  assert(dashHddInstallChoose(&in,1)&&in.flags==7&&in.game_launcher==(launcher?HDD_GAME_OPL:HDD_GAME_NEUTRINO)&&asked==2&&messages==1);
  }
- asked=0;cancel=1;assert(!dashHddInstallChoose(&in,1)&&asked==2);cancel=-1;
+ asked=messages=0;cancel=1;assert(!dashHddInstallChoose(&in,1)&&asked==2&&messages==1);cancel=-1;
  for(int profile=0;profile<4;profile++){
   const unsigned expected[]={0,2,1,3};answers[0]=profile;asked=messages=0;
   assert(dashHddInstallChoose(&in,0)&&in.flags==expected[profile]&&!in.game_launcher&&asked==1);
  }
  memset(answers,0,sizeof(answers));asked=messages=0;in.flags=7;in.jail=1;
  assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==7&&in.music_mb==1024&&in.contents_mb==1024&&!in.linux_home_mb);
- asked=messages=0;answers[0]=1;answers[1]=2;answers[2]=1;answers[3]=3;
- assert(dashHddInstallConfigure(&in,8192)&&asked==4&&messages==1&&in.flags==15&&in.music_mb==2048&&in.contents_mb==4096&&in.linux_home_mb==8192);
- for(cancel=0;cancel<4;cancel++){asked=0;assert(!dashHddInstallConfigure(&in,8192)&&asked==cancel+1);}
+ asked=messages=0;answers[0]=1;answers[1]=2;answers[2]=4;
+ assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==15&&in.music_mb==2048&&in.contents_mb==4096&&in.linux_home_mb==8192);
+ for(cancel=0;cancel<3;cancel++){asked=0;assert(!dashHddInstallConfigure(&in,8192)&&asked==cancel+1);}
+ for(unsigned step=1;step<=HDD_CHOICE_CONFIRM;step++){char title[100],expected[100];snprintf(expected,sizeof(expected),"Choice %u of 9: Question",step);assert(!strcmp(dashHddInstallChoiceTitle(&in,step,"Question",title,sizeof(title)),expected));}
  puts("PASS: installer choice defaults/cancellation, single-extent sizes, APA allocation/reserve bounds, optional Linux metadata/assets and Circle boot config");}
 '''
     (d/'ui.c').write_text(code)

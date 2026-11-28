@@ -420,6 +420,9 @@ void dashTextScrollProgress(float x, float y, float maxw, const char *s, float s
 void dashTextScrollTimed(float x, float y, float maxw, const char *s, float scale, DashColor c, float age);
 void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
+/* Measure with the same word/glyph wrapping used when drawing. */
+int dashTextWrapLines(float w, int max_lines, const char *s, float scale);
+/* Wrapped text scrolls upward at 8 px/s, holds the end for 2s, then restarts. */
 void dashTextWrapScrollTimed(float x, float y, float w, float h, const char *s,
                              float scale, DashColor c, float line_h, float age);
 void dashFontByte(unsigned char c, float x, float y, DashColor color);
@@ -511,6 +514,7 @@ enum DashIcon {
 	DI_HDD_MANAGER, /* dedicated HDD Manager icon */
 	DI_ARCHIVE_CREATE, /* closed package */
 	DI_ARCHIVE_EXTRACT, /* open package */
+	DI_SHOW,        /* open eye for showing hidden items */
 	DI_COUNT
 };
 
@@ -984,6 +988,8 @@ enum {
 };
 int dashHttpsCaPath(char *path, int path_size);
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
+/* Returns the count; caller frees each selected path and the array. */
+int dashPickFiles(const char *title, const char *start_dir, const char *ext, char ***paths);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 void dashModalSetMarks(unsigned char *marks);    /* next dashModalMenu(): Square toggles 0/1; other values fixed */
 void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg); /* next dashModalMenu(): Left/Right/Confirm change rows in place */
@@ -1039,6 +1045,7 @@ int dashWorkerAwait(int id, const char *title, int cancelable);
 int dashWorkerAwaitAll(const char *title);                       /* 0 = cancelled */
 int dashWorkerOnThread(void);
 void dashWorkerStatus(const char *text, int done, int total);   /* worker side */
+void dashWorkerGetStatus(char *out, int size, int *done, int *total); /* UI snapshot */
 void dashDrawActivity(void);
 /* A background job rebooting the IOP parks the UI thread at its next
  * dashWorkerParkPoint(): no pad reads, no sound, until the IOP is back. */

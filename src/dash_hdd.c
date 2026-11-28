@@ -820,7 +820,7 @@ static void loadPfsInfo(int i)
 static int pickSizeMenu(const char *title, int min_mb, int max_mb, int start_mb, int partition)
 {
 	int size = start_mb;
-	const float w = 440.0f, h = 244.0f;
+	const float w = 600.0f, h = 244.0f;
 	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	float open = 0.0f;
 	DashInput in;
@@ -882,7 +882,7 @@ static int pickSizeMenu(const char *title, int min_mb, int max_mb, int start_mb,
 			dashModalBackdrop(dashEaseOutCubic(open));
 			dashModalPanel(x, y, w, h, 1.0f);
 			dashIcon(DI_HDD, x + 24, y + 18, 22, DASH_C_ACCENT);
-			dashTextS(x + 56, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
+			dashTextFit(x + 56, y + 18, w - 80, title, DASH_FS_LABEL, DASH_C_TEXT);
 			if (size >= 1024)
 				snprintf(num, sizeof(num), "%.1f GB  (%d MB)", size / 1024.0f, size);
 			else
@@ -898,7 +898,7 @@ static int pickSizeMenu(const char *title, int min_mb, int max_mb, int start_mb,
 			dashText(bx, by + 14, lo, DASH_FS_CAPTION, DASH_C_TEXT3);
 			dashTextRight(bx + bw, by + 14, hi, DASH_FS_CAPTION, DASH_C_TEXT3);
 			{
-				float hx = x + 24, hy = y + h - 60;
+				float hx = x + 24, hy = y + h - 36;
 				/* Tighten the chevrons without overlapping button backings. */
 				hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + (dashCfg.icon_backing ? 0 : -6);
 				hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
@@ -908,7 +908,7 @@ static int pickSizeMenu(const char *title, int min_mb, int max_mb, int start_mb,
 				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "1 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
 				hx += dashDrawButton(hx, hy, -1, "L2") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R2") + 4;
-				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "10 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "10 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 16;
 				dashModalHintRow(hx, hy, dashOkIcon(), localizeDashboardText("OK"), dashBackIcon(), localizeDashboardText("Cancel"));
 			}
 			dashGfxPresent();
@@ -1101,7 +1101,7 @@ static void actFormat(void)
 	HddFormatPlan plan;
 	HddInstall install;
 	HddJob *j;
-	char body[640];
+	char body[640], choice_title[128];
 	int kind, reserve = 0, total, ret, began, format_ok;
 #endif
 
@@ -1150,9 +1150,7 @@ static void actFormat(void)
 				if (needed >= 0 && needed <= max) break;
 				dashModalMessage(DI_WARNING, "Not enough APA space", "The selected Music, Contents and Linux sizes do not fit. Choose smaller sizes or cancel.", NULL);
 			}
-			snprintf(body, sizeof(body), "APA system: %u MiB; PSBBN system: 4096 MiB.\nMusic: %u MiB; Contents: %u MiB.\nPS2 Linux: %s; home: %u MiB.\nSoftware and alignment: %d MiB.\nChoose extra APA space to keep free for future use.", (unsigned)(base.apa_sectors / 2048), install.music_mb, install.contents_mb, install.flags & HDD_INSTALL_PS2LINUX ? "On (2 GiB system)" : "Off", install.linux_home_mb, needed);
-			dashModalMessage(DI_INFO, "APA space allocation", body, NULL);
-			free_reserve = pickSize("Reserved APA space for future use", 0, max - needed, 0);
+			free_reserve = pickSize(dashHddInstallChoiceTitle(&install, HDD_CHOICE_RESERVE, "Reserved APA space for future use", choice_title, sizeof(choice_title)), 0, max - needed, 0);
 			if (free_reserve < 0) return;
 			install.reserved_mb = free_reserve;
 			reserve = hddInstallRequiredMb(&install, base.apa_sectors / 2048);
@@ -1183,15 +1181,15 @@ static void actFormat(void)
 		int count = 0;
 #define REVIEW(label_, ...) do { snprintf(values[count], sizeof(values[count]), __VA_ARGS__); rows[count].label = label_; rows[count].value = values[count]; count++; } while (0)
 		REVIEW("Format", "%s", formats[kind]);
-		REVIEW("Drive capacity", "%u MiB", (unsigned)((u32)total / 2048));
-		if (kind != HDD_FORMAT_EXFAT) REVIEW("APA space", "%u MiB", (unsigned)(plan.apa_sectors / 2048));
+		REVIEW("Drive Capacity", "%u MiB", (unsigned)((u32)total / 2048));
+		if (kind != HDD_FORMAT_EXFAT) REVIEW("APA total space", "%u MiB", (unsigned)(plan.apa_sectors / 2048));
 		if (kind != HDD_FORMAT_APA) {
 			REVIEW("exFAT space", "%u MiB", (unsigned)(plan.exfat_sectors / 2048));
 			REVIEW("exFAT label / cluster", "PS2 / 32 KiB");
 		}
-		REVIEW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP (Experimental), MBR, HOSDMenu, apps" :
+		REVIEW("Software", "%s", install.flags & HDD_INSTALL_PSBBN ? "PSBBN DP, HOSDMenu (EXPERIMENTAL)" :
 		       install.flags == (HDD_INSTALL_HOSD | HDD_INSTALL_APPS) ? "MBR, HOSDMenu and apps" :
-		       install.flags & HDD_INSTALL_HOSD ? "MBR and HOSDMenu" : install.flags & HDD_INSTALL_APPS ? "WLE-R3Z and R3CONFIGURATOR" : "Format only");
+		       install.flags & HDD_INSTALL_HOSD ? "MBR and HOSDMenu" : install.flags & HDD_INSTALL_APPS ? "WLE-R3Z and R3CONFIGURATOR" : "No software, format only");
 		if (install.flags & HDD_INSTALL_PSBBN) {
 			REVIEW("PSBBN language", "%s", install.language.name);
 			REVIEW("Default game launcher", "%s", hddInstallGameName(install.game_launcher));
@@ -1205,9 +1203,9 @@ static void actFormat(void)
 		if (install.flags) REVIEW("Downloads", "To the internal HDD after erase");
 		if (install.flags & HDD_INSTALL_HOSD) REVIEW("Console HDD boot", "Enable");
 #undef REVIEW
-		if (!dashModalConfirmTable("Review HDD format", rows, count, localizeDashboardText("Continue"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
+		if (!dashModalConfirmTable(dashHddInstallChoiceTitle(&install, HDD_CHOICE_REVIEW, "Review HDD format", choice_title, sizeof(choice_title)), rows, count, localizeDashboardText("Continue"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
 	}
-	if (!dashModalConfirm("Are you sure?", "Every partition, game and file on this HDD will be erased. This cannot be undone.", localizeDashboardText("Format"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
+	if (!dashModalConfirm(dashHddInstallChoiceTitle(&install, HDD_CHOICE_CONFIRM, "Are you sure?", choice_title, sizeof(choice_title)), "Every partition, game and file on this HDD will be erased. This cannot be undone.", localizeDashboardText("Format"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
 	j = jobNew(HOP_FORMAT);
 	if (!j) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ENOMEM); hddInstallRelease(&install); return; }
 	j->format_plan = plan;
@@ -1698,17 +1696,19 @@ static void partitionMenu(void)
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	if (hm.formatted)
 		ADD(DI_PLUS, "Create partition...", NULL, 0, A_CREATE);
-#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
-	if (can_install && hosdmenu)
-		ADD(DI_ARCHIVE_EXTRACT, "Install app from PSU...", hosd_detail ? hosd_detail : "8 MiB launcher; Internet required",
-		    hosdmenu < 0, A_INSTALL_APP);
-#endif
 	if (p != NULL) {
 		ADD(DI_CLOSE, "Remove partition...", reserved ? "system" : NULL, system || reserved, A_REMOVE);
 		ADD(DI_EDIT, "Rename partition...", NULL, system || reserved, A_RENAME);
 		if (can_hide && hosdmenu)
-			ADD(DI_HIDE, partitionHidden(p->name) ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser",
+			ADD(partitionHidden(p->name) ? DI_SHOW : DI_HIDE, partitionHidden(p->name) ? "Show in HOSDMenu HDD Browser" : "Hide in HOSDMenu HDD Browser",
 			    hosd_detail, hosdmenu < 0, A_VISIBILITY);
+	}
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD) && defined(EXFAT)
+	if (can_install && hosdmenu)
+		ADD(DI_ARCHIVE_EXTRACT, "Install apps from PSU...", hosd_detail ? hosd_detail : "8 MiB launcher; Internet required",
+		    hosdmenu < 0, A_INSTALL_APP);
+#endif
+	if (p != NULL) {
 		if (p->type == HP_HDL)
 			ADD(DI_DISC, "Rename game...", NULL, 0, A_RENAME_GAME);
 		ADD(DI_TEXT, "Inject APA header...", NULL, p->type != HP_PFS, A_INJECT);
@@ -2066,6 +2066,7 @@ void dashHddManager(void)
 	while (1) {
 		int prev = sel;
 
+		dashSoundMaintain(); /* Recover audio after cancelled IOP/network setup. */
 		dashInputPoll(&in);
 		if (dashDashboardPending())
 			break;

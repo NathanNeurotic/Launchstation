@@ -128,7 +128,7 @@ ui += r'''
 #define HP_HDL 1
 #define HDD_FS_EXFAT 1
 #define HDD_FS_FAT32 2
-enum {DI_PLUS, DI_ARCHIVE_EXTRACT, DI_CLOSE, DI_EDIT, DI_HIDE, DI_DISC, DI_TEXT, DI_SETTINGS, DI_INFO, DI_REFRESH};
+enum {DI_PLUS, DI_ARCHIVE_EXTRACT, DI_CLOSE, DI_EDIT, DI_HIDE, DI_SHOW, DI_DISC, DI_TEXT, DI_SETTINGS, DI_INFO, DI_REFRESH};
 typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
 static struct { HddPart *parts; int n,formatted,filesystem,seen,status,present,resume_checked; } hm;
 static int console_is_PSX, hosd_result, resume_result;

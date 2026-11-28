@@ -24,6 +24,8 @@ def function(signature, text=source):
 details = function("static void drawDetails(")
 scene = function("static void hddScene(")
 manager = function("void dashHddManager(")
+manager_loop = manager[manager.index("while (1)"):]
+assert manager_loop.index("dashSoundMaintain();") < manager_loop.index("dashInputPoll(&in);")
 rename = function("static void actRenameGame(")
 menu = function("static void partitionMenu(")
 

@@ -71,11 +71,15 @@ when it needs to reuse free space.
 
 ## Install an app from a PSU
 
-On an APA Jail HDD with HOSDMenu, choose **Install app from PSU…** in HDD Manager
-or **Install app to HDD…** on a PSU in File Browser. Launchstation inspects the
+On an APA Jail HDD with HOSDMenu, choose **Install apps from PSU…** in HDD Manager
+or **Install app to HDD…** on a PSU in File Browser. The HDD Manager picker can
+select several PSUs, even from different folders: Square or Confirm toggles a
+file and Start installs the selection. Apps install one at a time, each with
+its own review. An error or cancel stops the queue and reports how many apps
+finished; finished apps stay installed. Launchstation inspects the
 package for a PS2 ELF, reads its title and boot filename from `title.cfg` when
 present, and prompts if more than one ELF can be used. Internet access is
-required for HDD icons and artwork. A missing asset can use generic artwork.
+required for HDD icons and artwork. Missing PSBBN DP artwork is looked up in CosmicScale's psbbn-art-database before generic artwork is used.
 HTTP and TLS failures stop installation.
 
 The HDD Manager action appears when the installed HOSDMenu ELF is present.

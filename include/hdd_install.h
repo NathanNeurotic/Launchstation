@@ -65,6 +65,9 @@ unsigned hddInstallPartitionMb(const HddInstall *install, unsigned index);
  * including allocator alignment, apps and explicitly reserved free space. */
 int hddInstallRequiredMb(const HddInstall *install, unsigned base_mb);
 int dashHddInstallConfigure(HddInstall *install, unsigned max_extent_mb);
+enum { HDD_CHOICE_WARNING = 1, HDD_CHOICE_LAUNCHER, HDD_CHOICE_MUSIC, HDD_CHOICE_CONTENTS,
+       HDD_CHOICE_LINUX, HDD_CHOICE_RESERVE, HDD_CHOICE_LANGUAGE, HDD_CHOICE_REVIEW, HDD_CHOICE_CONFIRM };
+const char *dashHddInstallChoiceTitle(const HddInstall *install, unsigned choice, const char *title, char *out, size_t size);
 
 const char *hddInstallAssetPath(unsigned asset);
 const char *hddInstallAssetName(unsigned asset);

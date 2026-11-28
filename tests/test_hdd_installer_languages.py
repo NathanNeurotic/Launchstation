@@ -76,6 +76,7 @@ code += r'''
 #define DASH_JOB_VISIBLE 1
 static int ready=1,worker_error,worker_runs,cancel_choice,releases,modal_errors;
 static int dashWorkerAwaitAll(const char *s){assert(s);return 1;}
+static void dashSoundMaintain(void){}
 static int dashHttpsCaPath(char *p,int size){assert(size>10);strcpy(p,"pfs0:/CA");return 1;}
 int hddInstallLoadCa(HddInstall *in){in->ca_data=(unsigned char*)"CA";in->ca_size=2;return 0;}
 void hddInstallRelease(HddInstall *in){in->ca_data=NULL;in->ca_size=0;releases++;}
@@ -87,13 +88,14 @@ static int dashWorkerSubmit(const char *s,int flags,void(*run)(void*),void(*done
 }
 int dashHddInstallAwait(int id,const char *title){assert(id==1&&title);return 1;}
 static int dashModalSelect(const char *title,const char *const *items,int count,int initial){
- assert(!strcmp(title,"PSBBN language")&&count==4&&initial==0&&!strcmp(items[0],"English")&&!strcmp(items[3],"New language"));
+ assert(!strcmp(title,"Choice 7 of 9: PSBBN language")&&count==4&&initial==0&&!strcmp(items[0],"English")&&!strcmp(items[3],"New language"));
  return cancel_choice?-1:3;
 }
 void hddInstallOverall(uint64_t a,uint64_t b){assert(a==1&&b==1);}
 '''
 a = ui.index('typedef struct {\n    HddInstall *install;')
 code += ui[a:ui.index('#endif', a)]
+code += function(ui, 'const char *dashHddInstallChoiceTitle(')
 code += function(ui, 'int dashHddInstallPrepare(')
 code += r'''
 int main(void){

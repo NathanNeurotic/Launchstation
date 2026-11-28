@@ -73,7 +73,7 @@ static float dashAnimSpeed(void){return 1;}
 static float dashApproach(float v,float t,float speed,float dt){(void)v;(void)speed;(void)dt;return t;}
 static float dashEaseOutCubic(float n){return n;}
 static float dashClampf(float n,float a,float b){assert(b>=a);return n<a?a:n>b?b:n;}
-static float dashTextWidth(const char *s,int fs){(void)fs;return strlen(s)*7;}
+static int dashTextWrapLines(float w,int n,const char *s,int fs){(void)w;(void)n;(void)s;(void)fs;assert(0);return 0;}
 static void dashRenderScene(void){}
 static int dash_start_menu_blocked;
 static int dashDashboardPending(void){return 0;}

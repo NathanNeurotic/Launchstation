@@ -1096,7 +1096,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashGfxPushOffset(0, 18.0f * (1.0f - oe));
 			modalPanel(x, y, w, h, oe);
 		}
-		dashTextS(x + 24, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 24, y + 18, w - 48, title, DASH_FS_LABEL, DASH_C_TEXT);
 		{
 			float ly = y + 54;
 			if (subtitle) {
@@ -1215,20 +1215,16 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 	float scroll = 0, target = 0, table_h = 0;
 	const float table_row_h = 24.0f;
 	float x = (DASH_VW - w) * 0.5f, y;
-	int body_lines;
+	int body_lines, body_limit;
 	DashInput in;
 
-	body_lines = 1;
-	if (body) {
-		const char *p;
-		float tw = dashTextWidth(body, DASH_FS_BODY * 0.9f);
-		body_lines = (int)(tw / (w - 60)) + 1;
-		for (p = body; *p; p++)
-			if (*p == '\n')
-				body_lines++;
-		if (body_lines > 6)
-			body_lines = 6;
-	}
+	/* Word boundaries can require more rows than total text width predicts.
+	 * Measure the actual wrapper so the body never runs into the footer. */
+	body_limit = (int)((DASH_VH - 40.0f - 142.0f - (detail ? 26.0f : 0.0f)) / 24.0f);
+	if (body_limit < 1) body_limit = 1;
+	if (body_limit > 6) body_limit = 6;
+	body_lines = body ? dashTextWrapLines(w - 60, body_limit, body, DASH_FS_BODY * 0.9f) : 1;
+	if (body_lines < 1) body_lines = 1;
 	h = 92.0f + body_lines * 24.0f + (detail ? 26.0f : 0.0f) + 50.0f;
 	if (table) {
 		int visible = (int)((DASH_VH - 40.0f - 150.0f) / table_row_h);
@@ -1314,7 +1310,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			}
 		}
 		if (body)
-			dashTextWrap(x + 30, y + 78, w - 60, 6, body, DASH_FS_BODY * 0.9f, DASH_C_TEXT2, 24);
+			dashTextWrap(x + 30, y + 78, w - 60, body_limit, body, DASH_FS_BODY * 0.9f, DASH_C_TEXT2, 24);
 		if (detail) {
 			float dy = y + 84 + body_lines * 24.0f;
 			dashTextScrollTimed(x + 30, dy, w - 60, detail, DASH_FS_CAPTION, DASH_C_TEXT3, title_age);

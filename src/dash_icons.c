@@ -433,13 +433,16 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdBox(p, -0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
 			d = U(d, sdBox(p, 0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
 			break;
+		case DI_SHOW:
 		case DI_HIDE:
-			/* Eye outline and pupil, interrupted by a rising diagonal slash. */
+			/* Shared eye outline and pupil; Hide adds the diagonal slash. */
 			d = fabsf(fmaxf2(sdCircle(p, 0.0f, 0.40f, 0.98f),
 			                       sdCircle(p, 0.0f, -0.40f, 0.98f))) - T;
 			d = U(d, sdRing(p, 0.0f, 0.0f, 0.28f, T));
-			d = S(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, 0.17f));
-			d = U(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, T));
+			if (id == DI_HIDE) {
+				d = S(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, 0.17f));
+				d = U(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, T));
+			}
 			break;
 		case DI_PLAY:
 			d = sdTriP(p, -0.42f, -0.62f, -0.42f, 0.62f, 0.66f, 0.0f) - 0.04f;

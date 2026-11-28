@@ -33,6 +33,7 @@ typedef struct {
     const char *operation;
     char location[MAX_PATH];
     int result, resumed, mounted, cleanup_error, committed, metadata_error;
+    int index, count;
 } AppInstall;
 
 static void context(AppInstall *in, const char *operation, const char *path)
@@ -62,6 +63,7 @@ static int transfer(int fd, void *data, unsigned size, int writing)
         int n = writing ? genWrite(fd, (unsigned char *)data + done, count) : genRead(fd, (unsigned char *)data + done, count);
         if (n <= 0 || (unsigned)n > count) return n < 0 ? n : -EIO;
         done += n;
+        dashWorkerStatus(NULL, done, size);
     }
     return 0;
 }
@@ -352,6 +354,13 @@ static int assets(AppInstall *in)
     if (!in->icon_source[0]) snprintf(in->icon_source, sizeof(in->icon_source), "HDD icon: %s", in->app.asset);
     snprintf(remote, sizeof(remote), "icons/art/%s.png", in->app.asset);
     ret = download(in, HDD_INSTALL_REPOSITORY, commit, remote, "JACKET.PNG");
+    if (ret == -ENOENT) {
+        char art_commit[41];
+        ret = apiCommit(in, "CosmicScale/psbbn-art-database", art_commit);
+        if (ret < 0) return ret;
+        snprintf(remote, sizeof(remote), "apps/%s.png", in->app.asset);
+        ret = download(in, "CosmicScale/psbbn-art-database", art_commit, remote, "JACKET.PNG");
+    }
     if (ret == -ENOENT) {
         ret = download(in, HDD_INSTALL_REPOSITORY, commit, "icons/art/APP.png", "JACKET.PNG");
         strcpy(in->art_source, "DP generic artwork");
@@ -764,12 +773,21 @@ out:
     in->result = unmountPartition(in, ret);
 }
 
+static void appLoading(AppInstall *in, const char *title)
+{
+    char label[96];
+    if (in->count > 1) snprintf(label, sizeof(label), "App %d of %d: %s", in->index, in->count, title);
+    else snprintf(label, sizeof(label), "%s", title);
+    dashLoadingBegin(label);
+    dashLoadingFrame(in->source, 0, 0);
+}
 static int run(AppInstall *in, const char *title, void (*work)(void *))
 {
+    appLoading(in, title);
     in->metadata_error = 0;
     hddInstallRecoveryBegin();
     int id = dashWorkerSubmit(title, 0, work, NULL, in);
-    if (id < 0) { hddInstallRecoveryEnd(); in->result = -EBUSY; return 0; }
+    if (id < 0) { hddInstallRecoveryEnd(); dashLoadingEnd(); in->result = -EBUSY; return 0; }
     int done = dashHddInstallAwait(id, title);
     hddInstallRecoveryObserve(in->result);
     int fault = hddInstallRecoveryFault(), reset = hddInstallRecoveryWasReset();
@@ -777,6 +795,7 @@ static int run(AppInstall *in, const char *title, void (*work)(void *))
     if (fault || in->metadata_error) {
         /* A failed APA mutation retains its durable journal. Reinitializing
          * HDD replays it before a subsequent explicit installer retry. */
+        dashLoadingFrame("Recovering storage drivers", 0, 0);
         if ((!reset && !resetInstallerIopTransport()) || !reloadInstallerCoreAfterReset()) dashHddInstallRecoveryFailed();
         in->mounted = 0;
         if (fault) in->result = HDD_INSTALL_ATA_TIMEOUT;
@@ -785,24 +804,20 @@ static int run(AppInstall *in, const char *title, void (*work)(void *))
         loadHddModules(); loadAtaModules();
         in->metadata_error = 0;
     }
+    dashLoadingEnd();
     return done && in->result >= 0;
 }
 
 /* The source snapshot precedes network preparation, which may reset UDPFS. */
-void dashHddInstallApp(const char *psu_path)
+static int installApp(const char *psu_path, int index, int count)
 {
+    int result = 0;
     AppInstall *in = calloc(1, sizeof(*in));
-    if (!in) return;
-    if (!dashWorkerAwaitAll("Preparing app installer")) goto cleanup;
-    if (console_is_PSX) {
-        dashModalMessage(DI_WARNING, "App installer unavailable", "This installer requires a PS2 APA Jail HDD with HOSDMenu.", NULL); goto cleanup;
-    }
-    if (vmcMounted[0] || vmcMounted[1] || isFtpServerRunning() || isSmbServerRunning()) {
-        dashModalMessage(DI_WARNING, "HDD busy", "Unmount VMCs and stop file servers before installing an app.", NULL); goto cleanup;
-    }
-    if (!dashModalConfirm("Install app to HDD", "Requires an Internet connection to download HDD icons and artwork from PSBBN DP. Requires APA Jail with HOSDMenu; app files go on ata0: and the launcher uses an 8 MiB APA partition.", "Continue", 0)) goto cleanup;
-    if (psu_path) dashStrCopy(in->source, psu_path, sizeof(in->source));
-    else if (!dashPickPath("Choose an app PSU (or staged PACKAGE.PSU to resume)", "", DASH_PICK_FILE, "PSU", in->source, sizeof(in->source))) goto cleanup;
+    if (!in) { dashModalMessage(DI_WARNING, "App installation stopped", "Not enough memory to read the next PSU.", psu_path); return -1; }
+    in->index = index; in->count = count;
+    dashStrCopy(in->source, psu_path, sizeof(in->source));
+    appLoading(in, "Opening app PSU");
+    if (!dashWorkerAwaitAll("Finishing folder listing")) goto cleanup;
     context(in, "Opening app PSU device", in->source);
     if (!ensurePathDeviceStackReady(in->source)) { in->result = -ENODEV; goto error; }
     if (!run(in, "Reading app PSU", snapshot)) goto error;
@@ -814,12 +829,15 @@ void dashHddInstallApp(const char *psu_path)
         free(names); if (selected < 0) goto cleanup;
         hddAppChooseBoot(&in->save, &in->app, selected);
     }
+    appLoading(in, "Reading HTTPS certificate");
     if (!dashHttpsCaPath(in->network.ca_path, sizeof(in->network.ca_path)) || hddInstallLoadCa(&in->network) < 0) {
+        dashLoadingEnd(); result = -1;
         dashModalMessage(DI_WARNING, "CA bundle unavailable", "Could not read WLE-UPDATE-CA.PEM beside Launchstation or in its settings folder.", NULL); goto cleanup;
     }
     dashSoundShutdown();
     in->network.jail = 1;
     context(in, "Preparing network and HDD drivers", "hdd0: / ata0:");
+    dashLoadingFrame("Preparing network and HDD drivers", 0, 0);
     if ((in->result = dashHddInstallPrepareStorage(&in->network)) < 0) goto error;
     if (!run(in, "Downloading HDD app assets", prepare)) goto error;
     {
@@ -832,14 +850,17 @@ void dashHddInstallApp(const char *psu_path)
         if (!dashModalConfirmTable("Review app installation", rows, sizeof(rows) / sizeof(rows[0]), in->resumed ? "Resume" : "Install", 0)) goto cleanup;
     }
     if (!run(in, "Installing HDD app", apply)) goto error;
+    result = 1;
     filerSizeCacheInvalidate("ata0:/APPS/"); filerSizeCacheInvalidate("hdd0:/");
-    dashModalMessage(DI_CHECK, "App installed", in->app.title, in->cleanup_error ?
+    if (count == 1 || in->cleanup_error) dashModalMessage(DI_CHECK, "App installed", in->app.title, in->cleanup_error ?
         "The launcher is ready. Temporary files could not be removed; the app is installed." : "The launcher is available in HOSDMenu / PSBBN.");
     goto cleanup;
 error:
+    dashLoadingEnd(); result = -1;
     {
         char message[512], detail[MAX_PATH + 160];
         if (in->committed) {
+            result = 1;
             dashModalMessage(DI_WARNING, "App installed; cleanup interrupted", "The app and launcher were committed. Temporary files are retained.", in->stage);
             goto cleanup;
         }
@@ -851,7 +872,40 @@ error:
         dashModalMessage(DI_WARNING, "App installation incomplete", message, detail[0] ? detail : NULL);
     }
 cleanup:
+    dashLoadingEnd();
     saveArchiveFree(&in->save); free(in->package); hddInstallRelease(&in->network); free(in);
+    return result;
+}
+void dashHddInstallApp(const char *psu_path)
+{
+    char **paths = NULL;
+    int count = 1, installed = 0, result = 0;
+    if (!dashWorkerAwaitAll("Preparing app installer")) return;
+    if (console_is_PSX) {
+        dashModalMessage(DI_WARNING, "App installer unavailable", "This installer requires a PS2 APA Jail HDD with HOSDMenu.", NULL); return;
+    }
+    if (vmcMounted[0] || vmcMounted[1] || isFtpServerRunning() || isSmbServerRunning()) {
+        dashModalMessage(DI_WARNING, "HDD busy", "Unmount VMCs and stop file servers before installing an app.", NULL); return;
+    }
+    if (!dashModalConfirm("Install apps to HDD", "Requires an Internet connection to download HDD icons and artwork from PSBBN DP. Requires APA Jail with HOSDMenu; app files go on ata0: and each launcher uses an 8 MiB APA partition.", "Continue", 0)) return;
+    if (!psu_path) {
+        count = dashPickFiles("Choose app PSUs", "", "PSU", &paths);
+        if (!count) return;
+    }
+    for (int i = 0; i < count; i++) {
+        result = installApp(paths ? paths[i] : psu_path, i + 1, count);
+        if (result != 1) break;
+        installed++;
+    }
+    if (count > 1) {
+        char message[160];
+        snprintf(message, sizeof(message), "%d of %d apps installed.%s", installed, count,
+                 installed == count ? "" : " Queue stopped; remaining apps were not installed.");
+        dashModalMessage(installed == count ? DI_CHECK : DI_WARNING,
+                         installed == count ? "Apps installed" : result < 0 ? "App installation incomplete" : "App installation cancelled", message, NULL);
+    }
+    for (int i = 0; paths && i < count; i++) free(paths[i]);
+    free(paths);
     dashSoundMaintain(); dashBgmStart();
 }
 #else

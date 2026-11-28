@@ -154,6 +154,8 @@ jobs:
           python3 tests/test_hdd_mini.py
           python3 tests/test_hdd_app.py
           python3 tests/test_hdd_app_install.py
+          python3 tests/test_hdd_app_queue.py
+          python3 tests/test_picker_multiselect.py
           python3 tests/test_hdd_format_ui.py
           python3 tests/test_hdd_installer.py
           python3 tests/test_hdd_installer_finish.py

@@ -173,12 +173,15 @@ static void startKbd(void){assert(pads);}
 void hddInstallLog(const char *s,...){assert(s);}
 void hddInstallProgress(const char *s,int a,int b){assert(s&&!a&&!b);}
 static void dashLoadingFrame(const char *s,int a,int b){
-    assert(!a&&!b);frames++;
+    if(s&&!strcmp(s,"Downloading artwork"))assert(a==2&&b==10);
+    else assert(!a&&!b);
+    frames++;
     if(expect_terminal){assert(s&&worker_alive&&!hddInstallRecoveryWasReset()&&!forgot&&!core_calls);longjmp(terminal,1);}
 }
 static int dashLoadingActive(void){return loading;}
 static void dashLoadingBegin(const char *s){assert(s);loading=1;}
 static void dashLoadingEnd(void){loading=0;}
+static void dashWorkerGetStatus(char*s,int size,int*done,int*total){snprintf(s,size,"Downloading artwork");*done=2;*total=10;}
 static int dashWorkerDone(int id){assert(id==1);return done;}
 static void dashWorkerPump(void){
     pumps++;
