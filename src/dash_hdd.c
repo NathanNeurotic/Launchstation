@@ -1203,9 +1203,9 @@ static void actFormat(void)
 		if (install.flags) REVIEW("Downloads", "To the internal HDD after erase");
 		if (install.flags & HDD_INSTALL_HOSD) REVIEW("Console HDD boot", "Enable");
 #undef REVIEW
-		if (!dashModalConfirmTable(dashHddInstallChoiceTitle(&install, HDD_CHOICE_REVIEW, "Review HDD format", choice_title, sizeof(choice_title)), rows, count, localizeDashboardText("Continue"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
+		if (!dashModalConfirmTable("Review HDD format", rows, count, localizeDashboardText("Continue"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
 	}
-	if (!dashModalConfirm(dashHddInstallChoiceTitle(&install, HDD_CHOICE_CONFIRM, "Are you sure?", choice_title, sizeof(choice_title)), "Every partition, game and file on this HDD will be erased. This cannot be undone.", localizeDashboardText("Format"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
+	if (!dashModalConfirm("Are you sure?", "Every partition, game and file on this HDD will be erased. This cannot be undone.", localizeDashboardText("Format"), 1)) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ECANCELED); hddInstallRelease(&install); return; }
 	j = jobNew(HOP_FORMAT);
 	if (!j) { hddInstallCleanup(&install); dashHddInstallDebugEnd(&install, -ENOMEM); hddInstallRelease(&install); return; }
 	j->format_plan = plan;

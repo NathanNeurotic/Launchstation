@@ -56,7 +56,7 @@ static int dashModalSelect(const char *title, const char *const *options, int co
 }
 static int pickSize(const char *title, int min, int max, int initial) {
     assert((strstr(title, "Additional APA") || strstr(title, "Reserved APA")) && min == (install_flags & HDD_INSTALL_PSBBN ? 0 : install_flags & HDD_INSTALL_APPS ? 256 : 0) && max % 128 == 0 && initial <= max);
-    if(install_flags&HDD_INSTALL_PSBBN)assert(strstr(title,"Choice 6 of 9:"));
+    if(install_flags&HDD_INSTALL_PSBBN)assert(strstr(title,"Choice 5 of 6:"));
     return reserve;
 }
 static void dashModalMessage(int icon, const char *title, const char *body, const char *detail) {
@@ -69,7 +69,7 @@ static int dashModalConfirm(const char *title, const char *body, const char *but
     assert(title && body && button && danger == 1);
     confirms++;
     assert(confirms == 2 && strstr(body,"Every partition") && !strcmp(button,"Format"));
-    if(install_flags&HDD_INSTALL_PSBBN)assert(!strcmp(title,"Choice 9 of 9: Are you sure?"));
+    assert(!strcmp(title,"Are you sure?"));
     return confirms != cancel_confirm;
 }
 static const char *reviewValue(const DashTableRow *rows,int count,const char *label) {
@@ -78,7 +78,7 @@ static const char *reviewValue(const DashTableRow *rows,int count,const char *la
 }
 static int dashModalConfirmTable(const char *title,const DashTableRow *rows,int count,const char *button,int danger) {
     assert(strstr(title,"Review HDD format") && count>2 && count<=18 && !strcmp(button,"Continue") && danger==1);
-    if(install_flags&HDD_INSTALL_PSBBN)assert(!strcmp(title,"Choice 8 of 9: Review HDD format"));
+    assert(!strcmp(title,"Review HDD format"));
     assert(!strcmp(rows[0].label,"Format")&&!strcmp(rows[1].label,"Drive Capacity"));
     if(selected!=HDD_FORMAT_EXFAT)assert(!strcmp(rows[2].label,"APA total space"));
     assert(!confirms);confirms++;

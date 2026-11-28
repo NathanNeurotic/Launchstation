@@ -90,15 +90,19 @@ static int dashModalMenu(const char *title,const char *subtitle,const DashMenuIt
     int software=!strcmp(title,"Software after formatting")&&count==2;
     for(int j=0;j<count;j++)assert(items[j].icon==(j==expected_check?DI_CHECK:-1)&&(!items[j].detail||(software&&j==1))&&!items[j].disabled);
     if(software){assert(!strcmp(items[0].label,"No software, format only"));assert(!strcmp(items[1].label,"PSBBN DP, HOSDMenu")&&!strcmp(items[1].detail,"EXPERIMENTAL"));}
-    if(strstr(title,"Default game launcher")){assert(!strcmp(title,"Choice 2 of 9: Default game launcher")&&messages==1);assert(!strcmp(items[0].label,"Neutrino (NHDDL)")&&!strcmp(items[1].label,"Open PS2 Loader (OPL)"));}
-    if(strstr(title,"Music partition"))assert(!strcmp(title,"Choice 3 of 9: Music partition size"));
-    if(strstr(title,"Contents partition"))assert(!strcmp(title,"Choice 4 of 9: Contents partition size"));
-    if(strstr(title,"Standalone PS2 Linux"))assert(!strcmp(title,"Choice 5 of 9: Standalone PS2 Linux")&&subtitle&&strstr(subtitle,"2 GiB system")&&!strcmp(items[0].label,"Off"));
+    if(strstr(title,"Default game launcher")){assert(!strcmp(title,"Choice 1 of 6: Default game launcher")&&messages==1);assert(!strcmp(items[0].label,"Neutrino (NHDDL)")&&!strcmp(items[1].label,"Open PS2 Loader (OPL)"));}
+    if(strstr(title,"Music partition"))assert(!strcmp(title,"Choice 2 of 6: Music partition size"));
+    if(strstr(title,"Contents partition"))assert(!strcmp(title,"Choice 3 of 6: Contents partition size"));
+    if(strstr(title,"Standalone PS2 Linux")){
+        const char *linux_choices[]={"Do not install PS2 Linux","1 GiB","2 GiB","4 GiB","8 GiB"};
+        assert(!strcmp(title,"Choice 4 of 6: Standalone PS2 Linux")&&subtitle&&strstr(subtitle,"2 GiB system")&&count==5);
+        for(int j=0;j<count;j++)assert(!strcmp(items[j].label,linux_choices[j]));
+    }
     else assert(!subtitle);
     int i=asked++;if(i==cancel)return -1;
     assert(answers[i]<count);return answers[i];
 }
-static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);assert(!strcmp(title,"Choice 1 of 9: PSBBN DP installation")&&asked==1&&strstr(body,"Sony Network Adapter")&&strstr(body,"GameStar")&&strstr(body,"HOSDMenu, is installed as well"));messages++;}
+static void dashModalMessage(int icon,const char *title,const char *body,const char *detail){assert(icon==DI_INFO&&title&&body&&!detail);assert(!strcmp(title,"PSBBN DP installation")&&asked==1&&strstr(body,"Sony Network Adapter")&&strstr(body,"GameStar")&&strstr(body,"HOSDMenu, is installed as well"));messages++;}
 '''
     choice_source=(root/'src/dash_ui.c').read_text()
     for signature in ('static int modalChoice(', 'int dashModalChoice(', 'int dashModalSelect('):
@@ -124,8 +128,9 @@ int main(void){HddInstall in={.flags=7,.jail=1};
  assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==7&&in.music_mb==1024&&in.contents_mb==1024&&!in.linux_home_mb);
  asked=messages=0;answers[0]=1;answers[1]=2;answers[2]=4;
  assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==15&&in.music_mb==2048&&in.contents_mb==4096&&in.linux_home_mb==8192);
+ asked=messages=0;assert(dashHddInstallConfigure(&in,32768)&&asked==3&&in.linux_home_mb==8192);
  for(cancel=0;cancel<3;cancel++){asked=0;assert(!dashHddInstallConfigure(&in,8192)&&asked==cancel+1);}
- for(unsigned step=1;step<=HDD_CHOICE_CONFIRM;step++){char title[100],expected[100];snprintf(expected,sizeof(expected),"Choice %u of 9: Question",step);assert(!strcmp(dashHddInstallChoiceTitle(&in,step,"Question",title,sizeof(title)),expected));}
+ for(unsigned step=1;step<=HDD_CHOICE_LANGUAGE;step++){char title[100],expected[100];snprintf(expected,sizeof(expected),"Choice %u of 6: Question",step);assert(!strcmp(dashHddInstallChoiceTitle(&in,step,"Question",title,sizeof(title)),expected));}
  puts("PASS: installer choice defaults/cancellation, single-extent sizes, APA allocation/reserve bounds, optional Linux metadata/assets and Circle boot config");}
 '''
     (d/'ui.c').write_text(code)

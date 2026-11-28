@@ -88,7 +88,7 @@ static int dashWorkerSubmit(const char *s,int flags,void(*run)(void*),void(*done
 }
 int dashHddInstallAwait(int id,const char *title){assert(id==1&&title);return 1;}
 static int dashModalSelect(const char *title,const char *const *items,int count,int initial){
- assert(!strcmp(title,"Choice 7 of 9: PSBBN language")&&count==4&&initial==0&&!strcmp(items[0],"English")&&!strcmp(items[3],"New language"));
+ assert(!strcmp(title,"Choice 6 of 6: PSBBN language")&&count==4&&initial==0&&!strcmp(items[0],"English")&&!strcmp(items[3],"New language"));
  return cancel_choice?-1:3;
 }
 void hddInstallOverall(uint64_t a,uint64_t b){assert(a==1&&b==1);}

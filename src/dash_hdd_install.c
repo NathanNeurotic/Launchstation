@@ -8,7 +8,7 @@
 const char *dashHddInstallChoiceTitle(const HddInstall *in, unsigned choice, const char *title, char *out, size_t size)
 {
     if (!(in->flags & HDD_INSTALL_PSBBN)) return title;
-    snprintf(out, size, "Choice %u of %u: %s", choice, (unsigned)HDD_CHOICE_CONFIRM, title);
+    snprintf(out, size, "Choice %u of %u: %s", choice, (unsigned)HDD_CHOICE_LANGUAGE, title);
     return out;
 }
 
@@ -37,7 +37,7 @@ int dashHddInstallChoose(HddInstall *in, int jail)
         in->flags = jail && selected ? HDD_INSTALL_PSBBN | HDD_INSTALL_HOSD | HDD_INSTALL_APPS : flags[selected];
         if (in->flags & HDD_INSTALL_PSBBN) {
             char title[128];
-            dashModalMessage(DI_INFO, dashHddInstallChoiceTitle(in, HDD_CHOICE_WARNING, "PSBBN DP installation", title, sizeof(title)),
+            dashModalMessage(DI_INFO, "PSBBN DP installation",
                 "PSBBN DP requires a Sony Network Adapter. Third party clones are not compatible (Example: GameStar). HOSDMenu, is installed as well which does not have this limitation.", NULL);
             static const char *const launchers[] = {"Neutrino (NHDDL)", "Open PS2 Loader (OPL)"};
             selected = dashModalSelect(dashHddInstallChoiceTitle(in, HDD_CHOICE_LAUNCHER, "Default game launcher", title, sizeof(title)), launchers, 2, 0);
@@ -55,9 +55,9 @@ static int installSize(HddInstall *in, unsigned choice, const char *label, unsig
     char labels[7][24], title[128];
     DashMenuItem items[7];
     int count = optional, selected;
-    if (optional) items[0] = (DashMenuItem){-1, "Off", NULL, 0};
+    if (optional) items[0] = (DashMenuItem){-1, "Do not install PS2 Linux", NULL, 0};
     for (unsigned mb = 1024; mb <= maximum && count < 6 + optional; mb *= 2) {
-        snprintf(labels[count], sizeof(labels[count]), optional ? "On: %u GiB home" : "%u GiB", mb / 1024);
+        snprintf(labels[count], sizeof(labels[count]), "%u GiB", mb / 1024);
         items[count] = (DashMenuItem){-1, labels[count], NULL, 0}; count++;
     }
     if (!count) return -1;
@@ -76,7 +76,7 @@ int dashHddInstallConfigure(HddInstall *in, unsigned max_extent)
     value = installSize(in, HDD_CHOICE_CONTENTS, "Contents partition size", max_extent, 0);
     if (value < 0) return 0;
     in->contents_mb = value;
-    unsigned maximum = max_extent < HDD_INSTALL_HOME_MAX_MB ? max_extent : HDD_INSTALL_HOME_MAX_MB;
+    unsigned maximum = max_extent < 8192u ? max_extent : 8192u;
     value = installSize(in, HDD_CHOICE_LINUX, "Standalone PS2 Linux", maximum, 1);
     if (value < 0) return 0;
     in->flags &= ~HDD_INSTALL_PS2LINUX;
