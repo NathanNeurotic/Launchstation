@@ -63,9 +63,23 @@ with tempfile.TemporaryDirectory(prefix='hdd-install-choices-') as directory:
         assert lib.hddInstallConfig(c.byref(in_),0,out,len(out))>0
         assert b'name_OSDSYS_ITEM_1 = '+label+b'\n' in out.value
         assert b'OPNPS2LD.ELF' in out.value and b'nhddl.elf' in out.value and b'name_OSDSYS_ITEM_3 = wLaunchELF-R3Z' in out.value
-    in_.game_launcher=2;assert lib.hddInstallConfig(c.byref(in_),0,out,len(out))<0
+    in_.game_launcher=2
+    assert lib.hddInstallConfig(c.byref(in_),1,out,len(out))>0 and b'RIPTOPL-RA-UNPAKT.ELF' in out.value
+    assert b'boot_square_arg1' not in out.value
+    assert lib.hddInstallConfig(c.byref(in_),0,out,len(out))>0
+    assert b'name_OSDSYS_ITEM_1 = Open PS2 Loader: RiptOPL' in out.value
+    assert b'arg_OSDSYS_ITEM_1 = -titleid=APP_RIPTOPL' in out.value
+    assert b'name_OSDSYS_ITEM_2 = wLaunchELF-R3Z' in out.value and b'nhddl.elf' not in out.value
+    assert lib.hddInstallGameShortcut(c.byref(in_),out,len(out))>0 and out.value.startswith(b'RiptOPL ')
+    in_.game_launcher=3;assert lib.hddInstallConfig(c.byref(in_),0,out,len(out))>0 and b'RiptOPL (Neutrino)' in out.value
+    in_.game_launcher=4;assert lib.hddInstallConfig(c.byref(in_),0,out,len(out))<0
     in_.game_launcher=0
     hash_=c.create_string_buffer(41);size=c.c_uint32()
+    dependency={'name':'dep.zip','sha1':'a'*40,'size':'3174561'}
+    assert lib.hddInstallDependencyMetadata(json.dumps({'files':[dependency]}).encode(),hash_,c.byref(size))==1
+    assert size.value==3174561
+    for entries in ([dependency,dependency],[dict(dependency,size='16777217')],[dict(dependency,name='x.zip')],[dict(dependency,sha1='bad')]):
+        assert not lib.hddInstallDependencyMetadata(json.dumps({'files':entries}).encode(),hash_,c.byref(size))
     file={'name':'PS2Linux.tar.gz','sha1':'b'*40,'size':'269864865'}
     assert lib.hddInstallLinuxMetadata(json.dumps({'files':[file]}).encode(),hash_,c.byref(size))==1
     assert size.value==269864865 and hash_.value==b'b'*40
@@ -90,7 +104,7 @@ static int dashModalMenu(const char *title,const char *subtitle,const DashMenuIt
     int software=!strcmp(title,"Software after formatting")&&count==2;
     for(int j=0;j<count;j++)assert(items[j].icon==(j==expected_check?DI_CHECK:-1)&&(!items[j].detail||(software&&j==1))&&!items[j].disabled);
     if(software){assert(!strcmp(items[0].label,"No software, format only"));assert(!strcmp(items[1].label,"PSBBN DP, HOSDMenu")&&!strcmp(items[1].detail,"EXPERIMENTAL"));}
-    if(strstr(title,"Default game launcher")){assert(!strcmp(title,"Choice 1 of 6: Default game launcher")&&messages==1);assert(!strcmp(items[0].label,"Neutrino (NHDDL)")&&!strcmp(items[1].label,"Open PS2 Loader (OPL)"));}
+    if(strstr(title,"Default PS2 game core"))assert(!strcmp(title,"Choice 1 of 6: Default PS2 game core")&&messages==1&&!strcmp(items[0].label,"Neutrino (RiptOPL)")&&!strcmp(items[1].label,"OPL (RiptOPL)"));
     if(strstr(title,"Music partition"))assert(!strcmp(title,"Choice 2 of 6: Music partition size"));
     if(strstr(title,"Contents partition"))assert(!strcmp(title,"Choice 3 of 6: Contents partition size"));
     if(strstr(title,"Standalone PS2 Linux")){
@@ -115,16 +129,16 @@ int main(void){HddInstall in={.flags=7,.jail=1};
  expected_check=expected_focus=1;answers[0]=1;assert(dashModalChoice("Existing setting",options,2,1)==1);
  expected_check=-1;expected_focus=0;asked=0;answers[0]=0;assert(dashModalSelect("New choice",options,2,0)==0);
  asked=0;
- for(int launcher=0;launcher<2;launcher++){
-  answers[0]=1;answers[1]=launcher;asked=messages=0;
-  assert(dashHddInstallChoose(&in,1)&&in.flags==7&&in.game_launcher==(launcher?HDD_GAME_OPL:HDD_GAME_NEUTRINO)&&asked==2&&messages==1);
+ for(int core=0;core<2;core++){
+  answers[0]=1;answers[1]=core;asked=messages=0;
+  assert(dashHddInstallChoose(&in,1)&&in.flags==7&&in.game_launcher==(core?HDD_GAME_RIPTOPL:HDD_GAME_RIPTOPL_NEUTRINO)&&asked==2&&messages==1);
  }
  asked=messages=0;cancel=1;assert(!dashHddInstallChoose(&in,1)&&asked==2&&messages==1);cancel=-1;
  for(int profile=0;profile<4;profile++){
   const unsigned expected[]={0,2,1,3};answers[0]=profile;asked=messages=0;
   assert(dashHddInstallChoose(&in,0)&&in.flags==expected[profile]&&!in.game_launcher&&asked==1);
  }
- memset(answers,0,sizeof(answers));asked=messages=0;in.flags=7;in.jail=1;
+ memset(answers,0,sizeof(answers));asked=messages=0;in.flags=7;in.jail=1;in.game_launcher=HDD_GAME_RIPTOPL;
  assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==7&&in.music_mb==1024&&in.contents_mb==1024&&!in.linux_home_mb);
  asked=messages=0;answers[0]=1;answers[1]=2;answers[2]=4;
  assert(dashHddInstallConfigure(&in,8192)&&asked==3&&!messages&&in.flags==15&&in.music_mb==2048&&in.contents_mb==4096&&in.linux_home_mb==8192);

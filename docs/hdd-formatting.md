@@ -223,13 +223,25 @@ Boot configuration is generated for the actual installed components and paths.
 Pure APA boots HOSDMenu; PSBBN installs boot PSBBN with `-dev9=NICHDD` and offer
 HOSDMenu on Cross. Start/Select hotkeys launch the included apps when present.
 
-PSBBN installs ask for a default game launcher: **Open PS2 Loader (OPL)** or
-**Neutrino (NHDDL)**. Both launchers are downloaded from the same pinned DP
-commit. Their ELFs are installed in `__system/launcher`; the complete Neutrino
-runtime (including config files and IRX modules) goes to `ata0:/neutrino` and
-OPL's language assets go to `ata0:/LNG`. Matching licenses and version files are
-included. The generated OPL configuration enables BDM HDD, apps, and cover art.
-These binaries are copied after archive extraction to replace any older copies.
+New PSBBN installations follow DP's November 2026 runtime layout. RiptOPL is
+the game frontend, with **Neutrino (RiptOPL)** listed first (the default) and
+**OPL (RiptOPL)** as the other PS2 core. Both choices install the same pinned
+RiptOPL, Neutrino and Ember files. RiptOPL's ELF goes to
+`__system/launcher/RIPTOPL-RA-UNPAKT.ELF`; Neutrino's complete runtime goes to
+`ata0:/neutrino`, language assets to `ata0:/LNG`, and Ember to `ata0:/Ember`,
+with `ata0:/Ember/games` created for PS1 titles. `ata0:/settings_riptopl.cfg`
+uses the same settings as DP's game installer, selects the installed language,
+and sets `default_core=1` for Neutrino or `0` for OPL.
+
+Like DP, the installer downloads `dep.zip` from the
+`psbbn-definitive-project-dependencies` Archive.org item and extracts only
+`dep/bios.bin` (512 KiB) to `ata0:/Ember/bios.bin`. Archive.org metadata gives
+its size and SHA-1. `ata0:/Ember/README.txt` credits Gageformer and links
+[Ember's releases](https://github.com/Gageformer/Ember/releases). DP no longer
+ships per-launcher license files, so none are downloaded for this layout.
+Installations resumed from an older checkpoint keep the OPL/NHDDL layout they
+started with. These binaries are copied after archive extraction to replace any
+older copies.
 
 The choice controls the Square boot shortcut, the first HOSDMenu launcher entry,
 and DP's standard `PP.LAUNCHER` partition, including its icon, artwork, and PSBBN

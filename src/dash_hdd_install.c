@@ -39,10 +39,10 @@ int dashHddInstallChoose(HddInstall *in, int jail)
             char title[128];
             dashModalMessage(DI_INFO, "PSBBN DP installation",
                 "PSBBN DP requires a Sony Network Adapter. Third party clones are not compatible (Example: GameStar). HOSDMenu, is installed as well which does not have this limitation.", NULL);
-            static const char *const launchers[] = {"Neutrino (NHDDL)", "Open PS2 Loader (OPL)"};
-            selected = dashModalSelect(dashHddInstallChoiceTitle(in, HDD_CHOICE_LAUNCHER, "Default game launcher", title, sizeof(title)), launchers, 2, 0);
+            static const char *const cores[] = {"Neutrino (RiptOPL)", "OPL (RiptOPL)"};
+            selected = dashModalSelect(dashHddInstallChoiceTitle(in, HDD_CHOICE_LAUNCHER, "Default PS2 game core", title, sizeof(title)), cores, 2, 0);
             if (selected < 0) return 0;
-            in->game_launcher = selected ? HDD_GAME_OPL : HDD_GAME_NEUTRINO;
+            in->game_launcher = selected ? HDD_GAME_RIPTOPL : HDD_GAME_RIPTOPL_NEUTRINO;
         }
     }
 #endif
@@ -297,7 +297,9 @@ void dashHddInstallDebugBegin(HddInstall *in, const HddFormatPlan *plan)
     hddInstallLog("exFAT first=%u sectors=%u recovery=%u", (unsigned)plan->exfat_start, (unsigned)plan->exfat_sectors, (unsigned)plan->recovery_start);
     hddInstallLog("Choices: Music=%u MiB Contents=%u MiB PS2 Linux=%s Home=%u MiB Free APA reserve=%u MiB",
                   in->music_mb, in->contents_mb, in->flags & HDD_INSTALL_PS2LINUX ? "On" : "Off", in->linux_home_mb, in->reserved_mb);
-    hddInstallLog("Game launchers: install OPL + NHDDL/Neutrino; default %s", hddInstallGameName(in->game_launcher));
+    hddInstallLog("Game launcher: %s", hddInstallGameName(in->game_launcher));
+    if (in->game_launcher >= HDD_GAME_RIPTOPL)
+        hddInstallLog("Ember by Gageformer: https://github.com/Gageformer/Ember/releases");
     hddInstallStatus("Preparing installer; the HDD has not been erased yet", 0, 0);
     dashLoadingBegin("PSBBN DP installer log (Experimental)");
 }
