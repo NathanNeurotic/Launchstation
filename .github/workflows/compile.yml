@@ -150,6 +150,7 @@ jobs:
           python3 tests/test_folder_date_arithmetic.py
           python3 tests/test_folder_date_popup.py
           python3 tests/test_hdd_format.py
+          python3 tests/test_hdd_metadata.py
           python3 tests/test_hdd_mini.py
           python3 tests/test_hdd_app.py
           python3 tests/test_hdd_app_install.py

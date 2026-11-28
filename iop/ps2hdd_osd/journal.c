@@ -46,6 +46,8 @@ int apaJournalReset(s32 device)
 
 int apaJournalWrite(apa_cache_t *clink)
 {
+	if ((u32)journalBuf.num >= sizeof(journalBuf.sectors)/sizeof(journalBuf.sectors[0]))
+		return -ENOSPC;
 	clink->header->checksum=journalCheckSum(clink->header);
 	if(blkIoDmaTransfer(clink->device, clink->header,
 		(journalBuf.num << 1)+APA_SECTOR_APAL_HEADERS, 2, BLKIO_DIR_WRITE))
@@ -62,15 +64,19 @@ int apaJournalRestore(s32 device)
 
 	APA_PRINTF(APA_DRV_NAME": checking log...\n");
 	ret = blkIoDmaTransfer(device, &journalBuf, APA_SECTOR_APAL, sizeof(apa_journal_t)/512, BLKIO_DIR_READ) == 0 ? 0 : -EIO;
-	if((ret == 0) && (journalBuf.magic == APAL_MAGIC))
+	if (ret < 0) return ret;
+	if(journalBuf.magic == APAL_MAGIC)
 	{
 		int i;
 		apa_cache_t *clink;
 
+		if ((u32)journalBuf.num > sizeof(journalBuf.sectors)/sizeof(journalBuf.sectors[0]))
+			return -EIO;
 		if(journalBuf.num == 0)
 			return 0;
 
 		clink=apaCacheAlloc();
+		if (!clink) return -ENOMEM;
 		for(i=0, sector=APA_SECTOR_APAL_HEADERS;i<journalBuf.num;i++, sector+=2)
 		{
 			ret = (blkIoDmaTransfer(device, clink->header, sector, 2, BLKIO_DIR_READ) == 0) ? 0 : -EIO;
@@ -82,6 +88,7 @@ int apaJournalRestore(s32 device)
 				break;
 		}
 		apaCacheFree(clink);
+		if (ret < 0) return ret; /* Never erase a failed replay. */
 	}
 
 	return apaJournalReset(device);

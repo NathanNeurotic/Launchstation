@@ -92,6 +92,13 @@ if it contains only installer files. Unknown files and staged app or backup
 directories are kept. A pending launcher without durable ownership evidence
 is left untouched.
 
+APA header writes report their failures, and the HDD driver keeps its
+recovery journal until every header is written. After a create or format I/O
+error, the installer reloads the IOP and storage drivers so that journal is
+replayed before you retry. If a launcher partition went missing after an
+older checkpoint, a resume recreates only that new launcher after checking
+the app files' ownership. A published partition is never recreated.
+
 ## Partition names and HOSDMenu visibility
 
 HDD Manager accepts APA names up to 32 bytes and refuses a name already in

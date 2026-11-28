@@ -526,21 +526,18 @@ static float iconSdf(int id, V2 p)
 			break;
 		}
 		case DI_ARCHIVE_EXTRACT: {
-			/* Open box/checkmark adapted from Flaticon:
-			 * https://www.flaticon.com/free-icon/order_9422452 */
-			V2 a = {p.x * 288.0f, p.y * 288.0f + 256.0f};
+			/* Four-flap open box adapted from Flaticon:
+			 * https://www.flaticon.com/free-icon/box-open_12028823
+			 * Pixel coordinates, normalized to the same optical width as Create. */
+			V2 a = {p.x * 232.0f, p.y * 232.0f + 259.0f};
 			V2 q = {fabsf(a.x), a.y};
-			float body, flap, badge;
-			body = S(sdQuadP(q, 8, 339, 171, 339, 171, 442, 8, 505), sdTriP(q, 8, 339, 40, 384, 171, 339));
-			flap = sdQuadP(q, 12, 314, 176, 250, 208, 307, 44, 371);
-			d = S(sdTriP(q, 0, 300, 157, 240, 0, 180), sdCircle(q, 0, 178, 104));
-			d = U(d, U(body, flap));
-			badge = S(sdCircle(a, 0, 178, 88), U(sdSeg(a, -46, 176, -20, 208, 13), sdSeg(a, -20, 208, 42, 146, 13)));
-			d = U(d, badge);
-			d = U(d, sdSeg(q, 0, 15, 0, 52, 8));
-			d = U(d, sdSeg(q, 82, 36, 64, 67, 8));
-			d = U(d, sdSeg(q, 140, 96, 108, 114, 8));
-			d = U(d, sdSeg(q, 123, 178, 161, 178, 8)) / 288.0f;
+			float body, front, back;
+			back = sdQuadP(q, 24.785f, 125.700f, 70.493f, 79.992f, 189.800f, 125.529f, 148.243f, 172.905f) - 6.0f;
+			front = sdQuadP(q, 23.509f, 257.246f, 148.559f, 207.044f, 193.539f, 252.024f, 70.419f, 305.832f) - 6.0f;
+			body = sdQuadP(q, 15.000f, 281.403f, 140.000f, 307.863f, 140.000f, 395.655f, 15.000f, 436.714f) - 6.0f;
+			body = S(body, sdTriP(q, 31.766f, 286.996f, 66.237f, 324.602f, 117.631f, 305.172f) - 8.0f);
+			d = sdQuadP(a, 0, 141, 129, 190, 0, 242, -129, 190);
+			d = U(d, U(back, U(front, body))) / 232.0f;
 			break;
 		}
 		case DI_REFRESH:

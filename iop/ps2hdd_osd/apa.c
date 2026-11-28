@@ -144,22 +144,31 @@ apa_cache_t *apaInsertPartition(s32 device, const apa_params_t *params, u32 sect
             apaCacheFree(clink_this);
             return 0;
         }
-        clink_this->header->length >>= 1;
-        clink_empty = apaRemovePartition(device, (clink_this->header->start + clink_this->header->length),
-                                         clink_this->header->next, clink_this->header->start, clink_this->header->length);
+        u32 half = clink_this->header->length >> 1;
+        clink_empty = apaRemovePartition(device, clink_this->header->start + half,
+                                         clink_this->header->next, clink_this->header->start, half);
+        if (!clink_empty) {
+            *err = -ENOMEM;
+            apaCacheFree(clink_next); apaCacheFree(clink_this);
+            return NULL;
+        }
+        clink_this->header->length = half;
         clink_this->header->next = clink_empty->header->start;
         clink_this->flags |= APA_CACHE_FLAG_DIRTY;
         clink_next->header->prev = clink_empty->header->start;
         clink_next->flags |= APA_CACHE_FLAG_DIRTY;
 
-        apaCacheFlushAllDirty(device);
+        *err = apaCacheFlushAllDirty(device);
         apaCacheFree(clink_empty);
         apaCacheFree(clink_next);
+        if (*err < 0) { apaCacheFree(clink_this); return NULL; }
     }
+    u32 start = clink_this->header->start, next = clink_this->header->next, prev = clink_this->header->prev;
     apaCacheFree(clink_this);
-    clink_this = apaFillHeader(device, params, clink_this->header->start, clink_this->header->next,
-                               clink_this->header->prev, params->size, err);
-    apaCacheFlushAllDirty(device);
+    clink_this = apaFillHeader(device, params, start, next, prev, params->size, err);
+    if (!clink_this) return NULL;
+    *err = apaCacheFlushAllDirty(device);
+    if (*err < 0) { apaCacheFree(clink_this); return NULL; }
     return clink_this;
 }
 
@@ -181,12 +190,8 @@ apa_cache_t *apaFindPartition(s32 device, const char *id, int *err)
         }
         clink = apaGetNextHeader(clink, (int *)err);
     }
-    if (*err == 0) {
-        *err = -ENOENT;
-        return NULL;
-        // return (apa_cache_t *)-ENOENT; // <-- BUG code tests for NULL only
-    }
-    *err = 0;
+    /* Preserve read failures; callers must not mistake them for a found ID. */
+    if (*err == 0) *err = -ENOENT;
     return NULL;
 }
 
@@ -516,7 +521,8 @@ apa_cache_t *apaGetNextHeader(apa_cache_t *clink, int *err)
         APA_PRINTF(APA_DRV_NAME ": Warning: Invalid partition information. start != prev\n");
         clink->header->prev = start;
         clink->flags |= APA_CACHE_FLAG_DIRTY;
-        apaCacheFlushAllDirty(clink->device);
+        *err = apaCacheFlushAllDirty(clink->device);
+        if (*err < 0) { apaCacheFree(clink); return NULL; }
     }
     return clink;
 }
