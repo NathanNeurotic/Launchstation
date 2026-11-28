@@ -268,8 +268,14 @@ static int stageRestartable(const char *path)
 static void snapshot(void *arg)
 {
     AppInstall *in = arg;
+    char source[MAX_PATH];
     context(in, "Reading app PSU", in->source);
-    in->result = readFile(in->source, &in->package, &in->package_size, SAVE_ARCHIVE_LIMIT);
+    /* An earlier queued install releases every PFS mount, so mount an HDD
+     * partition source again at its own turn. */
+    if (!strncmp(in->source, "hdd0:/", 6)) {
+        if (genFixPath(in->source, source) < 0) { in->result = -ENODEV; return; }
+    } else dashStrCopy(source, in->source, sizeof(source));
+    in->result = readFile(source, &in->package, &in->package_size, SAVE_ARCHIVE_LIMIT);
     if (in->result < 0) return;
     if (!saveArchiveParse(&in->save, in->package, in->package_size, "APP.PSU")) {
         snprintf(in->network.error, sizeof(in->network.error), "The selected file is not a valid, complete PSU archive.");
@@ -415,6 +421,22 @@ static int validateTarget(AppInstall *in)
     return hddCheckAllocation(8u * 2048);
 }
 
+static int removeTree(char *path, unsigned depth)
+{
+    if (depth > MAX_RECURSE) return -ELOOP;
+    int fd = fileXioDopen(path), ret;
+    iox_dirent_t entry; char child[MAX_PATH];
+    if (fd < 0) return fd;
+    while ((ret = fileXioDread(fd, &entry)) > 0) {
+        if (!strcmp(entry.name, ".") || !strcmp(entry.name, "..")) continue;
+        if (strpbrk(entry.name, "/\\:") || join(child, path, entry.name) < 0) { ret = -EINVAL; break; }
+        ret = FIO_S_ISDIR(entry.stat.mode) ? removeTree(child, depth + 1) : genRemove(child);
+        if (ret < 0) break;
+    }
+    if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
+    int closed = fileXioDclose(fd);
+    return ret < 0 ? ret : closed < 0 ? closed : genRmdir(path);
+}
 static void prepare(void *arg)
 {
     AppInstall *in = arg;
@@ -461,7 +483,14 @@ static void prepare(void *arg)
     if (present < 0) { in->result = present; return; }
     if (present) {
         ret = readJournal(in);
-        if (ret >= 0) in->resumed = 1;
+        if (ret >= 0 && in->journal.phase >= HA_DONE) {
+            /* A finished install whose cleanup failed is never resumed: its
+             * launcher was published, so start a fresh install instead. */
+            memset(&in->journal, 0, sizeof(in->journal));
+            snprintf(in->pending, sizeof(in->pending), "+LSAPP.%08x.%08x", id, in->crc);
+            ret = removeTree(in->stage, 0);
+            if (ret >= 0) ret = genMkdir(in->stage, 0777);
+        } else if (ret >= 0) in->resumed = 1;
         else {
             if (hddInstallRecoveryFault()) { in->result = HDD_INSTALL_ATA_TIMEOUT; return; }
             ret = stageRestartable(in->stage);
@@ -540,22 +569,6 @@ static int copyTree(const char *from, const char *to, unsigned depth)
     }
     if (fd >= 0 && !hddInstallRecoveryFault()) { int closed = fileXioDclose(fd); if (ret >= 0) ret = closed; }
     return ret;
-}
-static int removeTree(char *path, unsigned depth)
-{
-    if (depth > MAX_RECURSE) return -ELOOP;
-    int fd = fileXioDopen(path), ret;
-    iox_dirent_t entry; char child[MAX_PATH];
-    if (fd < 0) return fd;
-    while ((ret = fileXioDread(fd, &entry)) > 0) {
-        if (!strcmp(entry.name, ".") || !strcmp(entry.name, "..")) continue;
-        if (strpbrk(entry.name, "/\\:") || join(child, path, entry.name) < 0) { ret = -EINVAL; break; }
-        ret = FIO_S_ISDIR(entry.stat.mode) ? removeTree(child, depth + 1) : genRemove(child);
-        if (ret < 0) break;
-    }
-    if (hddInstallRecoveryFault()) return HDD_INSTALL_ATA_TIMEOUT;
-    int closed = fileXioDclose(fd);
-    return ret < 0 ? ret : closed < 0 ? closed : genRmdir(path);
 }
 static int renameAbsent(const char *from, const char *to)
 {

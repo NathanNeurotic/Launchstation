@@ -43,7 +43,9 @@ void apaSaveError(s32 device, void *buffer, u32 lba, u32 err_lba)
 void apaSetPartErrorSector(s32 device, u32 lba)
 { // used to set the lba of a partition that has a error...
     apa_cache_t *clink;
-    clink = apaCacheAlloc();
+    /* Every free entry can be dirty after failed header writes. */
+    if (!(clink = apaCacheAlloc()))
+        return;
     apaSaveError(device, clink->header, APA_SECTOR_PART_ERROR, lba);
     apaCacheFree(clink);
 }
@@ -465,8 +467,9 @@ int apaGetFormat(s32 device, int *format)
     int rv = 0;
     u32 i;
 
-    clink = apaCacheAlloc();
     *format = 0;
+    if (!(clink = apaCacheAlloc()))
+        return -ENOMEM;
     if ((rv = apaReadHeader(device, clink->header, 0)) == 0) {
         *format = clink->header->mbr.version;
         if (blkIoDmaTransfer(device, clink->header, APA_SECTOR_SECTOR_ERROR, 2, BLKIO_DIR_READ))
