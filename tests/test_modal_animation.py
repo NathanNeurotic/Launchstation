@@ -45,6 +45,7 @@ code = r"""
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 typedef uint64_t u64;
 typedef struct { int r,g,b,a; } DashColor;
@@ -156,6 +157,9 @@ if "static int modalEnabledEdge(" in ui:
 # Older revisions given as an argument predate include/list_scroll.h.
 scroll_header = read("include/list_scroll.h") if "listCenteredTop(" in menu + buttons else ""
 code += scroll_header + menu + buttons
+if "static int modalChoice(" in ui:
+    code += function(ui, "static int modalChoice(")
+code += function(ui, "int dashModalChoice(")
 code += r"""
 static int modalButtonsCall(const char *title,const char *body,const char *detail,int icon,DashColor icon_col,
                             const char *ok_label,const char *cancel_label,int default_sel,u64 deadline) {
@@ -285,6 +289,14 @@ int main(void) {
     for(int k=0;k<20;k++){many[k].icon=0;many[k].label="row";many[k].detail=NULL;many[k].disabled=k==7;}
     reset(); nav_scenario=9;   /* 0 -R1-> 6 (7 disabled) -R1-> 13 -L1-> 6 */
     assert(dashModalMenu("pages",NULL,many,20,0)==6);
+    /* The time zone picker has Console plus 38 offsets. */
+    const char *options[39];
+    for (int i = 0; i < 39; i++)
+        options[i] = "zone";
+    reset(); nav_scenario = 2; /* R2 jumps to the final row, then OK. */
+    assert(dashModalChoice("Time zone", options, 39, 0) == 38);
+    reset(); nav_scenario = 3; /* OK confirms the previously selected row. */
+    assert(dashModalChoice("Time zone", options, 39, 38) == 38);
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;

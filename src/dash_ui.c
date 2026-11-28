@@ -7,6 +7,7 @@
 //(swapKeys == 0: Circle confirms, Cross cancels; swapKeys == 1: Cross
 //confirms, Circle cancels), exactly like the classic screens.
 //--------------------------------------------------------------
+#include <stdlib.h>
 #include <time.h>
 #include "dash_internal.h"
 #include "dash_sound.h"
@@ -1177,20 +1178,21 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 static int modalChoice(const char *title, const char *const *options, int n, int current, int initial)
 {
-	DashMenuItem items[24];
-	int i;
+	DashMenuItem *items;
+	int i, result;
 
 	if (options == NULL || n <= 0)
 		return -1;
-	if (n > 24)
-		n = 24;
+	items = calloc((size_t)n, sizeof(*items));
+	if (items == NULL)
+		return -1;
 	for (i = 0; i < n; i++) {
 		items[i].icon = (i == current) ? DI_CHECK : -1;
 		items[i].label = options[i];
-		items[i].detail = NULL;
-		items[i].disabled = 0;
 	}
-	return dashModalMenu(title, NULL, items, n, initial);
+	result = dashModalMenu(title, NULL, items, n, initial);
+	free(items);
+	return result;
 }
 
 int dashModalChoice(const char *title, const char *const *options, int n, int current)

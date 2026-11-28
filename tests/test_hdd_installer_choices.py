@@ -75,6 +75,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-install-choices-') as directory:
     code=r'''
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "hdd_install.h"
 #define ETH
