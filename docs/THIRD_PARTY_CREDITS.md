@@ -120,3 +120,5 @@ Emotion Engine Regular/Bold is by **Neale Davidson / Pixel Sagas** ([designer](h
 Material Design Icons rocket-launch by **Pictogrammers / MDI contributors**, adapted into the action icon atlas. Preserve the [Apache-2.0 notice](licenses/Material-Design-Icons-LICENSE.txt), original `res/icons/rocket-launch.svg` and its source checksum in `src/dash_icons.c`.
 
 The archive action icons in `src/dash_icons.c` adapt the [Box icon by Pixel perfect](https://www.flaticon.com/free-icon/box_726546) and the [Box open icon](https://www.flaticon.com/free-icon/box-open_12028823) from Flaticon, whose license requires attribution.
+
+The HDD Manager boot flag icon adapts the [Finish icon by Smashicons](https://www.flaticon.com/free-icon/finish_2164609) from Flaticon (attribution required), with a checkmark cutout for the enabled state.

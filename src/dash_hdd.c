@@ -88,7 +88,7 @@ static const char *hddStatusInfoText(int status)
 enum {
 	HP_PFS = 0, /* PFS partition: normal file access */
 	HP_HDL,     /* HDL game partition */
-	HP_SYSTEM,  /* __mbr: never touched */
+	HP_SYSTEM,  /* __mbr: protected from partition edits */
 	HP_OTHER    /* anything else: not accessible */
 };
 
@@ -138,7 +138,9 @@ enum {
 	HOP_INSTALL_SOFTWARE,
 	HOP_RESUME_LOOKUP,
 	HOP_RESUME_AVAILABLE,
-	HOP_SYSTEM_APP
+	HOP_SYSTEM_APP,
+	HOP_ENABLE_BOOT_FLAG,
+	HOP_READ_BOOT_FLAG
 };
 
 typedef struct
@@ -489,6 +491,12 @@ static void hddJobRun(void *arg)
 			break;
 		case HOP_SYSTEM_APP:
 			systemAppRun(j);
+			break;
+		case HOP_READ_BOOT_FLAG:
+			j->ret = hddReadBootFlag();
+			break;
+		case HOP_ENABLE_BOOT_FLAG:
+			j->ret = hddEnableBootFlag();
 			break;
 		case HOP_RESUME_AVAILABLE: {
 			char device[16] = "ata0:";
@@ -1660,6 +1668,33 @@ static int systemAppStatus(void)
     return ret;
 }
 
+static int runBootFlagJob(int op, int *result)
+{
+	if (!dashWorkerAwaitAll("Preparing console HDD boot")) return 0;
+	loadCdModules();
+	HddJob *j = jobNew(op);
+	if (j == NULL || !runJob(j, "Checking console HDD boot flag", 0)) return 0;
+	*result = j->ret;
+	hddJobFree(j);
+	return 1;
+}
+
+static void actEnableBootFlag(void)
+{
+	int ret;
+
+	if (!runBootFlagJob(HOP_ENABLE_BOOT_FLAG, &ret)) return;
+	if (ret == HDD_BOOT_ALREADY_ENABLED)
+		dashModalMessage(DI_CHECK, "Already enabled!", "The console HDD boot flag is already enabled.", NULL);
+	else if (ret == HDD_BOOT_ENABLED)
+		dashModalMessage(DI_CHECK, "HDD boot is enabled", "The console HDD boot flag was enabled and verified.", NULL);
+	else {
+		char body[96];
+		snprintf(body, sizeof(body), "Could not enable or verify the console HDD boot flag (error %d).", ret);
+		dashModalMessage(DI_WARNING, "HDD boot flag could not be verified", body, NULL);
+	}
+}
+
 static void partitionMenu(void)
 {
 	HddPart *p = (hm.n > 0 && sel < hm.n) ? &hm.parts[sel] : NULL;
@@ -1679,7 +1714,8 @@ static void partitionMenu(void)
 		A_FORMAT,
 		A_RESUME,
 		A_INSTALL_APP,
-		A_VISIBILITY
+		A_VISIBILITY,
+		A_ENABLE_BOOT_FLAG
 	};
 
 	if (p != NULL && !system && dashWorkerAwaitAll("Finishing up"))
@@ -1719,6 +1755,12 @@ static void partitionMenu(void)
 	ADD(DI_REFRESH, "Refresh", NULL, 0, A_REFRESH);
 	if (!console_is_PSX && hm.present)
 		ADD(DI_WARNING, "Format HDD...", NULL, 0, A_FORMAT);
+	if (!console_is_PSX && p && p->type == HP_SYSTEM && !strcmp(p->name, "__mbr")) {
+		int ret;
+		int enabled = runBootFlagJob(HOP_READ_BOOT_FLAG, &ret) && ret > 0;
+		ADD(enabled ? DI_BOOT_FLAG_ENABLED : DI_BOOT_FLAG,
+		    enabled ? "HDD boot flag enabled..." : "Enable HDD boot flag...", NULL, enabled, A_ENABLE_BOOT_FLAG);
+	}
 	int resume = resumeStatus();
 	if (resume)
 		ADD(DI_REFRESH, "Resume installation...", resume < 0 ? retry_detail : NULL,
@@ -1758,6 +1800,9 @@ static void partitionMenu(void)
 			break;
 		case A_REFRESH:
 			scan();
+			break;
+		case A_ENABLE_BOOT_FLAG:
+			actEnableBootFlag();
 			break;
 		case A_RESUME:
 			actResume();

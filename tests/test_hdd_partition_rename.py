@@ -97,6 +97,7 @@ ui = r'''
 #define DI_WARNING 1
 #define DASH_TOAST_OK 2
 #define HOP_RENAME 3
+#define HOP_READ_BOOT_FLAG 90
 typedef struct {char name[33];int type;} HddPart;
 typedef struct {char a[40],b[80];int op,ret;} HddJob;
 static char mountedParty[4][256],last_name[40];static int Party_vmcIndex[4];
@@ -128,7 +129,7 @@ ui += r'''
 #define HP_HDL 1
 #define HDD_FS_EXFAT 1
 #define HDD_FS_FAT32 2
-enum {DI_PLUS, DI_ARCHIVE_EXTRACT, DI_CLOSE, DI_EDIT, DI_HIDE, DI_SHOW, DI_DISC, DI_TEXT, DI_SETTINGS, DI_INFO, DI_REFRESH};
+enum {DI_PLUS, DI_ARCHIVE_EXTRACT, DI_CLOSE, DI_EDIT, DI_HIDE, DI_SHOW, DI_BOOT_FLAG, DI_BOOT_FLAG_ENABLED, DI_DISC, DI_TEXT, DI_SETTINGS, DI_INFO, DI_REFRESH};
 typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
 static struct { HddPart *parts; int n,formatted,filesystem,seen,status,present,resume_checked; } hm;
 static int console_is_PSX, hosd_result, resume_result;
@@ -148,6 +149,8 @@ static void actStatus(void){assert(0);}
 static void scan(void){assert(0);}
 static void actResume(void){assert(0);}
 static void actFormat(void){assert(0);}
+static int runBootFlagJob(int op,int *result){(void)op;(void)result;assert(0);return 0;}
+static void actEnableBootFlag(void){assert(0);}
 static void dashHddInstallApp(const char *path){(void)path;assert(0);}
 static int dashModalMenu(const char *title,const char *subtitle,const DashMenuItem *items,int n,int initial){
     assert(title&&subtitle&&!initial);

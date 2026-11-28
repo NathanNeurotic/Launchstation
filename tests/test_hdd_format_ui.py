@@ -105,6 +105,8 @@ int hddInstallCleanup(HddInstall *in) { in->stage[0] = 0; return 0; }
 static HddJob *jobNew(int operation) { HddJob *j = calloc(1, sizeof(HddJob)); j->op = operation; return j; }
 static void hddJobFree(HddJob *j) { freed++; free(j); }
 int hddFormatLoad(void) { assert(confirms == 2); loaded++; return load_error; }
+int hddReadBootFlag(void) { assert(0); return -1; }
+int hddEnableBootFlag(void) { assert(0); return -1; }
 static void dashSoundShutdown(void) { assert(loaded); stopped++; }
 static int runJob(HddJob *j, const char *title, int cancelable) {
     assert(title && cancelable == 0);
@@ -237,6 +239,8 @@ int hddInstallUnmountStage(HddInstall *in) { (void)in; return 0; }
 int hddInstallCreateStage(HddInstall *in) { (void)in; return 0; }
 int hddInstallCleanup(HddInstall *in) { (void)in; return 0; }
 int hddInstallEnableBoot(HddInstall *in) { (void)in; return 0; }
+int hddReadBootFlag(void) { assert(0); return -1; }
+int hddEnableBootFlag(void) { assert(0); return -1; }
 int hddInstallDownload(HddInstall *in) { (void)in; return 0; }
 int hddInstallApply(HddInstall *in) { (void)in; return 0; }
 int hddInstallPsbbnPayload(void *in, const HddFormatIo *io) { (void)in; (void)io; return 0; }

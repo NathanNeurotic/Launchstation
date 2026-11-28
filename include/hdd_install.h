@@ -110,6 +110,11 @@ int hddInstallApply(HddInstall *install);
 /* Call only after successful software/MBR commit. Preserves unrelated console
  * configuration and verifies the persistent HDD boot setting; HOSD only. */
 int hddInstallEnableBoot(HddInstall *install);
+/* Returns 1 if enabled, 0 if disabled, or a negative errno. */
+int hddReadBootFlag(void);
+/* Console configuration only. Returns a status below or a negative errno. */
+enum { HDD_BOOT_ENABLED, HDD_BOOT_ALREADY_ENABLED };
+int hddEnableBootFlag(void);
 int hddInstallPsbbnPartitions(HddInstall *install);
 int hddInstallPsbbnPayload(void *install, const HddFormatIo *io);
 int hddInstallClaimStage(HddInstall *install);

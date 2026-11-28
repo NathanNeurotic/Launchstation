@@ -515,6 +515,8 @@ enum DashIcon {
 	DI_ARCHIVE_CREATE, /* closed package */
 	DI_ARCHIVE_EXTRACT, /* open package */
 	DI_SHOW,        /* open eye for showing hidden items */
+	DI_BOOT_FLAG,   /* finish flag: enable console HDD boot */
+	DI_BOOT_FLAG_ENABLED, /* finish flag with a check: HDD boot already on */
 	DI_COUNT
 };
 

@@ -288,6 +288,27 @@ static float soundWaveSdf(V2 p, float radius)
 	return U(d, U(sdCircle(p, ex, ey, T), sdCircle(p, ex, -ey, T)));
 }
 
+/* Finish by Smashicons, adapted from https://www.flaticon.com/free-icon/finish_2164609 */
+static float bootFlagSdf(V2 p)
+{
+	static const V2 cloth[] = {
+		{0.66f, -0.93f}, {0.67f, -0.76f}, {0.57f, -0.31f}, {0.70f, -0.18f},
+		{0.93f, -0.05f}, {0.89f, 0.04f}, {0.78f, 0.13f}, {0.63f, 0.19f},
+		{-0.16f, 0.18f}, {-0.29f, 0.22f}, {-0.46f, 0.33f}, {-0.72f, -0.60f},
+		{-0.56f, -0.72f}, {-0.41f, -0.76f}, {0.38f, -0.75f}, {0.52f, -0.81f}
+	};
+	float distance = 1e9f;
+	int inside = 0;
+	for (unsigned i = 0, j = sizeof(cloth) / sizeof(cloth[0]) - 1; i < sizeof(cloth) / sizeof(cloth[0]); j = i++) {
+		V2 a = cloth[j], b = cloth[i];
+		distance = fminf2(distance, sdSeg(p, a.x, a.y, b.x, b.y, 0.0f));
+		if ((a.y > p.y) != (b.y > p.y) &&
+		    p.x < a.x + (b.x - a.x) * (p.y - a.y) / (b.y - a.y))
+			inside = !inside;
+	}
+	return U(inside ? -distance : distance, sdSeg(p, -0.85f, -0.53f, -0.47f, 0.85f, 0.08f));
+}
+
 static float iconSdf(int id, V2 p)
 {
 	float d = 1e9f;
@@ -580,6 +601,15 @@ static float iconSdf(int id, V2 p)
 			d = sdBoxOutline(p, -0.20f, -0.20f, 0.52f, 0.52f, 0.14f, T);
 			d = S(d, sdBox(p, 0.20f, 0.20f, 0.52f, 0.52f, 0.14f));
 			d = U(d, sdBoxOutline(p, 0.20f, 0.20f, 0.52f, 0.52f, 0.14f, T));
+			break;
+		case DI_BOOT_FLAG:
+		case DI_BOOT_FLAG_ENABLED:
+			d = bootFlagSdf(p);
+			if (id == DI_BOOT_FLAG_ENABLED) {
+				float check = U(sdSeg(p, -0.29f, -0.33f, -0.12f, -0.13f, 0.10f),
+				                sdSeg(p, -0.12f, -0.13f, 0.28f, -0.53f, 0.10f));
+				d = S(d, check);
+			}
 			break;
 		case DI_CHECK:
 		case DI_SELECT_ALL:

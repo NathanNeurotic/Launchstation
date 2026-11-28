@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / 'src/hdd_format_ps2.c').read_text()
 zero = source[source.index('static int zeroDisk('):source.index('static int flushDisk(')]
-function = zero + source[source.index('int hddInstallFinish('):]
+function = zero + source[source.index('static int mbrPointerMatches('):]
 code = r'''
 #include <assert.h>
 #include <errno.h>
@@ -34,6 +34,7 @@ static unsigned offset, activated, recovered, populated, flushed, flushed_writes
 static unsigned zeroed, zero_calls;
 static int zero_error;
 static int session, begun, finished, bad_read, bad_flush, bad_limit, populate_error;
+static int fail_pointer_read, fail_payload_read, fail_pointer_write;
 static HddFormatPlan plan;
 static int genOpen(const char *name, int mode) { assert(name && mode == FIO_O_RDONLY); offset = 0; return 9; }
 static s64 genLseek(int fd, int pos, int whence) { assert(fd == 9 && pos == 0); if(whence == SEEK_END) return sizeof(payload); offset = 0; return 0; }
@@ -51,8 +52,9 @@ static int call(int cmd, uint32_t lba, unsigned count, unsigned send, unsigned r
 }
 static int readDisk(void *ctx, uint32_t lba, unsigned count, void *data) {
     (void)ctx; assert(session); reads++;
-    if(lba == 0) { assert(count == 2); memcpy(data, header, 1024); return 0; }
+    if(lba == 0) { assert(count == 2); if(fail_pointer_read) return -EIO; memcpy(data, header, 1024); return 0; }
     assert(lba >= 8192 && (lba - 8192 + count) * 512 <= sizeof(disk));
+    if(fail_payload_read) return -EIO;
     memcpy(data, disk + (lba - 8192) * 512, count * 512);
     if(bad_read) ((char *)data)[0] ^= 1;
     return 0;
@@ -74,7 +76,9 @@ static int fileXioDevctl(const char *path, int cmd, const void *data, unsigned s
     const hddSetOsdMBR_t *info = data;
     assert(!strcmp(path,"hdd0:") && cmd == HDIOC_SETOSDMBR && size == sizeof(*info) && !out && !outsize);
     assert(flushed && writes && flushed_writes==writes && !memcmp(disk,payload,sizeof(disk)));
-    memcpy(header + 304,&info->start,4); memcpy(header + 308,&info->size,4); activated++; return 0;
+    activated++;
+    if(!fail_pointer_write){memcpy(header + 304,&info->start,4); memcpy(header + 308,&info->size,4);}
+    return 0;
 }
 int hddFormatRecovery(const HddFormatPlan *p, const HddFormatIo *io) { assert(p == &plan && io && session); recovered++; return 0; }
 static int populate(void *ctx, const HddFormatIo *io) { assert(ctx == &plan && io && !activated && !writes && session); populated++; return populate_error; }
@@ -96,7 +100,13 @@ static void clear(void) {
     memcpy(payload,"\x01\x00\x00\x04",4);
     offset=activated=recovered=populated=flushed=flushed_writes=reads=writes=0;
     session=begun=finished=bad_read=bad_flush=bad_limit=populate_error=0;
+    fail_pointer_read=fail_payload_read=fail_pointer_write=0;
     assert(hddFormatPlan(&plan,HDD_FORMAT_APA_JAIL,100u*1024*2048,8192,1)==0);
+}
+static void existingBootPayload(void) {
+    const uint32_t lba=8192, sectors=sizeof(payload)/512;
+    memcpy(header+304,&lba,4);memcpy(header+308,&sectors,4);
+    memcpy(disk,payload,sizeof(disk));
 }
 int main(void) {
     int started = 8;
@@ -107,6 +117,20 @@ int main(void) {
     assert(started && begun==1 && finished==1 && activated==1 && recovered==0 && populated==1 && !session);
     clear(); assert(hddInstallFinish(&plan,"mbr","0000000000000000000000000000000000000000",&started,populate,&plan)==-EIO);
     assert(started && writes && !activated && !recovered && finished==1);
+    clear(); existingBootPayload();
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,populate,&plan)==0);
+    assert(started&&populated==1&&reads==4&&!writes&&!activated&&recovered==0&&finished==1);
+    clear(); existingBootPayload();disk[sizeof(disk)-1]^=1;
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==0);
+    assert(started&&writes==1&&activated==1&&recovered==0&&finished==1&&!memcmp(disk,payload,sizeof(disk)));
+    clear(); existingBootPayload();memset(header+308,0,4);
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==0&&writes==3&&activated==1);
+    clear(); existingBootPayload();fail_pointer_read=1;
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO&&!writes&&!activated&&!recovered&&finished==1);
+    clear(); existingBootPayload();fail_payload_read=1;
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO&&!writes&&!activated&&!recovered&&finished==1);
+    clear(); fail_pointer_write=1;
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO&&activated==1&&!recovered&&finished==1);
     clear(); populate_error=-EIO; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,populate,&plan)==-EIO);
     assert(started && populated==1 && !writes && !activated && !recovered && finished==1);
     clear(); bad_read=1; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO);
@@ -121,7 +145,9 @@ int main(void) {
     assert(!started && !begun && !writes && !activated);
     clear(); assert(hddInstallFinish(&plan,NULL,NULL,&started,NULL,NULL)==0);
     assert(started && !writes && !activated && recovered==0 && finished==1);
-    puts("PASS: software before MBR, short reads, readback/flush checks, failed population never activates boot, recovery preservation and session cleanup");
+    clear(); assert(hddFormatPlan(&plan,HDD_FORMAT_APA,100u*1024*2048,0,1)==0);
+    assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==0 && activated==1 && !recovered && begun==1 && finished==1);
+    puts("PASS: verify and skip active MBR, repair changed payload or pointer, readback checks, software before activation and recovery refresh");
 }
 '''
 payload = b'\x01\x00\x00\x04' + b'\x5a' * (66048 - 4)
