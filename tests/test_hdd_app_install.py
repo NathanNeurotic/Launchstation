@@ -75,7 +75,7 @@ void hddInstallRecoveryObserve(int ret){(void)ret;}
 static int isFtpServerRunning(void){return 0;}
 static int isSmbServerRunning(void){return 0;}
 static void unmountParty(int i){assert(i>=0&&i<4);mountedParty[i][0]=0;}
-static void dashWorkerStatus(const char*t,int d,int n){assert(t&&d>=0&&n>=0);}
+static void dashWorkerStatus(const char*t,int d,int n){(void)t;assert(d>=0&&n>=0);}
 static int fileXioDevctl(const char*p,int cmd,void*a,int b,void*c,int d){(void)a;(void)b;(void)c;(void)d;assert(!strcmp(p,"hdd0:")&&cmd==HDIOC_FLUSH);crashpoint();return 0;}
 static int fileXioDopen(const char*p){for(int i=0;i<32;i++)if(!directories[i]){directories[i]=opendir(p);return directories[i]?i:-errno;}return -EMFILE;}
 static int fileXioDread(int fd,iox_dirent_t*e){struct dirent*d=readdir(directories[fd]);if(!d)return 0;strcpy(e->name,d->d_name);struct stat s;if(fstatat(dirfd(directories[fd]),d->d_name,&s,0)<0)return -errno;memset(&e->stat,0,sizeof(e->stat));e->stat.mode=s.st_mode;return 1;}
@@ -108,6 +108,8 @@ int cloudHttpDownloadAlignedFd(const char*url,int fd,const char*ca,int max,int*s
     if(strstr(url,"Game-Installer.sh")){
         data=asset_case==4?"create_icon_sys() {\ncat <<EOL\nPS2X\ntitle0=$(evil)\nEOL\n}\n":
           "create_icon_sys() {\ncat > \"$icon_sys_filename\" <<EOL\nPS2X\ntitle0=$title\ntitle1=$publisher\nEOL\n}\n";n=strlen(data);
+    }else if(strstr(url,"psbbn-art-database")){
+        assert(strstr(url,"/apps/APP_TEST.png"));return -ENOENT; /* art database fallback also missing */
     }else if(strstr(url,"/icons/art/")){
         if(asset_case==1&&strstr(url,"APP_TEST"))return -ENOENT;
         data=asset_case==5?"not a PNG at all...........":"\211PNG\r\n\032\n................";n=strlen(data);
@@ -234,7 +236,7 @@ int main(int argc,char**argv){
         else if(asset_case==5)assert(ret<0&&downloads==4);
         else if(asset_case==6)assert(ret==-EISDIR&&!downloads&&metadata_requests==1&&
                                      !strcmp(in->location,"ata0:/stage/DP-TEMPLATE.TXT"));
-        else {assert(ret==0&&!strncmp(in->settings,"PS2X\n",5));assert(downloads==(asset_case==1?9u:4u));assert(metadata_requests==(asset_case==1?2u:1u));}
+        else {assert(ret==0&&!strncmp(in->settings,"PS2X\n",5));assert(downloads==(asset_case==1?10u:4u));assert(metadata_requests==(asset_case==1?3u:1u));}
         assert(!create_count&&!format_count&&!header_count);free(in);return 0;
     }
     AppInstall *in=calloc(1,sizeof(*in));setup(in,update);

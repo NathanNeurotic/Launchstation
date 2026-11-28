@@ -3,6 +3,14 @@
 #include "init.h"
 #include "filer_shared.h"
 #include "hdd_install_recovery.h"
+#include "dash_sound.h"
+
+const char *dashHddInstallChoiceTitle(const HddInstall *in, unsigned choice, const char *title, char *out, size_t size)
+{
+    if (!(in->flags & HDD_INSTALL_PSBBN)) return title;
+    snprintf(out, size, "Choice %u of %u: %s", choice, (unsigned)HDD_CHOICE_LANGUAGE, title);
+    return out;
+}
 
 int dashHddInstallChoose(HddInstall *in, int jail)
 {
@@ -13,67 +21,67 @@ int dashHddInstallChoose(HddInstall *in, int jail)
 #endif
     {
         static const char *const profiles[] = {
-            "Format only",
+            "No software, format only",
             "Install WLE-R3Z and R3CONFIGURATOR",
             "Install OSDMenu MBR and HOSDMenu",
             "Install MBR, HOSDMenu and included apps"
         };
         static const unsigned flags[] = {0, HDD_INSTALL_APPS, HDD_INSTALL_HOSD, HDD_INSTALL_HOSD | HDD_INSTALL_APPS};
-        static const char *const jail_profiles[] = {
-            "Format only", "Install PSBBN DP (Experimental), MBR, HOSDMenu and apps"
+        static const DashMenuItem jail_profiles[] = {
+            {-1, "No software, format only", NULL, 0},
+            {-1, "PSBBN DP, HOSDMenu", "EXPERIMENTAL", 0}
         };
-        int selected = dashModalSelect("Software after formatting", jail ? jail_profiles : profiles, jail ? 2 : 4, 0);
+        int selected = jail ? dashModalMenu("Software after formatting", NULL, jail_profiles, 2, 0) :
+                              dashModalSelect("Software after formatting", profiles, 4, 0);
         if (selected < 0) return 0;
         in->flags = jail && selected ? HDD_INSTALL_PSBBN | HDD_INSTALL_HOSD | HDD_INSTALL_APPS : flags[selected];
         if (in->flags & HDD_INSTALL_PSBBN) {
-            static const char *const launchers[] = {"Open PS2 Loader (OPL)", "Neutrino (NHDDL)"};
-            selected = dashModalSelect("Default game launcher (both installed)", launchers, 2, 0);
+            char title[128];
+            dashModalMessage(DI_INFO, "PSBBN DP installation",
+                "PSBBN DP requires a Sony Network Adapter. Third party clones are not compatible (Example: GameStar). HOSDMenu, is installed as well which does not have this limitation.", NULL);
+            static const char *const cores[] = {"Neutrino (RiptOPL)", "OPL (RiptOPL)"};
+            selected = dashModalSelect(dashHddInstallChoiceTitle(in, HDD_CHOICE_LAUNCHER, "Default PS2 game core", title, sizeof(title)), cores, 2, 0);
             if (selected < 0) return 0;
-            in->game_launcher = (unsigned)selected;
+            in->game_launcher = selected ? HDD_GAME_RIPTOPL : HDD_GAME_RIPTOPL_NEUTRINO;
         }
-        if (in->flags & HDD_INSTALL_PSBBN)
-            dashModalMessage(DI_INFO, "PSBBN DP installation (Experimental)",
-                "Requires a compatible Sony Network Adapter. Choose Music and Contents sizes next. Standalone PS2 Linux is optional; PSBBN always needs its own system partitions. Downloads are stored on the new HDD after formatting.", NULL);
     }
 #endif
     return 1;
 }
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
-static int installSize(const char *title, unsigned maximum)
+static int installSize(HddInstall *in, unsigned choice, const char *label, unsigned maximum, int optional)
 {
-    char labels[6][24];
-    const char *items[6];
-    int count = 0, selected;
-    for (unsigned mb = 1024; mb <= maximum && count < 6; mb *= 2) {
+    char labels[7][24], title[128];
+    DashMenuItem items[7];
+    int count = optional, selected;
+    if (optional) items[0] = (DashMenuItem){-1, "Do not install PS2 Linux", NULL, 0};
+    for (unsigned mb = 1024; mb <= maximum && count < 6 + optional; mb *= 2) {
         snprintf(labels[count], sizeof(labels[count]), "%u GiB", mb / 1024);
-        items[count] = labels[count]; count++;
+        items[count] = (DashMenuItem){-1, labels[count], NULL, 0}; count++;
     }
     if (!count) return -1;
-    selected = dashModalSelect(title, items, count, 0);
-    return selected < 0 ? -1 : 1024 << selected;
+    selected = dashModalMenu(dashHddInstallChoiceTitle(in, choice, label, title, sizeof(title)),
+                            optional ? "Requires a USB keyboard; adds a 2 GiB system partition." : NULL, items, count, 0);
+    return selected < 0 ? -1 : optional && !selected ? 0 : 1024 << (selected - optional);
 }
 #endif
 int dashHddInstallConfigure(HddInstall *in, unsigned max_extent)
 {
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
-    static const char *const linux[] = {"Off", "On"};
     int value;
-    value = installSize("Music partition size", max_extent);
+    value = installSize(in, HDD_CHOICE_MUSIC, "Music partition size", max_extent, 0);
     if (value < 0) return 0;
     in->music_mb = value;
-    value = installSize("Contents partition size", max_extent);
+    value = installSize(in, HDD_CHOICE_CONTENTS, "Contents partition size", max_extent, 0);
     if (value < 0) return 0;
     in->contents_mb = value;
-    value = dashModalSelect("Install standalone PS2 Linux", linux, 2, 0);
+    unsigned maximum = max_extent < 8192u ? max_extent : 8192u;
+    value = installSize(in, HDD_CHOICE_LINUX, "Standalone PS2 Linux", maximum, 1);
     if (value < 0) return 0;
     in->flags &= ~HDD_INSTALL_PS2LINUX;
     in->linux_home_mb = 0;
     if (value) {
-        unsigned maximum = max_extent < HDD_INSTALL_HOME_MAX_MB ? max_extent : HDD_INSTALL_HOME_MAX_MB;
-        dashModalMessage(DI_INFO, "PS2 Linux space", "PS2 Linux needs a 2 GiB system partition plus the home size you choose next. A USB keyboard is required to use it.", NULL);
-        value = installSize("PS2 Linux home size", maximum);
-        if (value < 0) return 0;
         in->linux_home_mb = value;
         in->flags |= HDD_INSTALL_PS2LINUX;
     }
@@ -122,6 +130,10 @@ int dashHddInstallPrepare(HddInstall *in)
         LanguageChoices choices = {.install = in, .count = -EIO};
         const char *labels[HDD_INSTALL_LANGUAGES];
         int initial = 0, selected;
+        char title[128];
+        /* Network setup can reset audsrv. Serialize its restart before the
+         * language job so navigation audio is ready for the remaining choices. */
+        dashSoundMaintain();
         int id = dashWorkerSubmit("Reading PSBBN languages", DASH_JOB_VISIBLE, loadLanguages, NULL, &choices);
         if (id < 0 || !dashHddInstallAwait(id, "Reading PSBBN languages") || choices.count < 1) {
             dashModalMessage(DI_WARNING, "PSBBN languages unavailable", in->error[0] ? in->error : "Could not read the repository language choices. The HDD has not been changed.", NULL);
@@ -131,7 +143,7 @@ int dashHddInstallPrepare(HddInstall *in)
             labels[i] = choices.languages[i].name;
             if (!strcmp(choices.languages[i].code, "eng")) initial = i;
         }
-        selected = dashModalSelect("PSBBN language", labels, choices.count, initial);
+        selected = dashModalSelect(dashHddInstallChoiceTitle(in, HDD_CHOICE_LANGUAGE, "PSBBN language", title, sizeof(title)), labels, choices.count, initial);
         if (selected < 0) { hddInstallRelease(in); return -ECANCELED; }
         in->language = choices.languages[selected];
         hddInstallLog("PSBBN language: %s (%s); repository %.7s", in->language.name, in->language.code, in->commit);
@@ -285,7 +297,9 @@ void dashHddInstallDebugBegin(HddInstall *in, const HddFormatPlan *plan)
     hddInstallLog("exFAT first=%u sectors=%u recovery=%u", (unsigned)plan->exfat_start, (unsigned)plan->exfat_sectors, (unsigned)plan->recovery_start);
     hddInstallLog("Choices: Music=%u MiB Contents=%u MiB PS2 Linux=%s Home=%u MiB Free APA reserve=%u MiB",
                   in->music_mb, in->contents_mb, in->flags & HDD_INSTALL_PS2LINUX ? "On" : "Off", in->linux_home_mb, in->reserved_mb);
-    hddInstallLog("Game launchers: install OPL + NHDDL/Neutrino; default %s", hddInstallGameName(in->game_launcher));
+    hddInstallLog("Game launcher: %s", hddInstallGameName(in->game_launcher));
+    if (in->game_launcher >= HDD_GAME_RIPTOPL)
+        hddInstallLog("Ember by Gageformer: https://github.com/Gageformer/Ember/releases");
     hddInstallStatus("Preparing installer; the HDD has not been erased yet", 0, 0);
     dashLoadingBegin("PSBBN DP installer log (Experimental)");
 }
@@ -314,7 +328,11 @@ int dashHddInstallAwait(int id, const char *title)
         dashWorkerPump();
         if (dashWorkerDone(id)) break;
         if (!hddInstallRecoveryFault()) { dashInputPoll(&in); if (debug_open) debugInput(&in); }
-        dashLoadingFrame(NULL, 0, 0);
+        if (!debug_open && !hddInstallRecoveryFault()) {
+            char status[96]; int done, total;
+            dashWorkerGetStatus(status, sizeof(status), &done, &total);
+            dashLoadingFrame(status, done, total);
+        } else dashLoadingFrame(NULL, 0, 0);
     }
     if (owns_loading) dashLoadingEnd();
     return 1;

@@ -56,10 +56,12 @@ static int dashModalSelect(const char *title, const char *const *options, int co
 }
 static int pickSize(const char *title, int min, int max, int initial) {
     assert((strstr(title, "Additional APA") || strstr(title, "Reserved APA")) && min == (install_flags & HDD_INSTALL_PSBBN ? 0 : install_flags & HDD_INSTALL_APPS ? 256 : 0) && max % 128 == 0 && initial <= max);
+    if(install_flags&HDD_INSTALL_PSBBN)assert(strstr(title,"Choice 5 of 6:"));
     return reserve;
 }
 static void dashModalMessage(int icon, const char *title, const char *body, const char *detail) {
     assert(title && body);
+    assert(strcmp(title,"APA space allocation"));
     if (icon == DI_INFO) return;
     assert(icon == DI_WARNING); if(detail) cache_kept++; messages++;
 }
@@ -67,6 +69,7 @@ static int dashModalConfirm(const char *title, const char *body, const char *but
     assert(title && body && button && danger == 1);
     confirms++;
     assert(confirms == 2 && strstr(body,"Every partition") && !strcmp(button,"Format"));
+    assert(!strcmp(title,"Are you sure?"));
     return confirms != cancel_confirm;
 }
 static const char *reviewValue(const DashTableRow *rows,int count,const char *label) {
@@ -74,7 +77,10 @@ static const char *reviewValue(const DashTableRow *rows,int count,const char *la
     assert(0);return NULL;
 }
 static int dashModalConfirmTable(const char *title,const DashTableRow *rows,int count,const char *button,int danger) {
-    assert(!strcmp(title,"Review HDD format") && count>2 && count<=18 && !strcmp(button,"Continue") && danger==1);
+    assert(strstr(title,"Review HDD format") && count>2 && count<=18 && !strcmp(button,"Continue") && danger==1);
+    assert(!strcmp(title,"Review HDD format"));
+    assert(!strcmp(rows[0].label,"Format")&&!strcmp(rows[1].label,"Drive Capacity"));
+    if(selected!=HDD_FORMAT_EXFAT)assert(!strcmp(rows[2].label,"APA total space"));
     assert(!confirms);confirms++;
     assert(!strcmp(reviewValue(rows,count,"Format"),selected==0?"APA":selected==1?"exFAT":"APA Jail (APA + exFAT)"));
     if(selected!=HDD_FORMAT_APA)assert(!strcmp(reviewValue(rows,count,"exFAT label / cluster"),"PS2 / 32 KiB"));
@@ -99,6 +105,8 @@ int hddInstallCleanup(HddInstall *in) { in->stage[0] = 0; return 0; }
 static HddJob *jobNew(int operation) { HddJob *j = calloc(1, sizeof(HddJob)); j->op = operation; return j; }
 static void hddJobFree(HddJob *j) { freed++; free(j); }
 int hddFormatLoad(void) { assert(confirms == 2); loaded++; return load_error; }
+int hddReadBootFlag(void) { assert(0); return -1; }
+int hddEnableBootFlag(void) { assert(0); return -1; }
 static void dashSoundShutdown(void) { assert(loaded); stopped++; }
 static int runJob(HddJob *j, const char *title, int cancelable) {
     assert(title && cancelable == 0);
@@ -118,6 +126,8 @@ static void dashToast(int icon, const char *text) { assert(icon == DASH_TOAST_OK
 static void afterChange(void) { changed++; }
 int hddFormatRecovery(const HddFormatPlan *p, const HddFormatIo *io) { (void)p; (void)io; return 0; }
 '''
+titles = (root / 'src/dash_hdd_install.c').read_text()
+code += titles[titles.index('const char *dashHddInstallChoiceTitle('):titles.index('\nint dashHddInstallChoose(')]
 code += action
 code += r'''
 static void clear(void) {
@@ -229,6 +239,8 @@ int hddInstallUnmountStage(HddInstall *in) { (void)in; return 0; }
 int hddInstallCreateStage(HddInstall *in) { (void)in; return 0; }
 int hddInstallCleanup(HddInstall *in) { (void)in; return 0; }
 int hddInstallEnableBoot(HddInstall *in) { (void)in; return 0; }
+int hddReadBootFlag(void) { assert(0); return -1; }
+int hddEnableBootFlag(void) { assert(0); return -1; }
 int hddInstallDownload(HddInstall *in) { (void)in; return 0; }
 int hddInstallApply(HddInstall *in) { (void)in; return 0; }
 int hddInstallPsbbnPayload(void *in, const HddFormatIo *io) { (void)in; (void)io; return 0; }

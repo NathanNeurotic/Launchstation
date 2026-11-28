@@ -148,6 +148,29 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
         assert lib.hddInstallConfig(c.byref(settings), 0, config, 12) < 0
     print('PASS: commit/asset/version metadata bounds and layout-specific boot settings')
 
+    disk = Disk(d / 'batch-failure.img', 128); fs = c.c_void_p()
+    assert lib.installExt2Create(c.byref(fs), c.byref(disk.io), 0, disk.size // 512, 1) == 0
+    e = Entry(name=b'payload', type=b'0', size=3, mode=0o644)
+    assert lib.installExt2Begin(fs, c.byref(e)) == 0
+    assert lib.installExt2Data(fs, b'old', e.size) == 0
+    assert lib.installExt2End(fs) == 0
+    root_inode = os.pread(disk.fd, 128, 4 * 4096 + 128)
+    root_dir = int.from_bytes(root_inode[40:44], 'little') * 4096
+    original_entries = os.pread(disk.fd, 4096, root_dir)
+    assert b'payload' in original_entries
+    e.size = 32768
+    assert lib.installExt2Begin(fs, c.byref(e)) == 0
+    assert lib.installExt2Data(fs, b'Z' * e.size, e.size) == 0
+    disk.fail = True
+    assert lib.installExt2End(fs) == -errno.EIO and lib.installExt2Finish(fs) < 0
+    assert os.pread(disk.fd, 2, 1024 + 58) == b'\x02\x00'  # Never marked clean.
+    assert os.pread(disk.fd, 4096, root_dir) == original_entries
+    lib.installExt2Free(fs); disk.close()
+    if shutil.which('debugfs'):
+        original = subprocess.run(['debugfs', '-R', 'cat payload', str(d / 'batch-failure.img')], check=True, capture_output=True)
+        assert original.stdout == b'old'
+    print('PASS: a failed ext2 file replacement keeps the old directory entry and contents')
+
     # Both archive formats: exact payload, CRC failures, traversal and truncated input.
     out = io.BytesIO()
     expected = b'font and OSD resources' * 2000

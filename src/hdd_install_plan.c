@@ -36,6 +36,8 @@ int hddInstallSelectedAsset(const HddInstall *in, unsigned asset)
 {
     if (asset == HI_CHANNELS || asset == HI_KERNEL_JPN)
         return (in->flags & HDD_INSTALL_PSBBN) && !strcmp(in->language.code, "jpn");
+    /* PSBBN profiles reuse the extras slot for DP's Ember BIOS dep.zip. */
+    if (asset == HI_EXTRAS && (in->flags & HDD_INSTALL_PSBBN) && in->game_launcher >= HDD_GAME_RIPTOPL) return 1;
     return hddInstallNeedsAsset(in->flags, asset);
 }
 
@@ -332,19 +334,19 @@ int hddInstallDirectory(const char *json, int (*entry)(void *, const char *, con
 }
 
 const char *hddInstallGameName(unsigned launcher)
-{ return launcher == HDD_GAME_NEUTRINO ? "Neutrino (NHDDL)" : "Open PS2 Loader"; }
+{ return launcher == HDD_GAME_RIPTOPL_NEUTRINO ? "RiptOPL (Neutrino)" : launcher >= HDD_GAME_RIPTOPL ? "Open PS2 Loader: RiptOPL" : launcher == HDD_GAME_NEUTRINO ? "Neutrino (NHDDL)" : "Open PS2 Loader"; }
 const char *hddInstallGameElf(unsigned launcher)
-{ return launcher == HDD_GAME_NEUTRINO ? "nhddl.elf" : "OPNPS2LD.ELF"; }
+{ return launcher >= HDD_GAME_RIPTOPL ? "RIPTOPL-RA-UNPAKT.ELF" : launcher == HDD_GAME_NEUTRINO ? "nhddl.elf" : "OPNPS2LD.ELF"; }
 
 int hddInstallGameShortcut(const HddInstall *in, char *text, size_t capacity)
 {
     int n;
-    if (!in || !(in->flags & HDD_INSTALL_PSBBN) || in->game_launcher > HDD_GAME_NEUTRINO || !text || !capacity) return -EINVAL;
+    if (!in || !(in->flags & HDD_INSTALL_PSBBN) || in->game_launcher > HDD_GAME_RIPTOPL_NEUTRINO || !text || !capacity) return -EINVAL;
     n = snprintf(text, capacity,
         "%s file%%3A%%2Fopt0%%2Fbn%%2Fscript%%2Fgame%%2Fboot_game3.xml uri%%3Dpfs%%3A%%2FPP.LAUNCHER\n"
         "wLaunchELF-R3Z file%%3A%%2Fopt0%%2Fbn%%2Fscript%%2Fgame%%2Fboot_game3.xml uri%%3Dpfs%%3A%%2FPP.APP_WLE-R3Z\n"
         "R3CONFIGURATOR file%%3A%%2Fopt0%%2Fbn%%2Fscript%%2Fgame%%2Fboot_game3.xml uri%%3Dpfs%%3A%%2FPP.SYS_R3CONFIGURATOR\n",
-        in->game_launcher == HDD_GAME_NEUTRINO ? "NHDDL" : "Open%20PS2%20Loader");
+        in->game_launcher >= HDD_GAME_RIPTOPL ? "RiptOPL" : in->game_launcher == HDD_GAME_NEUTRINO ? "NHDDL" : "Open%20PS2%20Loader");
     return n < 0 || (size_t)n >= capacity ? -ENOSPC : n;
 }
 
@@ -355,7 +357,7 @@ int hddInstallConfig(const HddInstall *in, int mbr, char *out, size_t capacity)
     if (!in || (in->flags & ~(HDD_INSTALL_HOSD | HDD_INSTALL_APPS | HDD_INSTALL_PSBBN | HDD_INSTALL_PS2LINUX))) return -EINVAL;
     if ((in->flags & HDD_INSTALL_PSBBN) && !in->jail) return -EINVAL;
     if ((in->flags & HDD_INSTALL_PS2LINUX) && !(in->flags & HDD_INSTALL_PSBBN)) return -EINVAL;
-    if (in->game_launcher > HDD_GAME_NEUTRINO) return -EINVAL;
+    if (in->game_launcher > HDD_GAME_RIPTOPL_NEUTRINO) return -EINVAL;
     apps = in->jail ? "ata0:/APPS/" : "hdd0:__common:pfs:/APPS/";
     if (!strcmp(in->language.code, "jpn")) osd = "jap";
     else if (strlen(in->language.code) == 3 && strstr(" ger ita por spa fre dut rus kor tch sch", in->language.code)) osd = in->language.code;
@@ -408,23 +410,23 @@ int hddInstallConfig(const HddInstall *in, int mbr, char *out, size_t capacity)
             "ps1drv_enable_fast = 0\nps1drv_enable_smooth = 0\nps1drv_use_ps1vn = 1\napp_gameid = 1\n", in->commit);
         if (used < 0 || (size_t)used >= capacity) return -ENOSPC;
         if (in->flags & HDD_INSTALL_PSBBN) {
-            for (unsigned i = 0; i < 2; i++) {
+            for (unsigned i = 0; i < (in->game_launcher >= HDD_GAME_RIPTOPL ? 1u : 2u); i++) {
                 unsigned launcher = i ? !in->game_launcher : in->game_launcher;
                 n = snprintf(out + used, capacity - used,
                     "name_OSDSYS_ITEM_%u = %s\npath1_OSDSYS_ITEM_%u = hdd0:__system:pfs:/launcher/%s\n"
                     "arg_OSDSYS_ITEM_%u = %s\n",
                     i + 1, hddInstallGameName(launcher), i + 1, hddInstallGameElf(launcher), i + 1,
-                    launcher == HDD_GAME_NEUTRINO ? "-mode=ata" : "-titleid=OPNPS2LD");
+                    launcher >= HDD_GAME_RIPTOPL ? "-titleid=APP_RIPTOPL" : launcher == HDD_GAME_NEUTRINO ? "-mode=ata" : "-titleid=OPNPS2LD");
                 if (n < 0 || (size_t)n >= capacity - used) return -ENOSPC;
                 used += n;
             }
         }
         if (in->flags & HDD_INSTALL_APPS) {
+            unsigned first = !(in->flags & HDD_INSTALL_PSBBN) ? 1u : in->game_launcher >= HDD_GAME_RIPTOPL ? 2u : 3u;
             n = snprintf(out + used, capacity - used,
                 "name_OSDSYS_ITEM_%u = wLaunchELF-R3Z\npath1_OSDSYS_ITEM_%u = %sAPP_WLE-R3Z/WLE-R3Z.ELF\n"
                 "name_OSDSYS_ITEM_%u = R3CONFIGURATOR\npath1_OSDSYS_ITEM_%u = %sSYS_R3CONFIGURATOR/r3configurator.elf\n",
-                in->flags & HDD_INSTALL_PSBBN ? 3u : 1u, in->flags & HDD_INSTALL_PSBBN ? 3u : 1u, apps,
-                in->flags & HDD_INSTALL_PSBBN ? 4u : 2u, in->flags & HDD_INSTALL_PSBBN ? 4u : 2u, apps);
+                first, first, apps, first + 1, first + 1, apps);
             if (n < 0 || (size_t)n >= capacity - used) return -ENOSPC;
             used += n;
         }
@@ -492,8 +494,8 @@ int hddInstallArchiveMetadata(const char *json, const char *prefix,
     return 1;
 }
 
-/* Optional PS2 Linux is a named archive, rather than a versioned PSBBN pack. */
-int hddInstallLinuxMetadata(const char *json, char hash[41], uint32_t *size)
+/* Named dependencies use the same bounded Archive.org file metadata reader. */
+static int namedArchiveMetadata(const char *json, const char *wanted, uint32_t maximum, char hash[41], uint32_t *size)
 {
     const char *p, *end;
     unsigned matches = 0;
@@ -505,14 +507,14 @@ int hddInstallLinuxMetadata(const char *json, char hash[41], uint32_t *size)
         char name[256];
         const char *n = field(p, "name");
         if (!n || !string(n, name, sizeof(name))) return 0;
-        if (!strcmp(name, "PS2Linux.tar.gz")) {
+        if (!strcmp(name, wanted)) {
             char count[24], *stop;
             const char *h = field(p, "sha1"), *v = field(p, "size");
             unsigned long bytes;
             if (++matches != 1 || !h || !v || !string(h, hash, 41) || !hddInstallHex(hash, 40) ||
                 !string(v, count, sizeof(count)) || !isdigit((unsigned char)count[0])) return 0;
             bytes = strtoul(count, &stop, 10);
-            if (*stop || !bytes || bytes >= 512u * 1024 * 1024) return 0;
+            if (*stop || !bytes || bytes > maximum) return 0;
             *size = bytes;
         }
         p = skip(p, 0); if (!p) return 0;
@@ -522,3 +524,9 @@ int hddInstallLinuxMetadata(const char *json, char hash[41], uint32_t *size)
     }
     return matches == 1;
 }
+
+int hddInstallLinuxMetadata(const char *json, char hash[41], uint32_t *size)
+{ return namedArchiveMetadata(json, "PS2Linux.tar.gz", 512u * 1024 * 1024 - 1, hash, size); }
+
+int hddInstallDependencyMetadata(const char *json, char hash[41], uint32_t *size)
+{ return namedArchiveMetadata(json, "dep.zip", 16u * 1024 * 1024, hash, size); }

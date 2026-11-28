@@ -144,6 +144,14 @@ int main(int argc,char **argv){
   memcpy(copy,buffer,size);copy[n]^=1;
   assert(hddInstallResumeDecode(&out,&p,&seq,copy,size)<0&&!out.launcher_files);
  }
+ const char *modern[]={"scripts/assets/Ember/ember.elf","scripts/assets/OPL/RIPTOPL-RA-UNPAKT.ELF",
+  "icons/ico/APP_RIPTOPL_LST.ico","icons/art/APP_RIPTOPL.png"};
+ for(unsigned core=HDD_GAME_RIPTOPL;core<=HDD_GAME_RIPTOPL_NEUTRINO;core++)for(unsigned i=0;i<sizeof(modern)/sizeof(*modern);i++){
+  in.game_launcher=core;strcpy(in.launcher_files[0].path,modern[i]);
+  size=hddInstallResumeEncode(&in,&actual,23,buffer,sizeof(buffer));assert(size>24);
+  assert(!hddInstallResumeDecode(&out,&p,&seq,buffer,size)&&out.game_launcher==core&&seq==23);
+  assert(!strcmp(out.launcher_files[0].path,modern[i]));hddInstallRelease(&out);memset(&out,0,sizeof(out));
+ }
  const char *bad[]={"scripts/assets/neutrino/../evil","scripts/assets/neutrino//evil","scripts/assets/neutrino/evil/","../../elsewhere","scripts/assets/OPL/./bad","scripts/assets/neutrino/x:bad"};
  for(unsigned i=0;i<sizeof(bad)/sizeof(*bad);i++){
   strcpy(in.launcher_files[0].path,bad[i]);assert(hddInstallResumeEncode(&in,&actual,1,buffer,sizeof(buffer))<0);

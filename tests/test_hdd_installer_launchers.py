@@ -110,7 +110,7 @@ int main(int argc,char **argv) {
     if(!strcmp(failure,"unmapped"))assert(ret<0&&downloads==0);
     assert((ret==0)==!strcmp(failure,"ok"));
     unsigned nonempty=0;for(unsigned i=0;i<in.launcher_count;i++)nonempty+=!!in.launcher_files[i].size;
-    if(!ret){assert(in.launcher_count>=15&&downloads==nonempty&&requests>=8&&(uint64_t)read_bytes==downloadBytes(&in)+3*52);
+    if(!ret){assert(in.launcher_count>=(in.game_launcher>=HDD_GAME_RIPTOPL?13u:15u)&&downloads==nonempty&&requests>=8&&(uint64_t)read_bytes==downloadBytes(&in)+3*52);
              assert(overall_bytes==downloadBytes(&in)&&overall_total==overall_bytes);
              assert(findLauncher(&in,launcherIcon(&in))>=0&&findLauncher(&in,launcherArt(&in))>=0);}
     free(in.launcher_files);return 0;
@@ -135,11 +135,18 @@ with tempfile.TemporaryDirectory(prefix="hdd-installer-launchers-") as directory
              **{f"scripts/licenses/{name}": b"license" for name in ("OPL", "nhddl", "neutrino")},
              **{f"icons/{kind}/APP_{app}{suffix}": b"icon" for app in ("OPL", "NHDDL")
                 for kind, suffix in (("art", ".png"), ("ico", "_LST.ico"))}}
-    for choice in (0, 1):
+    modern = {key:data for key,data in files.items() if not any(x in key for x in ('NHDDL','OPNPS2LD','scripts/licenses/','icons/'))}
+    modern.update({"scripts/assets/OPL/RIPTOPL-RA-UNPAKT.ELF":bytes(elf), "scripts/assets/Ember/ember.elf":bytes(elf),
+                   "scripts/assets/Ember/version.txt":b"0.8",
+                   **{f"scripts/licenses/{name}":b"license" for name in ("RiptOPL.txt","neutrino.txt","EMBER-LICENSE-BETA.txt")},
+                   "icons/art/APP_RIPTOPL.png":b"art", "icons/ico/APP_RIPTOPL_LST.ico":b"icon"})
+    legacy_files=files
+    for choice in (0, 1, 2, 3):
+        files = modern if choice>=2 else legacy_files
         for failure in ("ok", "bad-hash", "truncated", "request", "write", "missing", "duplicate", "symlink", "traversal", "oversize", "file-limit", "directory-limit", "unmapped"):
             work = d / f"{choice}-{failure}"
             (work / "stage").mkdir(parents=True)
-            listings = {path: [] for path in ("scripts/assets/OPL", "scripts/assets/NHDDL", "scripts/assets/neutrino", "icons/art", "icons/ico", "scripts/licenses")}
+            listings = {path: [] for path in ("scripts/assets/OPL", "scripts/assets/Ember" if choice>=2 else "scripts/assets/NHDDL", "scripts/assets/neutrino", "icons/art", "icons/ico", "scripts/licenses")}
             def ensure_directory(parent):
                 if parent in listings:
                     return

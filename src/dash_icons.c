@@ -288,6 +288,27 @@ static float soundWaveSdf(V2 p, float radius)
 	return U(d, U(sdCircle(p, ex, ey, T), sdCircle(p, ex, -ey, T)));
 }
 
+/* Finish by Smashicons, adapted from https://www.flaticon.com/free-icon/finish_2164609 */
+static float bootFlagSdf(V2 p)
+{
+	static const V2 cloth[] = {
+		{0.66f, -0.93f}, {0.67f, -0.76f}, {0.57f, -0.31f}, {0.70f, -0.18f},
+		{0.93f, -0.05f}, {0.89f, 0.04f}, {0.78f, 0.13f}, {0.63f, 0.19f},
+		{-0.16f, 0.18f}, {-0.29f, 0.22f}, {-0.46f, 0.33f}, {-0.72f, -0.60f},
+		{-0.56f, -0.72f}, {-0.41f, -0.76f}, {0.38f, -0.75f}, {0.52f, -0.81f}
+	};
+	float distance = 1e9f;
+	int inside = 0;
+	for (unsigned i = 0, j = sizeof(cloth) / sizeof(cloth[0]) - 1; i < sizeof(cloth) / sizeof(cloth[0]); j = i++) {
+		V2 a = cloth[j], b = cloth[i];
+		distance = fminf2(distance, sdSeg(p, a.x, a.y, b.x, b.y, 0.0f));
+		if ((a.y > p.y) != (b.y > p.y) &&
+		    p.x < a.x + (b.x - a.x) * (p.y - a.y) / (b.y - a.y))
+			inside = !inside;
+	}
+	return U(inside ? -distance : distance, sdSeg(p, -0.85f, -0.53f, -0.47f, 0.85f, 0.08f));
+}
+
 static float iconSdf(int id, V2 p)
 {
 	float d = 1e9f;
@@ -433,13 +454,16 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdBox(p, -0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
 			d = U(d, sdBox(p, 0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
 			break;
+		case DI_SHOW:
 		case DI_HIDE:
-			/* Eye outline and pupil, interrupted by a rising diagonal slash. */
+			/* Shared eye outline and pupil; Hide adds the diagonal slash. */
 			d = fabsf(fmaxf2(sdCircle(p, 0.0f, 0.40f, 0.98f),
 			                       sdCircle(p, 0.0f, -0.40f, 0.98f))) - T;
 			d = U(d, sdRing(p, 0.0f, 0.0f, 0.28f, T));
-			d = S(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, 0.17f));
-			d = U(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, T));
+			if (id == DI_HIDE) {
+				d = S(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, 0.17f));
+				d = U(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, T));
+			}
 			break;
 		case DI_PLAY:
 			d = sdTriP(p, -0.42f, -0.62f, -0.42f, 0.62f, 0.66f, 0.0f) - 0.04f;
@@ -526,21 +550,18 @@ static float iconSdf(int id, V2 p)
 			break;
 		}
 		case DI_ARCHIVE_EXTRACT: {
-			/* Open box/checkmark adapted from Flaticon:
-			 * https://www.flaticon.com/free-icon/order_9422452 */
-			V2 a = {p.x * 288.0f, p.y * 288.0f + 256.0f};
+			/* Four-flap open box adapted from Flaticon:
+			 * https://www.flaticon.com/free-icon/box-open_12028823
+			 * Pixel coordinates, normalized to the same optical width as Create. */
+			V2 a = {p.x * 232.0f, p.y * 232.0f + 259.0f};
 			V2 q = {fabsf(a.x), a.y};
-			float body, flap, badge;
-			body = S(sdQuadP(q, 8, 339, 171, 339, 171, 442, 8, 505), sdTriP(q, 8, 339, 40, 384, 171, 339));
-			flap = sdQuadP(q, 12, 314, 176, 250, 208, 307, 44, 371);
-			d = S(sdTriP(q, 0, 300, 157, 240, 0, 180), sdCircle(q, 0, 178, 104));
-			d = U(d, U(body, flap));
-			badge = S(sdCircle(a, 0, 178, 88), U(sdSeg(a, -46, 176, -20, 208, 13), sdSeg(a, -20, 208, 42, 146, 13)));
-			d = U(d, badge);
-			d = U(d, sdSeg(q, 0, 15, 0, 52, 8));
-			d = U(d, sdSeg(q, 82, 36, 64, 67, 8));
-			d = U(d, sdSeg(q, 140, 96, 108, 114, 8));
-			d = U(d, sdSeg(q, 123, 178, 161, 178, 8)) / 288.0f;
+			float body, front, back;
+			back = sdQuadP(q, 24.785f, 125.700f, 70.493f, 79.992f, 189.800f, 125.529f, 148.243f, 172.905f) - 6.0f;
+			front = sdQuadP(q, 23.509f, 257.246f, 148.559f, 207.044f, 193.539f, 252.024f, 70.419f, 305.832f) - 6.0f;
+			body = sdQuadP(q, 15.000f, 281.403f, 140.000f, 307.863f, 140.000f, 395.655f, 15.000f, 436.714f) - 6.0f;
+			body = S(body, sdTriP(q, 31.766f, 286.996f, 66.237f, 324.602f, 117.631f, 305.172f) - 8.0f);
+			d = sdQuadP(a, 0, 141, 129, 190, 0, 242, -129, 190);
+			d = U(d, U(back, U(front, body))) / 232.0f;
 			break;
 		}
 		case DI_REFRESH:
@@ -580,6 +601,15 @@ static float iconSdf(int id, V2 p)
 			d = sdBoxOutline(p, -0.20f, -0.20f, 0.52f, 0.52f, 0.14f, T);
 			d = S(d, sdBox(p, 0.20f, 0.20f, 0.52f, 0.52f, 0.14f));
 			d = U(d, sdBoxOutline(p, 0.20f, 0.20f, 0.52f, 0.52f, 0.14f, T));
+			break;
+		case DI_BOOT_FLAG:
+		case DI_BOOT_FLAG_ENABLED:
+			d = bootFlagSdf(p);
+			if (id == DI_BOOT_FLAG_ENABLED) {
+				float check = U(sdSeg(p, -0.29f, -0.33f, -0.12f, -0.13f, 0.10f),
+				                sdSeg(p, -0.12f, -0.13f, 0.28f, -0.53f, 0.10f));
+				d = S(d, check);
+			}
 			break;
 		case DI_CHECK:
 		case DI_SELECT_ALL:

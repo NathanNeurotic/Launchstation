@@ -829,6 +829,11 @@ static int textWrap(float x, float y, float w, int max_lines, const char *str, f
 	return lines;
 }
 
+int dashTextWrapLines(float w, int max_lines, const char *str, float scale)
+{
+	return textWrap(0, 0, w, max_lines, str, scale, DASH_C_TEXT, 0, 0);
+}
+
 int dashTextWrap(float x, float y, float w, int max_lines, const char *str, float scale, DashColor c, float line_h)
 {
 	return textWrap(x, y, w, max_lines, str, scale, c, line_h, 1);

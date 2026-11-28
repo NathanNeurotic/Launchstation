@@ -15,7 +15,8 @@
 #define HDD_INSTALL_HOME_MAX_MB 16384u
 #define HDD_INSTALL_LAUNCHER_FILES 160
 
-enum { HDD_GAME_OPL, HDD_GAME_NEUTRINO };
+/* Keep legacy values for existing installation journals. */
+enum { HDD_GAME_OPL, HDD_GAME_NEUTRINO, HDD_GAME_RIPTOPL, HDD_GAME_RIPTOPL_NEUTRINO };
 enum { HDD_INSTALL_PFS_CONTENTS, HDD_INSTALL_PFS_APP, HDD_INSTALL_PFS_CONFIG,
        HDD_INSTALL_PFS_GAME, HDD_INSTALL_PFS_COUNT };
 typedef struct {
@@ -65,6 +66,9 @@ unsigned hddInstallPartitionMb(const HddInstall *install, unsigned index);
  * including allocator alignment, apps and explicitly reserved free space. */
 int hddInstallRequiredMb(const HddInstall *install, unsigned base_mb);
 int dashHddInstallConfigure(HddInstall *install, unsigned max_extent_mb);
+enum { HDD_CHOICE_LAUNCHER = 1, HDD_CHOICE_MUSIC, HDD_CHOICE_CONTENTS,
+       HDD_CHOICE_LINUX, HDD_CHOICE_RESERVE, HDD_CHOICE_LANGUAGE };
+const char *dashHddInstallChoiceTitle(const HddInstall *install, unsigned choice, const char *title, char *out, size_t size);
 
 const char *hddInstallAssetPath(unsigned asset);
 const char *hddInstallAssetName(unsigned asset);
@@ -81,6 +85,7 @@ int hddInstallAssetMetadata(const char *json, const char *name,
                              char hash[41], uint32_t *size);
 int hddInstallArchiveMetadata(const char *json, const char *prefix,
                               char name[128], char hash[41], uint32_t *size);
+int hddInstallDependencyMetadata(const char *json, char hash[41], uint32_t *size);
 int hddInstallLinuxMetadata(const char *json, char hash[41], uint32_t *size);
 /* Bounded directory metadata; callback receives leaf names, never remote URLs. */
 int hddInstallDirectory(const char *json, int (*entry)(void *, const char *, const char *, uint32_t, int), void *context);
@@ -107,6 +112,11 @@ int hddInstallApply(HddInstall *install);
 /* Call only after successful software/MBR commit. Preserves unrelated console
  * configuration and verifies the persistent HDD boot setting; HOSD only. */
 int hddInstallEnableBoot(HddInstall *install);
+/* Returns 1 if enabled, 0 if disabled, or a negative errno. */
+int hddReadBootFlag(void);
+/* Console configuration only. Returns a status below or a negative errno. */
+enum { HDD_BOOT_ENABLED, HDD_BOOT_ALREADY_ENABLED };
+int hddEnableBootFlag(void);
 int hddInstallPsbbnPartitions(HddInstall *install);
 int hddInstallPsbbnPayload(void *install, const HddFormatIo *io);
 int hddInstallClaimStage(HddInstall *install);

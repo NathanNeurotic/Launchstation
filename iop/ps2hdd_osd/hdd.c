@@ -128,6 +128,7 @@ apa_cache_t *hddAddPartitionHere(s32 device, const apa_params_t *params, u32 *em
 			return apaInsertPartition(device, params, emptyBlocks[i], err);
 	}
 	clink_this=apaCacheGetHeader(device, sector, APA_IO_MODE_READ, err);
+	if (!clink_this) return NULL;
 	header=clink_this->header;
 	part_end=header->start+header->length;
 	some_size=(part_end%params->size);
@@ -157,12 +158,21 @@ apa_cache_t *hddAddPartitionHere(s32 device, const apa_params_t *params, u32 *em
 			{
 				clink_new=apaRemovePartition(device, part_end, 0,
 					clink_this->header->start, tempSize);
+				if (!clink_new) {
+					*err=-ENOMEM;
+					apaCacheFree(clink_this); apaCacheFree(clink_next);
+					return NULL;
+				}
 				clink_this->header->next=part_end;
 				clink_this->flags|=APA_CACHE_FLAG_DIRTY;
 				clink_next->header->prev=clink_new->header->start;
 				part_end+=tempSize;
 				clink_next->flags|=APA_CACHE_FLAG_DIRTY;
-				apaCacheFlushAllDirty(device);
+				*err=apaCacheFlushAllDirty(device);
+				if (*err < 0) {
+					apaCacheFree(clink_new); apaCacheFree(clink_this); apaCacheFree(clink_next);
+					return NULL;
+				}
 				apaCacheFree(clink_this);
 				clink_this=clink_new;
 				break;
@@ -177,7 +187,8 @@ apa_cache_t *hddAddPartitionHere(s32 device, const apa_params_t *params, u32 *em
 		clink_this->flags|=APA_CACHE_FLAG_DIRTY;
 		clink_next->header->prev=clink_new->header->start;
 		clink_next->flags|=APA_CACHE_FLAG_DIRTY;
-		apaCacheFlushAllDirty(device);
+		*err=apaCacheFlushAllDirty(device);
+		if (*err < 0) { apaCacheFree(clink_new); clink_new=NULL; }
 	}
 	apaCacheFree(clink_this);
 	apaCacheFree(clink_next);

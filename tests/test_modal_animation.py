@@ -100,6 +100,7 @@ for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPan
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
     code += f"#define {draw}(...) ((void)0)\n"
 code += "#define modalHintRow(...) (0.0f)\n#define drawButton(...) (0.0f)\n"
+code += "#define dashTextWrapLines(...) 1\n"
 code += function(gfx, "float dashApproach(")
 code += function(shell, "float dashTime(")
 code += function(shell, "float dashAnimSpeed(")

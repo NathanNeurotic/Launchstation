@@ -330,7 +330,8 @@ int hddFormat(iomanX_iop_file_t *f, const char *dev, const char *blockdev, void 
         return -ENXIO;
 
     // clear all errors on hdd
-    clink = apaCacheAlloc();
+    if (!(clink = apaCacheAlloc()))
+        return -ENOMEM;
     memset(clink->header, 0, sizeof(apa_header_t));
     if (blkIoDmaTransfer(f->unit, clink->header, APA_SECTOR_SECTOR_ERROR, 1, BLKIO_DIR_WRITE)) {
         apaCacheFree(clink);
@@ -461,7 +462,10 @@ static int apaOpen(s32 device, hdd_file_slot_t *fileSlot, apa_params_t *params, 
         if ((rv = hddCheckPartitionMax(device, params->size)) >= 0) {
             if ((clink = hddAddPartitionHere(device, params, emptyBlocks, sector, &rv)) != NULL) {
                 sector = clink->header->start;
-                clink2 = apaCacheAlloc();
+                if (!(clink2 = apaCacheAlloc())) {
+                    apaCacheFree(clink);
+                    return -ENOMEM;
+                }
                 memset(clink2->header, 0, sizeof(apa_header_t));
                 blkIoDmaTransfer(device, clink2->header, sector + 8, 2, BLKIO_DIR_WRITE);
                 blkIoDmaTransfer(device, clink2->header, sector + 0x2000, 2, BLKIO_DIR_WRITE);

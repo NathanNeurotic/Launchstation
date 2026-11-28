@@ -144,14 +144,18 @@ jobs:
           python3 tests/test_hdd_manager_browse.py
           python3 tests/test_hdd_partition_rename.py
           python3 tests/test_hdd_manager_mounts.py
+          python3 tests/test_ata_bd_alignment.py
           python3 tests/test_hdd_filesystem.py
           python3 tests/test_saildot4k_targeted_parity.py
           python3 tests/test_folder_date_arithmetic.py
           python3 tests/test_folder_date_popup.py
           python3 tests/test_hdd_format.py
+          python3 tests/test_hdd_metadata.py
           python3 tests/test_hdd_mini.py
           python3 tests/test_hdd_app.py
           python3 tests/test_hdd_app_install.py
+          python3 tests/test_hdd_app_queue.py
+          python3 tests/test_picker_multiselect.py
           python3 tests/test_hdd_format_ui.py
           python3 tests/test_hdd_installer.py
           python3 tests/test_hdd_installer_finish.py

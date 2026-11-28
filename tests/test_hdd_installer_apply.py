@@ -116,7 +116,7 @@ static int InjectHddAppLauncher(const char*p,const char*elf,const char*title,con
 static int InjectHddAppLauncherWithArg(const char*p,const char*elf,const char*title,const void*icon,unsigned size,const char*arg){
     assert(!strcmp(p,"PP.LAUNCHER")&&title&&icon&&size&&partitions==injected+1);
     assert(strstr(elf,"hdd0:__system:pfs:/launcher/"));
-    if(strstr(elf,"nhddl"))assert(arg&&!strcmp(arg,"-mode=ata"));else assert(!arg&&strstr(elf,"OPNPS2LD.ELF"));
+    if(strstr(elf,"nhddl"))assert(arg&&!strcmp(arg,"-mode=ata"));else assert(!arg&&(strstr(elf,"OPNPS2LD.ELF")||strstr(elf,"RIPTOPL-RA-UNPAKT.ELF")));
     injected++;return 0;
 }
 int hddInstallPsbbnPartitions(HddInstall*in){assert(in->jail&&(in->flags&7)==7);psbbn_parts++;return 0;}
@@ -245,7 +245,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
         ('scripts/assets/OPL/LNG/lang_French.lng', b'French translation'),
         ('scripts/licenses/OPL', b'OPL license'), ('scripts/licenses/nhddl', b'NHDDL license'), ('scripts/licenses/neutrino', b'Neutrino license'),
     ]
-    for flags, failure, launcher in ((1,'ok',0),(2,'ok',0),(3,'ok',0),(7,'ok',0),(7,'ok',1),
+    for flags, failure, launcher in ((1,'ok',0),(2,'ok',0),(3,'ok',0),(7,'ok',0),(7,'ok',1),(7,'ok',2),(15,'ok',2),(7,'ok',3),
                                     (15,'ok',0),(15,'ok',1),(3,'bad-hash',0),(3,'size',0),(3,'attr',0),(7,'launcher-size',0)):
         work = d / (str(flags) + failure + str(launcher)); work.mkdir()
         for part in ('stage','ata','__system','__sysconf','__common'): (work / part).mkdir()
@@ -260,8 +260,20 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
             manifest.append(f'{i} {len(data)} {hashlib.sha1(prefix+data).hexdigest()}\n')
         (work / 'manifest').write_text(''.join(manifest))
         if flags & 4:
-            package = launchers + [('icons/ico/APP_NHDDL_LST.ico' if launcher else 'icons/ico/APP_OPL_LST.ico', b'launcher icon'),
-                                   ('icons/art/APP_NHDDL.png' if launcher else 'icons/art/APP_OPL.png', b'launcher art')]
+            selected_launchers = launchers
+            if launcher>=2:
+                selected_launchers = [(remote,payload) for remote,payload in launchers if not any(x in remote for x in ('NHDDL','OPNPS2LD','scripts/licenses/'))]
+                selected_launchers += [('scripts/assets/OPL/RIPTOPL-RA-UNPAKT.ELF',bytes(elf)),('scripts/assets/Ember/ember.elf',bytes(elf)),
+                    ('scripts/assets/Ember/version.txt',b'0.8')]
+                dep=io.BytesIO()
+                with zipfile.ZipFile(dep,'w',zipfile.ZIP_DEFLATED) as z:
+                    z.writestr('dep/bios.bin',b'B'*524288)
+                    z.writestr('dep/ignored.bin',b'unneeded')
+                (stage/'extras.zip').write_bytes(dep.getvalue())
+                manifest[4]=f'4 {len(dep.getvalue())} {hashlib.sha1(dep.getvalue()).hexdigest()}\n'
+                (work/'manifest').write_text(''.join(manifest))
+            package = selected_launchers + [('icons/ico/APP_RIPTOPL_LST.ico' if launcher>=2 else 'icons/ico/APP_NHDDL_LST.ico' if launcher else 'icons/ico/APP_OPL_LST.ico', b'launcher icon'),
+                                   ('icons/art/APP_RIPTOPL.png' if launcher>=2 else 'icons/art/APP_NHDDL.png' if launcher else 'icons/art/APP_OPL.png', b'launcher art')]
             manifest = []
             for i, (remote, data) in enumerate(package):
                 (stage / f'launcher-{i:03}.bin').write_bytes(data)
@@ -281,15 +293,27 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-apply-') as directory:
             assert (work / 'PP.APP_WLE-R3Z/res/info.sys').exists()
             assert (work / 'PP.SYS_R3CONFIGURATOR/res/jkt_001.png').read_bytes() == b'jacket fixture'
             assert (work / 'PP.LAUNCHER/res/jkt_001.png').read_bytes() == b'launcher art'
-            assert (b'APP_NHDDL' if launcher else b'APP_OPL') in (work / 'PP.LAUNCHER/res/info.sys').read_bytes()
-            assert (work / '__system/launcher/OPNPS2LD.ELF').read_bytes() == bytes(elf)
-            assert (work / '__system/launcher/nhddl.elf').read_bytes() == bytes(elf)
+            assert (b'APP_RIPTOPL' if launcher>=2 else b'APP_NHDDL' if launcher else b'APP_OPL') in (work / 'PP.LAUNCHER/res/info.sys').read_bytes()
+            if launcher>=2:
+                assert (work/'__system/launcher/RIPTOPL-RA-UNPAKT.ELF').read_bytes()==bytes(elf)
+                assert (work/'ata/Ember/ember.elf').read_bytes()==bytes(elf)
+                assert (work/'ata/Ember/bios.bin').read_bytes()==b'B'*524288
+                assert b'Gageformer' in (work/'ata/Ember/README.txt').read_bytes()
+                assert (work/'ata/Ember/games').is_dir() and not (work/'ata/Ember/ignored.bin').exists()
+            else:
+                assert (work / '__system/launcher/OPNPS2LD.ELF').read_bytes() == bytes(elf)
+                assert (work / '__system/launcher/nhddl.elf').read_bytes() == bytes(elf)
             assert (work / 'ata/neutrino/modules/ata_bd.irx').read_bytes() == b'ATA module'
             assert (work / 'ata/neutrino/config/system.toml').read_bytes() == b'Neutrino configuration'
             assert (work / 'ata/neutrino/udpfs_server/compressed_iso/__init__.py').read_bytes() == b'UDPFS helper'
             assert (work / 'ata/LNG/lang_French.lng').read_bytes() == b'French translation'
-            assert b'enable_bdm_hdd=1' in (work / 'ata/conf_opl.cfg').read_bytes()
-            assert (work / '__system/launcher/licenses/OPL').read_bytes() == b'OPL license'
+            assert b'enable_bdm_hdd=1' in (work / 'ata' / ('settings_riptopl.cfg' if launcher>=2 else 'conf_opl.cfg')).read_bytes()
+            if launcher>=2:
+                assert f'default_core={int(launcher==3)}'.encode() in (work/'ata/settings_riptopl.cfg').read_bytes()
+            if launcher<2:
+                assert (work / '__system/launcher/licenses/OPL').read_bytes() == b'OPL license'
+            else:
+                assert not (work / '__system/launcher/licenses').exists()
             config = (work / '__sysconf/osdmenu/OSDMENU.CNF').read_bytes()
-            assert b'name_OSDSYS_ITEM_1 = ' + (b'Neutrino (NHDDL)' if launcher else b'Open PS2 Loader') in config
+            assert b'name_OSDSYS_ITEM_1 = ' + (b'RiptOPL (Neutrino)' if launcher==3 else b'Open PS2 Loader: RiptOPL' if launcher>=2 else b'Neutrino (NHDDL)' if launcher else b'Open PS2 Loader') in config
     print('PASS: production PSU/app/HOSD copying, shared APPS attributes, launcher resources, staged hash checks, short I/O and failed-install unmounts')

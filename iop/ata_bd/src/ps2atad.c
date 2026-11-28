@@ -1549,22 +1549,38 @@ static void ata_shutdown_cb(void)
 //
 // Block device interface
 //
+static int ata_bd_transfer_unaligned(int device, u64 sector, u8 *buffer, u16 count, int direction)
+{
+    u32 scratch[ATA_BD_SECTOR_SIZE / sizeof(u32)];
+
+    for (unsigned i = 0; i < count; i++, buffer += ATA_BD_SECTOR_SIZE) {
+        if (direction == ATA_DIR_WRITE)
+            memcpy(scratch, buffer, ATA_BD_SECTOR_SIZE);
+        if (ata_device_sector_io64(device, scratch, sector + i, 1, direction) != 0)
+            return -EIO;
+        if (direction == ATA_DIR_READ)
+            memcpy(buffer, scratch, ATA_BD_SECTOR_SIZE);
+    }
+    return count;
+}
+
+static int ata_bd_transfer(int device, u64 sector, void *buffer, u16 count, int direction)
+{
+    /* FatFs can advance the caller's pointer by a partial sector before
+       handing off the bulk transfer. DEV9 DMA needs a word-aligned buffer. */
+    if ((uiptr)buffer & 3)
+        return ata_bd_transfer_unaligned(device, sector, buffer, count, direction);
+    return ata_device_sector_io64(device, buffer, sector, count, direction) == 0 ? count : -EIO;
+}
+
 static int ata_bd_read(struct block_device *bd, u64 sector, void *buffer, u16 count)
 {
-    if (ata_device_sector_io64(bd->devNr, buffer, sector, count, ATA_DIR_READ) != 0) {
-        return -EIO;
-    }
-
-    return count;
+    return ata_bd_transfer(bd->devNr, sector, buffer, count, ATA_DIR_READ);
 }
 
 static int ata_bd_write(struct block_device *bd, u64 sector, const void *buffer, u16 count)
 {
-    if (ata_device_sector_io64(bd->devNr, (void *)buffer, sector, count, ATA_DIR_WRITE) != 0) {
-        return -EIO;
-    }
-
-    return count;
+    return ata_bd_transfer(bd->devNr, sector, (void *)buffer, count, ATA_DIR_WRITE);
 }
 
 static void ata_bd_flush(struct block_device *bd)

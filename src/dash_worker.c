@@ -195,7 +195,7 @@ void dashWorkerStatus(const char *text, int done, int total)
 		SignalSema(sem_status);
 }
 
-static void readStatus(char *out, int size, int *done, int *total)
+void dashWorkerGetStatus(char *out, int size, int *done, int *total)
 {
 	if (sem_status >= 0)
 		WaitSema(sem_status);
@@ -325,7 +325,7 @@ int dashWorkerAwait(int id, const char *title, int cancelable)
 		if (shown) {
 			char s[96];
 			int done, total;
-			readStatus(s, sizeof(s), &done, &total);
+			dashWorkerGetStatus(s, sizeof(s), &done, &total);
 			dashLoadingSetCancel(cancelable);
 			dashLoadingFrame(s, done, total);
 		} else {
@@ -369,7 +369,7 @@ void dashDrawActivity(void)
 			act_visible_since = now;
 		if (cur_state != CUR_IDLE && (cur.flags & DASH_JOB_VISIBLE)) {
 			dashStrCopy(act_label, cur.label, sizeof(act_label));
-			readStatus(s, sizeof(s), &done, &total);
+			dashWorkerGetStatus(s, sizeof(s), &done, &total);
 			if (total > 0)
 				snprintf(act_status, sizeof(act_status), "%d/%d", done + 1 > total ? total : done + 1, total);
 			else

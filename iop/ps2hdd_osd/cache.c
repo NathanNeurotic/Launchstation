@@ -101,7 +101,8 @@ int apaCacheTransfer(apa_cache_t *clink, int type)
 		if(type==0)// save any read error's..
 			apaSaveError(clink->device, clink->header, APA_SECTOR_SECTOR_ERROR, clink->sector);
 	}
-	clink->flags&=~APA_CACHE_FLAG_DIRTY;
+	/* A failed header remains dirty and recoverable. */
+	if (!err) clink->flags&=~APA_CACHE_FLAG_DIRTY;
 	return err;
 }
 
@@ -113,18 +114,19 @@ void apaCacheFlushDirty(apa_cache_t *clink)
 
 int apaCacheFlushAllDirty(s32 device)
 {
-	int i;
-	// flush apal
-	for(i=1;i<cacheSize+1;i++){
+	int i, ret;
+	/* Commit the complete journal before changing any linked APA headers. */
+	for(i=1;i<cacheSize+1;i++) {
 		if((cacheBuf[i].flags & APA_CACHE_FLAG_DIRTY) && cacheBuf[i].device==device)
-			apaJournalWrite(&cacheBuf[i]);
+			if ((ret=apaJournalWrite(&cacheBuf[i])) < 0) return ret;
 	}
-	apaJournalFlush(device);
-	// flush apa
-	for(i=1;i<cacheSize+1;i++){
+	if ((ret=apaJournalFlush(device)) < 0) return ret;
+	for(i=1;i<cacheSize+1;i++) {
 		if((cacheBuf[i].flags & APA_CACHE_FLAG_DIRTY) && cacheBuf[i].device==device)
-			apaCacheTransfer(&cacheBuf[i], APA_IO_MODE_WRITE);
+			if ((ret=apaCacheTransfer(&cacheBuf[i], APA_IO_MODE_WRITE)) < 0) return ret;
 	}
+	/* Reset flushes the applied headers before clearing the durable record.
+	 * Any failure above must retain that record for IOP-startup replay. */
 	return apaJournalReset(device);
 }
 
@@ -154,9 +156,10 @@ apa_cache_t *apaCacheGetHeader(s32 device, u32 sector, u32 mode, int *result)
 		}
 	else
 	{
-		clink=cacheBuf->next;
-		if(clink->flags & APA_CACHE_FLAG_DIRTY)
-			APA_PRINTF(APA_DRV_NAME": error: dirty buffer allocated\n");
+		/* Retain failed writes rather than evicting their only cached copy. */
+		for (clink=cacheBuf->next; clink!=cacheBuf; clink=clink->next)
+			if (!(clink->flags & APA_CACHE_FLAG_DIRTY)) break;
+		if (clink==cacheBuf) { *result=-ENOMEM; return NULL; }
 		clink->flags=0;
 		clink->nused=1;
 		clink->device=device;
@@ -207,9 +210,9 @@ apa_cache_t *apaCacheAlloc(void)
 			APA_PRINTF(APA_DRV_NAME": error: free buffer empty\n");
 			return NULL;
 		}
-	cnext=cacheBuf->next;
-	if(cnext->flags & APA_CACHE_FLAG_DIRTY)
-		APA_PRINTF(APA_DRV_NAME": error: dirty buffer allocated\n");
+	for (cnext=cacheBuf->next; cnext!=cacheBuf; cnext=cnext->next)
+		if (!(cnext->flags & APA_CACHE_FLAG_DIRTY)) break;
+	if (cnext==cacheBuf) return NULL;
 	cnext->nused=1;
 	cnext->flags=0;
 	cnext->device=-1;

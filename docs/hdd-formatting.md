@@ -71,11 +71,15 @@ when it needs to reuse free space.
 
 ## Install an app from a PSU
 
-On an APA Jail HDD with HOSDMenu, choose **Install app from PSU…** in HDD Manager
-or **Install app to HDD…** on a PSU in File Browser. Launchstation inspects the
+On an APA Jail HDD with HOSDMenu, choose **Install apps from PSU…** in HDD Manager
+or **Install app to HDD…** on a PSU in File Browser. The HDD Manager picker can
+select several PSUs, even from different folders: Square or Confirm toggles a
+file and Start installs the selection. Apps install one at a time, each with
+its own review. An error or cancel stops the queue and reports how many apps
+finished; finished apps stay installed. Launchstation inspects the
 package for a PS2 ELF, reads its title and boot filename from `title.cfg` when
 present, and prompts if more than one ELF can be used. Internet access is
-required for HDD icons and artwork. A missing asset can use generic artwork.
+required for HDD icons and artwork. Missing PSBBN DP artwork is looked up in CosmicScale's psbbn-art-database before generic artwork is used.
 HTTP and TLS failures stop installation.
 
 The HDD Manager action appears when the installed HOSDMenu ELF is present.
@@ -91,6 +95,13 @@ app until publication completes. With no valid journal, staging may restart
 if it contains only installer files. Unknown files and staged app or backup
 directories are kept. A pending launcher without durable ownership evidence
 is left untouched.
+
+APA header writes report their failures, and the HDD driver keeps its
+recovery journal until every header is written. After a create or format I/O
+error, the installer reloads the IOP and storage drivers so that journal is
+replayed before you retry. If a launcher partition went missing after an
+older checkpoint, a resume recreates only that new launcher after checking
+the app files' ownership. A published partition is never recreated.
 
 ## Partition names and HOSDMenu visibility
 
@@ -212,13 +223,25 @@ Boot configuration is generated for the actual installed components and paths.
 Pure APA boots HOSDMenu; PSBBN installs boot PSBBN with `-dev9=NICHDD` and offer
 HOSDMenu on Cross. Start/Select hotkeys launch the included apps when present.
 
-PSBBN installs ask for a default game launcher: **Open PS2 Loader (OPL)** or
-**Neutrino (NHDDL)**. Both launchers are downloaded from the same pinned DP
-commit. Their ELFs are installed in `__system/launcher`; the complete Neutrino
-runtime (including config files and IRX modules) goes to `ata0:/neutrino` and
-OPL's language assets go to `ata0:/LNG`. Matching licenses and version files are
-included. The generated OPL configuration enables BDM HDD, apps, and cover art.
-These binaries are copied after archive extraction to replace any older copies.
+New PSBBN installations follow DP's November 2026 runtime layout. RiptOPL is
+the game frontend, with **Neutrino (RiptOPL)** listed first (the default) and
+**OPL (RiptOPL)** as the other PS2 core. Both choices install the same pinned
+RiptOPL, Neutrino and Ember files. RiptOPL's ELF goes to
+`__system/launcher/RIPTOPL-RA-UNPAKT.ELF`; Neutrino's complete runtime goes to
+`ata0:/neutrino`, language assets to `ata0:/LNG`, and Ember to `ata0:/Ember`,
+with `ata0:/Ember/games` created for PS1 titles. `ata0:/settings_riptopl.cfg`
+uses the same settings as DP's game installer, selects the installed language,
+and sets `default_core=1` for Neutrino or `0` for OPL.
+
+Like DP, the installer downloads `dep.zip` from the
+`psbbn-definitive-project-dependencies` Archive.org item and extracts only
+`dep/bios.bin` (512 KiB) to `ata0:/Ember/bios.bin`. Archive.org metadata gives
+its size and SHA-1. `ata0:/Ember/README.txt` credits Gageformer and links
+[Ember's releases](https://github.com/Gageformer/Ember/releases). DP no longer
+ships per-launcher license files, so none are downloaded for this layout.
+Installations resumed from an older checkpoint keep the OPL/NHDDL layout they
+started with. These binaries are copied after archive extraction to replace any
+older copies.
 
 The choice controls the Square boot shortcut, the first HOSDMenu launcher entry,
 and DP's standard `PP.LAUNCHER` partition, including its icon, artwork, and PSBBN
