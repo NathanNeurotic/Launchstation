@@ -27,6 +27,8 @@ struct InstallExt2 {
     unsigned pending_count;
     int write_error;
     uint32_t bbgroup, ibgroup, itblock, ino, position, size;
+    uint32_t file_dir, previous_ino;
+    char file_path[INSTALL_TAR_PATH];
     int bbdirty, ibdirty, itdirty, active;
     struct { char path[INSTALL_TAR_PATH]; uint32_t ino; } cache[CACHE];
     unsigned nextcache;
@@ -83,11 +85,17 @@ static int bitmap(InstallExt2 *f, int inode, uint32_t g)
     if (ret >= 0) *old = g;
     return ret;
 }
+static int flushInodes(InstallExt2 *f)
+{
+    if (!f->itdirty) return 0;
+    int ret = writeBlock(f, f->itblock, f->it);
+    if (ret >= 0) f->itdirty = 0;
+    return ret;
+}
 static int inodeBlock(InstallExt2 *f, uint32_t b)
 {
-    int ret;
     if (f->itblock == b) return 0;
-    if (f->itdirty) { ret = writeBlock(f, f->itblock, f->it); if (ret < 0) return ret; f->itdirty = 0; }
+    int ret = flushInodes(f); if (ret < 0) return ret;
     ret = readBlock(f, b, f->it); if (ret >= 0) f->itblock = b; return ret;
 }
 static int getInode(InstallExt2 *f, uint32_t ino, unsigned char *data, int put)
@@ -308,12 +316,33 @@ static int makeDir(InstallExt2 *f, uint32_t ino, uint32_t parent, const InstallT
     }
     return 0;
 }
+static int dropLink(InstallExt2 *f, uint32_t ino)
+{
+    unsigned char node[128];
+    int ret = getInode(f, ino, node, 0); if (ret < 0) return ret;
+    unsigned links = r16(node + 26); if (!links) return -EIO;
+    w16(node + 26, --links);
+    if (!links) {
+        ret = truncateInode(f, node); if (ret < 0) return ret;
+        memset(node, 0, sizeof(node));
+        ret = release(f, 1, ino); if (ret < 0) return ret;
+    }
+    return getInode(f, ino, node, 1);
+}
+static int linkEntry(InstallExt2 *f, const char *path, uint32_t dir, uint32_t ino, uint32_t old)
+{
+    const char *leaf = strrchr(path, '/');
+    int ret = directory(f, dir, leaf ? leaf + 1 : path, &ino, 1, old != 0);
+    if (ret < 0) return ret;
+    seen(f, path, 1);
+    return old ? dropLink(f, old) : 0;
+}
 int installExt2Begin(InstallExt2 *f, const InstallTarEntry *e)
 {
     char parent[INSTALL_TAR_PATH], *leaf;
-    uint32_t dir, ino = 0, old = 0;
-    unsigned char node[128];
-    int ret, exists, possible, replace = 0;
+    uint32_t dir, ino, old = 0;
+    unsigned char node[128] = {0};
+    int ret;
     if (!f || !e || f->active || strlen(e->name) >= sizeof(parent)) return -EINVAL;
     if (!*e->name) {
         if (e->type != '5') return -EINVAL;
@@ -323,73 +352,58 @@ int installExt2Begin(InstallExt2 *f, const InstallTarEntry *e)
     strcpy(parent, e->name); leaf = strrchr(parent, '/');
     if (leaf) { *leaf++ = 0; ret = lookup(f, parent, &dir, e); if (ret < 0) return ret; }
     else { leaf = parent; dir = 2; }
-    possible = seen(f, e->name, 0);
-    ret = possible ? directory(f, dir, leaf, &old, 0, 1) : -ENOENT;
-    if (ret < 0 && ret != -ENOENT) return ret;
-    exists = ret == 0;
-    if (exists) {
-        ret = getInode(f, old, node, 0); if (ret < 0) return ret;
+    if (!*leaf || strlen(leaf) > 255) return -EINVAL;
+    if (seen(f, e->name, 0)) {
+        ret = directory(f, dir, leaf, &old, 0, 1);
+        if (ret < 0 && ret != -ENOENT) return ret;
+    }
+    if (old) {
+        unsigned char previous[128];
+        ret = getInode(f, old, previous, 0); if (ret < 0) return ret;
         if (e->type == '5') {
-            if ((r16(node) & 0170000) != 0040000) return -ENOTDIR;
-            attributes(node, e); return getInode(f, old, node, 1);
+            if ((r16(previous) & 0170000) != 0040000) return -ENOTDIR;
+            attributes(previous, e); return getInode(f, old, previous, 1);
         }
-        if ((r16(node) & 0170000) == 0040000) return -EISDIR;
+        if ((r16(previous) & 0170000) == 0040000) return -EISDIR;
     }
     if (e->type == '1') {
-        unsigned char target[128];
         ret = lookup(f, e->link, &ino, NULL); if (ret < 0) return ret;
-        if (exists && old == ino) return 0;
-        ret = getInode(f, ino, target, 0); if (ret < 0) return ret;
-        if ((r16(target) & 0170000) == 0040000 || r16(target + 26) == 65535) return -EINVAL;
-        w16(target + 26, r16(target + 26) + 1); ret = getInode(f, ino, target, 1); if (ret < 0) return ret;
-        if (exists) {
-            unsigned links = r16(node + 26); if (!links) return -EIO;
-            w16(node + 26, --links);
-            if (!links) {
-                ret = truncateInode(f, node); if (ret < 0) return ret;
-                memset(node, 0, 128); ret = release(f, 1, old); if (ret < 0) return ret;
-            }
-            ret = getInode(f, old, node, 1); if (ret < 0) return ret;
-        }
-    } else {
-        if (exists && r16(node + 26) > 1) {
-            /* A tar replacement breaks this directory entry's hard link;
-             * other names must retain their original contents. */
-            ret = alloc(f, 1, &ino); if (ret < 0) return ret;
-            w16(node + 26, r16(node + 26) - 1);
-            ret = getInode(f, old, node, 1); if (ret < 0) return ret;
-            memset(node, 0, 128); w16(node + 26, 1); replace = 1;
-        } else if (exists) { ino = old; ret = truncateInode(f, node); if (ret < 0) return ret; }
-        else { ret = alloc(f, 1, &ino); if (ret < 0) return ret; memset(node, 0, 128); w16(node + 26, 1); }
-        if (e->type == '5') {
-            ret = makeDir(f, ino, dir, e); if (ret < 0) return ret;
-            unsigned slot = f->nextcache++ % CACHE;
-            strcpy(f->cache[slot].path, e->name); f->cache[slot].ino = ino;
-        } else {
-            unsigned type = e->type == '0' ? 0100000 : e->type == '2' ? 0120000 : e->type == '3' ? 0020000 : e->type == '4' ? 0060000 : e->type == '6' ? 0010000 : 0;
-            if (!type) return -EINVAL;
-            w16(node, type); attributes(node, e);
-            if (e->type == '3' || e->type == '4') {
-                if (e->major > 4095 || e->minor > 1048575) return -EINVAL;
-                if (e->major < 256 && e->minor < 256) w32(node + 40, e->major << 8 | e->minor);
-                else w32(node + 44, (e->minor & 255) | e->major << 8 | (e->minor & ~255u) << 12);
-            }
-            if (e->type == '0' || e->type == '2') {
-                f->ino = ino; memcpy(f->inode, node, 128); f->position = 0;
-                f->size = e->type == '0' ? e->size : strlen(e->link);
-                w32(f->inode + 4, f->size); f->active = 1; memset(f->file, 0, BS);
-                if (e->type == '2') {
-                    if (f->size < 60) { memcpy(f->inode + 40, e->link, f->size); f->position = f->size; }
-                    else { ret = installExt2Data(f, e->link, f->size); if (ret < 0) return ret; }
-                    ret = installExt2End(f); if (ret < 0) return ret;
-                }
-            } else { ret = getInode(f, ino, node, 1); if (ret < 0) return ret; }
-        }
+        if (old == ino) return 0;
+        ret = getInode(f, ino, node, 0); if (ret < 0) return ret;
+        if ((r16(node) & 0170000) == 0040000 || r16(node + 26) == 65535) return -EINVAL;
+        w16(node + 26, r16(node + 26) + 1);
+        ret = getInode(f, ino, node, 1); if (ret < 0) return ret;
+        return linkEntry(f, e->name, dir, ino, old);
     }
-    if (!exists || replace || e->type == '1') {
-        ret = directory(f, dir, leaf, &ino, 1, possible); if (ret < 0) return ret;
+    ret = alloc(f, 1, &ino); if (ret < 0) return ret;
+    if (e->type == '5') {
+        ret = makeDir(f, ino, dir, e); if (ret < 0) return ret;
+        unsigned slot = f->nextcache++ % CACHE;
+        strcpy(f->cache[slot].path, e->name); f->cache[slot].ino = ino;
+        return linkEntry(f, e->name, dir, ino, 0);
     }
-    seen(f, e->name, 1); return 0;
+    unsigned type = e->type == '0' ? 0100000 : e->type == '2' ? 0120000 : e->type == '3' ? 0020000 : e->type == '4' ? 0060000 : e->type == '6' ? 0010000 : 0;
+    if (!type) return -EINVAL;
+    w16(node, type); attributes(node, e); w16(node + 26, 1);
+    if (e->type == '0' || e->type == '2') {
+        /* Keep the inode unlinked until the complete file is written. */
+        f->ino = ino; f->file_dir = dir; f->previous_ino = old;
+        strcpy(f->file_path, e->name);
+        memcpy(f->inode, node, sizeof(node)); f->position = 0;
+        f->size = e->type == '0' ? e->size : strlen(e->link);
+        w32(f->inode + 4, f->size); f->active = 1; memset(f->file, 0, BS);
+        if (e->type == '0') return 0;
+        if (f->size < 60) { memcpy(f->inode + 40, e->link, f->size); f->position = f->size; }
+        else { ret = installExt2Data(f, e->link, f->size); if (ret < 0) return ret; }
+        return installExt2End(f);
+    }
+    if (e->type == '3' || e->type == '4') {
+        if (e->major > 4095 || e->minor > 1048575) return -EINVAL;
+        if (e->major < 256 && e->minor < 256) w32(node + 40, e->major << 8 | e->minor);
+        else w32(node + 44, (e->minor & 255) | e->major << 8 | (e->minor & ~255u) << 12);
+    }
+    ret = getInode(f, ino, node, 1); if (ret < 0) return ret;
+    return linkEntry(f, e->name, dir, ino, old);
 }
 int installExt2Data(InstallExt2 *f, const void *data, unsigned size)
 {
@@ -414,7 +428,11 @@ int installExt2End(InstallExt2 *f)
     if (!f || !f->active) return 0;
     if (f->position != f->size) return -EINVAL;
     ret = flushData(f); if (ret < 0) return ret;
-    ret = getInode(f, f->ino, f->inode, 1); if (ret >= 0) f->active = 0; return ret;
+    ret = getInode(f, f->ino, f->inode, 1); if (ret < 0) return ret;
+    ret = flushInodes(f); if (ret < 0) return ret;
+    ret = linkEntry(f, f->file_path, f->file_dir, f->ino, f->previous_ino);
+    if (ret >= 0) f->active = 0;
+    return ret;
 }
 static int groupDescriptors(InstallExt2 *f)
 {
@@ -450,7 +468,7 @@ int installExt2Finish(InstallExt2 *f)
     ret = flushData(f); if (ret < 0) return ret;
     if (f->bbdirty) { ret = writeBlock(f, f->bbgroup * BPG + 2, f->bb); if (ret < 0) return ret; f->bbdirty = 0; }
     if (f->ibdirty) { ret = writeBlock(f, f->ibgroup * BPG + 3, f->ib); if (ret < 0) return ret; f->ibdirty = 0; }
-    if (f->itdirty) { ret = writeBlock(f, f->itblock, f->it); if (ret < 0) return ret; f->itdirty = 0; }
+    ret = flushInodes(f); if (ret < 0) return ret;
     ret = f->io.flush(f->io.context); if (ret < 0) return ret;
     ret = groupDescriptors(f); if (ret < 0) return ret;
     ret = f->io.flush(f->io.context); if (ret < 0) return ret;
