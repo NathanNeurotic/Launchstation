@@ -156,7 +156,7 @@ static int dashModalMenu(const char *title,const char *subtitle,const DashMenuIt
     assert(title&&subtitle&&!initial);
     for(int i=0;i<n;i++){
         int bit=0,result=0;
-        if(!strcmp(items[i].label,"Install app from PSU...")){bit=1;result=hosd_result;}
+        if(!strcmp(items[i].label,"Install apps from PSU...")){bit=1;result=hosd_result;}
         if(!strcmp(items[i].label,"Hide in HOSDMenu HDD Browser")){bit=2;result=hosd_result;}
         if(!strcmp(items[i].label,"Resume installation...")){bit=4;result=resume_result;}
         if(!bit)continue;
